@@ -44,25 +44,27 @@ namespace SHEvaluation.Rank
             plStudentView.Visible = false;
 
             #region 填資料進ComboBox
-            cboSchoolYear.Items.Clear();
-            cboSemester.Items.Clear();
+            //因為目前只提供計算預設學年度學期所以先註解掉
+            //cboSchoolYear.Items.Clear();
+            //cboSemester.Items.Clear();
             cboExamName.Items.Clear();
             cboStudentFilter.Items.Clear();
             cboStudentTag1.Items.Clear();
             cboStudentTag2.Items.Clear();
 
-            cboSchoolYear.Items.Add(_DefaultSchoolYear);//加入預設的學年度
-            cboSemester.Items.Add(_DefaultSemester);//加入預設的學年度
-
-            cboSchoolYear.SelectedIndex = 0;
-            if (cboSemester.Items.Contains(_DefaultSemester))
-            {
-                cboSemester.SelectedIndex = cboSemester.Items.IndexOf(_DefaultSemester);
-            }
-            else
-            {
-                cboSemester.SelectedIndex = 0;
-            }
+            lbCalcSchoolYear.Text = _DefaultSchoolYear;
+            lbCalcSemester.Text = _DefaultSemester;
+            //cboSchoolYear.Items.Add(_DefaultSchoolYear);//加入預設的學年度
+            //cboSemester.Items.Add(_DefaultSemester);//加入預設的學年度
+            //cboSchoolYear.SelectedIndex = 0;
+            //if (cboSemester.Items.Contains(_DefaultSemester))
+            //{
+            //    cboSemester.SelectedIndex = cboSemester.Items.IndexOf(_DefaultSemester);
+            //}
+            //else
+            //{
+            //    cboSemester.SelectedIndex = 0;
+            //}
 
             foreach (string exam in _ExamList.Select(x => x.Name).Distinct())
             {
@@ -135,8 +137,9 @@ namespace SHEvaluation.Rank
             btnPrevious.Enabled = false;
             btnCalculate.Enabled = false;
 
-            lbSchoolYear.Text = cboSchoolYear.Text;
-            lbSemester.Text = cboSemester.Text;
+            //因為目前只提供計算預設學年度學期，所以暫時先註解掉
+            lbSchoolYear.Text = lbCalcSchoolYear.Text; //cboSchoolYear.Text;
+            lbSemester.Text = lbCalcSemester.Text; //cboSemester.Text;
             lbExam.Text = cboExamName.Text;
 
             string studentfilter = cboStudentFilter.Text.Trim('[', ']');
