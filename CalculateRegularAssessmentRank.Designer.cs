@@ -90,7 +90,7 @@
             this.plBasicInfSelect.Dock = System.Windows.Forms.DockStyle.Fill;
             this.plBasicInfSelect.Location = new System.Drawing.Point(0, 0);
             this.plBasicInfSelect.Name = "plBasicInfSelect";
-            this.plBasicInfSelect.Size = new System.Drawing.Size(849, 471);
+            this.plBasicInfSelect.Size = new System.Drawing.Size(844, 471);
             this.plBasicInfSelect.Style.Alignment = System.Drawing.StringAlignment.Center;
             this.plBasicInfSelect.Style.BackColor1.ColorSchemePart = DevComponents.DotNetBar.eColorSchemePart.PanelBackground;
             this.plBasicInfSelect.Style.BackColor2.ColorSchemePart = DevComponents.DotNetBar.eColorSchemePart.PanelBackground2;
@@ -173,7 +173,7 @@
             this.btnNext.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnNext.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.btnNext.ForeColor = System.Drawing.Color.Black;
-            this.btnNext.Location = new System.Drawing.Point(762, 434);
+            this.btnNext.Location = new System.Drawing.Point(757, 434);
             this.btnNext.Name = "btnNext";
             this.btnNext.Size = new System.Drawing.Size(75, 25);
             this.btnNext.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -261,7 +261,7 @@
             this.listGradeYear.CheckBoxes = true;
             this.listGradeYear.Location = new System.Drawing.Point(13, 137);
             this.listGradeYear.Name = "listGradeYear";
-            this.listGradeYear.Size = new System.Drawing.Size(798, 223);
+            this.listGradeYear.Size = new System.Drawing.Size(792, 195);
             this.listGradeYear.TabIndex = 7;
             this.listGradeYear.UseCompatibleStateImageBehavior = false;
             this.listGradeYear.View = System.Windows.Forms.View.List;
@@ -400,7 +400,7 @@
             this.plStudentView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.plStudentView.Location = new System.Drawing.Point(0, 0);
             this.plStudentView.Name = "plStudentView";
-            this.plStudentView.Size = new System.Drawing.Size(849, 471);
+            this.plStudentView.Size = new System.Drawing.Size(844, 471);
             this.plStudentView.Style.Alignment = System.Drawing.StringAlignment.Center;
             this.plStudentView.Style.BackColor1.ColorSchemePart = DevComponents.DotNetBar.eColorSchemePart.PanelBackground;
             this.plStudentView.Style.BackColor2.ColorSchemePart = DevComponents.DotNetBar.eColorSchemePart.PanelBackground2;
@@ -413,12 +413,11 @@
             // 
             // pbLoading
             // 
-            this.pbLoading.BackColor = System.Drawing.Color.Transparent;
+            this.pbLoading.BackColor = System.Drawing.Color.White;
             this.pbLoading.Image = global::SHEvaluation.Rank.Properties.Resources.loading;
-            this.pbLoading.Location = new System.Drawing.Point(357, 190);
+            this.pbLoading.Location = new System.Drawing.Point(410, 235);
             this.pbLoading.Name = "pbLoading";
-            this.pbLoading.Size = new System.Drawing.Size(170, 133);
-            this.pbLoading.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pbLoading.Size = new System.Drawing.Size(33, 33);
             this.pbLoading.TabIndex = 58;
             this.pbLoading.TabStop = false;
             this.pbLoading.Visible = false;
@@ -430,7 +429,7 @@
             this.btnPrevious.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnPrevious.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F);
             this.btnPrevious.ForeColor = System.Drawing.Color.Black;
-            this.btnPrevious.Location = new System.Drawing.Point(656, 434);
+            this.btnPrevious.Location = new System.Drawing.Point(651, 434);
             this.btnPrevious.Name = "btnPrevious";
             this.btnPrevious.Size = new System.Drawing.Size(84, 25);
             this.btnPrevious.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -470,7 +469,7 @@
             this.dgvStudentList.ReadOnly = true;
             this.dgvStudentList.RowTemplate.Height = 24;
             this.dgvStudentList.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvStudentList.Size = new System.Drawing.Size(843, 360);
+            this.dgvStudentList.Size = new System.Drawing.Size(838, 360);
             this.dgvStudentList.TabIndex = 18;
             // 
             // colClass
@@ -568,7 +567,7 @@
             this.btnCalculate.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnCalculate.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.btnCalculate.ForeColor = System.Drawing.Color.Black;
-            this.btnCalculate.Location = new System.Drawing.Point(756, 434);
+            this.btnCalculate.Location = new System.Drawing.Point(751, 434);
             this.btnCalculate.Name = "btnCalculate";
             this.btnCalculate.Size = new System.Drawing.Size(81, 25);
             this.btnCalculate.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -584,7 +583,7 @@
             this.btnImport.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnImport.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.btnImport.ForeColor = System.Drawing.Color.Black;
-            this.btnImport.Location = new System.Drawing.Point(565, 434);
+            this.btnImport.Location = new System.Drawing.Point(560, 434);
             this.btnImport.Name = "btnImport";
             this.btnImport.Size = new System.Drawing.Size(75, 25);
             this.btnImport.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -600,7 +599,7 @@
             this.btnExport.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnExport.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.btnExport.ForeColor = System.Drawing.Color.Black;
-            this.btnExport.Location = new System.Drawing.Point(474, 434);
+            this.btnExport.Location = new System.Drawing.Point(469, 434);
             this.btnExport.Name = "btnExport";
             this.btnExport.Size = new System.Drawing.Size(75, 25);
             this.btnExport.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -729,13 +728,14 @@
             // 
             // CalculateRegularAssessmentRank
             // 
-            this.ClientSize = new System.Drawing.Size(849, 471);
+            this.ClientSize = new System.Drawing.Size(844, 471);
             this.Controls.Add(this.plStudentView);
             this.Controls.Add(this.plBasicInfSelect);
             this.DoubleBuffered = true;
             this.Name = "CalculateRegularAssessmentRank";
             this.Text = "計算定期評量排名";
             this.Load += new System.EventHandler(this.CalculateRegularAssessmentRank_Load);
+            this.Resize += new System.EventHandler(this.CalculateRegularAssessmentRank_Resize);
             this.plBasicInfSelect.ResumeLayout(false);
             this.plBasicInfSelect.PerformLayout();
             this.gpRankPeople.ResumeLayout(false);

@@ -89,7 +89,7 @@
             this.btnExit.BackColor = System.Drawing.Color.Transparent;
             this.btnExit.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnExit.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.btnExit.Location = new System.Drawing.Point(1081, 546);
+            this.btnExit.Location = new System.Drawing.Point(1081, 551);
             this.btnExit.Name = "btnExit";
             this.btnExit.Size = new System.Drawing.Size(91, 28);
             this.btnExit.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -321,7 +321,7 @@
             this.btnExportToExcel.BackColor = System.Drawing.Color.Transparent;
             this.btnExportToExcel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnExportToExcel.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.btnExportToExcel.Location = new System.Drawing.Point(12, 546);
+            this.btnExportToExcel.Location = new System.Drawing.Point(12, 551);
             this.btnExportToExcel.Name = "btnExportToExcel";
             this.btnExportToExcel.Size = new System.Drawing.Size(91, 28);
             this.btnExportToExcel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -477,7 +477,7 @@
             this.dgvScoreRank.ReadOnly = true;
             this.dgvScoreRank.RowTemplate.Height = 24;
             this.dgvScoreRank.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvScoreRank.Size = new System.Drawing.Size(1160, 458);
+            this.dgvScoreRank.Size = new System.Drawing.Size(1160, 463);
             this.dgvScoreRank.TabIndex = 45;
             this.dgvScoreRank.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvScoreRank_CellContentClick);
             // 
@@ -565,10 +565,9 @@
             // 
             this.pbLoading.BackColor = System.Drawing.Color.Transparent;
             this.pbLoading.Image = global::SHEvaluation.Rank.Properties.Resources.loading;
-            this.pbLoading.Location = new System.Drawing.Point(525, 236);
+            this.pbLoading.Location = new System.Drawing.Point(580, 295);
             this.pbLoading.Name = "pbLoading";
-            this.pbLoading.Size = new System.Drawing.Size(170, 133);
-            this.pbLoading.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pbLoading.Size = new System.Drawing.Size(32, 32);
             this.pbLoading.TabIndex = 59;
             this.pbLoading.TabStop = false;
             this.pbLoading.Visible = false;
@@ -577,7 +576,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1184, 586);
+            this.ClientSize = new System.Drawing.Size(1184, 591);
             this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.btnExit);
             this.Controls.Add(this.labelX8);
@@ -599,9 +598,12 @@
             this.Controls.Add(this.cboRankType);
             this.Controls.Add(this.dgvScoreRank);
             this.DoubleBuffered = true;
+            this.MaximizeBox = true;
             this.Name = "RegularAssessmentRankSelect";
             this.Text = "定期評量排名資料檢索";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.RegularAssessmentRankSelect_FormClosing);
             this.Load += new System.EventHandler(this.RegularRankSelec_Load);
+            this.Resize += new System.EventHandler(this.RegularAssessmentRankSelect_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.dgvScoreRank)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).EndInit();
             this.ResumeLayout(false);
