@@ -104,6 +104,12 @@
     <Compile Include="CalculateRegularAssessmentRank.Designer.cs">
       <DependentUpon>CalculateRegularAssessmentRank.cs</DependentUpon>
     </Compile>
+    <Compile Include="CalculateSemesterAssessmentRank.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CalculateSemesterAssessmentRank.Designer.cs">
+      <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RegularMatrixRankSelect.cs">
@@ -118,8 +124,23 @@
     <Compile Include="RegularAssessmentRankSelect.Designer.cs">
       <DependentUpon>RegularAssessmentRankSelect.cs</DependentUpon>
     </Compile>
+    <Compile Include="SemesterAssessmentRankSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SemesterAssessmentRankSelect.Designer.cs">
+      <DependentUpon>SemesterAssessmentRankSelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SemesterMatrixRankSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SemesterMatrixRankSelect.Designer.cs">
+      <DependentUpon>SemesterMatrixRankSelect.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="CalculateRegularAssessmentRank.resx">
       <DependentUpon>CalculateRegularAssessmentRank.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CalculateSemesterAssessmentRank.resx">
+      <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -136,6 +157,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="RegularAssessmentRankSelect.resx">
       <DependentUpon>RegularAssessmentRankSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SemesterAssessmentRankSelect.resx">
+      <DependentUpon>SemesterAssessmentRankSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SemesterMatrixRankSelect.resx">
+      <DependentUpon>SemesterMatrixRankSelect.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

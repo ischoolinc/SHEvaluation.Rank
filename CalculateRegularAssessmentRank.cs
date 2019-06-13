@@ -77,9 +77,18 @@ namespace SHEvaluation.Rank
             cboStudentTag2.Items.Add("");
             foreach (string tagName in _TagList.Select(x => x.Prefix).Distinct())
             {
-                cboStudentFilter.Items.Add("[" + tagName + "]");
-                cboStudentTag1.Items.Add("[" + tagName + "]");
-                cboStudentTag2.Items.Add("[" + tagName + "]");
+                if (!string.IsNullOrEmpty(tagName))
+                {
+                    cboStudentFilter.Items.Add("[" + tagName + "]");
+                    cboStudentTag1.Items.Add("[" + tagName + "]");
+                    cboStudentTag2.Items.Add("[" + tagName + "]");
+                }
+            }
+            foreach (string tagName in _TagList.Where(x => string.IsNullOrEmpty(x.Prefix)).Select(x => x.Name).ToList())
+            {
+                cboStudentFilter.Items.Add(tagName);
+                cboStudentTag1.Items.Add(tagName);
+                cboStudentTag2.Items.Add(tagName);
             }
             cboStudentFilter.SelectedIndex = 0;
             cboStudentTag1.SelectedIndex = 0;
@@ -185,6 +194,10 @@ namespace SHEvaluation.Rank
                     if (!string.IsNullOrEmpty(studentfilter))
                     {
                         List<string> filterTagIDs = _TagList.Where(x => x.Prefix == studentfilter).Select(x => x.ID).ToList();
+                        if (filterTagIDs.Count == 0)
+                        {
+                            filterTagIDs = _TagList.Where(x => x.Name == studentfilter).Select(x => x.ID).ToList();
+                        }
                         List<string> studentIDList = K12.Data.StudentTag.SelectAll().Where(x => filterTagIDs.Contains(x.RefTagID)).Select(x => x.RefStudentID).ToList();
                         filterStudentList = filterStudentList.Where(x => !studentIDList.Contains(x.ID)).ToList();
                     }
@@ -261,11 +274,19 @@ WHERE
                 if (!string.IsNullOrEmpty(studenttag1))
                 {
                     List<string> tag1IDs = _TagList.Where(x => x.Prefix == studenttag1).Select(x => x.ID).ToList();
+                    if (tag1IDs.Count == 0)
+                    {
+                        tag1IDs = _TagList.Where(x => x.Name == studenttag1).Select(x => x.ID).ToList();
+                    }
                     tag1StudentList = K12.Data.StudentTag.SelectAll().Where(x => tag1IDs.Contains(x.RefTagID)).ToList();
                 }
                 if (!string.IsNullOrEmpty(studenttag2))
                 {
                     List<string> tag2IDs = _TagList.Where(x => x.Prefix == studenttag2).Select(x => x.ID).ToList();
+                    if (tag2IDs.Count == 0)
+                    {
+                        tag2IDs = _TagList.Where(x => x.Name == studenttag2).Select(x => x.ID).ToList();
+                    }
                     tag2StudentList = K12.Data.StudentTag.SelectAll().Where(x => tag2IDs.Contains(x.RefTagID)).ToList();
                 }
                 #endregion
@@ -393,6 +414,7 @@ WITH student_list AS
 		'" + gradeYear + @"'::TEXT  AS rank_grade_year
 		, '" + schoolYear + @"'::TEXT AS rank_school_year
 		, '" + semester + @"'::TEXT AS rank_semester
+        , '" + examId + @"'::TEXT AS ref_exam_id
 		, '" + examName + @"'::TEXT AS rank_exam_name
         , '" + calculateSetting + @"'::TEXT AS calculation_setting
     ");
@@ -1004,13 +1026,13 @@ WITH student_list AS
 	SET
 		is_alive = null
 	FROM
-		score_list
+		calc_condition
 	WHERE
 		rank_matrix.is_alive = true
-		AND rank_matrix.school_year = score_list.rank_school_year
-		AND rank_matrix.semester = score_list.rank_semester
-		AND rank_matrix.grade_year = score_list.rank_grade_year
-		AND rank_matrix.ref_exam_id = score_list.ref_exam_id
+		AND rank_matrix.school_year = calc_condition.rank_school_year::INT
+		AND rank_matrix.semester = calc_condition.rank_semester::INT
+		AND rank_matrix.grade_year = calc_condition.rank_grade_year::INT
+		AND rank_matrix.ref_exam_id = calc_condition.ref_exam_id::INT
 
 	RETURNING rank_matrix.*
 )
