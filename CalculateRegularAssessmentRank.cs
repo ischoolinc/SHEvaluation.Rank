@@ -515,6 +515,7 @@ WITH student_list AS
 		subject_rank_score
 	WHERE
 		score IS NOT NULL
+		AND credit IS NOT NULL
 	GROUP BY
 		rank_school_year
 		, rank_semester
