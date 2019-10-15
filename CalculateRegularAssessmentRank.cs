@@ -706,6 +706,7 @@ WITH row AS (
 		, exam.exam_name
 		, student_row.rank_class_name
 		, student_row.rank_grade_year
+        , student_row.rank_dept_name
 		, student_row.rank_tag1
 		, student_row.rank_tag2
 		, sce_take.score
@@ -732,6 +733,7 @@ WITH row AS (
 
     --2.1 科目成績 年排名
     --2.2 科目成績 班排名
+    --2.5 科目成績 科排名
 ), exam_score AS (-------結算定期評量總成績
 	SELECT	
 		score_detail_row.*
@@ -748,14 +750,18 @@ WITH row AS (
 		, exam_score.rank_semester
 		, exam_score.rank_grade_year
 		, exam_score.rank_class_name
+		, exam_score.rank_dept_name
 		, exam_score.exam_id
 		, exam_score.score
 		, RANK() OVER(PARTITION BY exam_score.rank_grade_year,exam_score.subject ORDER BY score DESC) AS grade_rank
 		, RANK() OVER(PARTITION BY exam_score.rank_class_name ,exam_score.subject ORDER BY score DESC) AS class_rank
+		, RANK() OVER(PARTITION BY exam_score.rank_grade_year, exam_score.rank_dept_name ,exam_score.subject ORDER BY score DESC) AS dept_rank
 		, RANK() OVER(PARTITION BY exam_score.rank_grade_year,exam_score.subject ORDER BY score ASC) AS grade_rank_reverse
 		, RANK() OVER(PARTITION BY exam_score.rank_class_name ,exam_score.subject ORDER BY score ASC) AS class_rank_reverse
+		, RANK() OVER(PARTITION BY exam_score.rank_grade_year, exam_score.rank_dept_name ,exam_score.subject ORDER BY score ASC) AS dept_rank_reverse
 		, COUNT (exam_score.student_id) OVER(PARTITION BY exam_score.rank_grade_year,exam_score.subject ) AS grade_count
 		, COUNT (exam_score.student_id) OVER(PARTITION BY exam_score.rank_class_name, exam_score.subject) AS class_count
+		, COUNT (exam_score.student_id) OVER(PARTITION BY exam_score.rank_grade_year, exam_score.rank_dept_name, exam_score.subject) AS dept_count
         , exam_score.subject
 	FROM 
         exam_score
@@ -766,8 +772,10 @@ WITH row AS (
 		s1.*
 		, FLOOR((grade_rank::DECIMAL-1)*100::DECIMAL/grade_count)+1 AS graderank_percentage
 		, FLOOR((class_rank::DECIMAL-1)*100::DECIMAL/class_count)+1 AS classrank_percentage
+		, FLOOR((dept_rank::DECIMAL-1)*100::DECIMAL/dept_count)+1 AS deptrank_percentage
         , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
         , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
 	FROM 
 		subject_rank_row AS s1
 
@@ -1823,6 +1831,7 @@ WITH row AS (
     --2.2 科目成績 班排名
     --2.3 科目成績 類別1排名
     --2.4 科目成績 類別2排名
+    --2.5 科目成績 科排名
     --3.1 總計成績 總分 年排名
     --3.2 總計成績 總分 班排名
     --3.3 總計成績 總分 類別1排名
@@ -2164,6 +2173,45 @@ WITH row AS (
 	WHERE
 		subject_rank.rank_tag2 IS NOT NULL
 		AND subject_rank.rank_tag2 <> ''
+	UNION ALL
+    --2.5 科目成績 科排名
+	SELECT
+		rank_school_year 
+		, rank_semester
+		, rank_grade_year
+		, item_type
+		, exam_id AS ref_exam_id
+		, item_name
+		, '科排名'::TEXT AS rank_type
+		, rank_dept_name AS rank_name
+		, true AS is_alive
+		, class_count AS matrix_count
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank <= TRUNC(class_count * 0.25)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_25
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank <= TRUNC(class_count * 0.5)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_50
+		, AVG(score::DECIMAL)OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank >= TRUNC(class_count * 0.5)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_50
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank >= TRUNC(class_count * 0.75)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_25
+		, COUNT(*) FILTER (WHERE 100::DECIMAL<=score::DECIMAL ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_gte100 
+		, COUNT(*) FILTER (WHERE 90::DECIMAL<=score AND score <100::DECIMAL)  OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_90
+		, COUNT(*) FILTER (WHERE 80::DECIMAL<=score AND score <90::DECIMAL)  OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_80
+		, COUNT(*) FILTER (WHERE 70::DECIMAL<=score AND score <80::DECIMAL)  OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_70
+		, COUNT(*) FILTER (WHERE 60::DECIMAL<=score AND score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_60
+		, COUNT(*) FILTER (WHERE 50::DECIMAL<=score AND score <60::DECIMAL)  OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_50
+		, COUNT(*) FILTER (WHERE 40::DECIMAL<=score AND score <50::DECIMAL) OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_40
+		, COUNT(*) FILTER (WHERE 30::DECIMAL<=score AND score <40::DECIMAL)   OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_30
+		, COUNT(*) FILTER (WHERE 20::DECIMAL<=score AND score <30::DECIMAL)  OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_20
+		, COUNT(*) FILTER (WHERE 10::DECIMAL<=score AND score <20::DECIMAL)   OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_10
+		, COUNT(*) FILTER (WHERE score<10::DECIMAL) OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_lt10 
+		, student_id
+		, score
+		, class_rank AS rank
+		, classrank_percentage AS percentile
+		, classrank_pr AS pr
+		, rank_class_name
+		, rank_tag1
+		, rank_tag2
+	FROM
+		subject_rank
 	UNION ALL
     --3.1 總計成績 總分 年排名
 	SELECT
