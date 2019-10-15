@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.labelX1 = new DevComponents.DotNetBar.LabelX();
             this.labelX2 = new DevComponents.DotNetBar.LabelX();
             this.cboStudentTag2 = new DevComponents.DotNetBar.Controls.ComboBoxEx();
@@ -51,14 +51,6 @@
             this.btnImport = new DevComponents.DotNetBar.ButtonX();
             this.btnCacluate = new DevComponents.DotNetBar.ButtonX();
             this.dgvStudentList = new DevComponents.DotNetBar.Controls.DataGridViewX();
-            this.colClass = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colSeatNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colStudentNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colStudentName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colSchoolRank = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colClassRank = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colRankType1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colRankType2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.plStudentView = new DevComponents.DotNetBar.PanelEx();
             this.btnPrevious = new DevComponents.DotNetBar.ButtonX();
             this.pbLoading = new System.Windows.Forms.PictureBox();
@@ -80,6 +72,15 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.lvCalcSubject = new DevComponents.DotNetBar.Controls.ListViewEx();
             this.labelX11 = new DevComponents.DotNetBar.LabelX();
+            this.colClass = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colSeatNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colStudentNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colStudentName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colSchoolRank = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colDeptRank = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colClassRank = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colRankType1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colRankType2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStudentList)).BeginInit();
             this.plStudentView.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).BeginInit();
@@ -443,17 +444,18 @@
             this.colStudentNum,
             this.colStudentName,
             this.colSchoolRank,
+            this.colDeptRank,
             this.colClassRank,
             this.colRankType1,
             this.colRankType2});
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle2.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle1;
             this.dgvStudentList.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvStudentList.HighlightSelectedColumnHeaders = false;
             this.dgvStudentList.Location = new System.Drawing.Point(12, 66);
@@ -463,84 +465,6 @@
             this.dgvStudentList.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvStudentList.Size = new System.Drawing.Size(835, 441);
             this.dgvStudentList.TabIndex = 18;
-            // 
-            // colClass
-            // 
-            this.colClass.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.colClass.DataPropertyName = "ClassName";
-            this.colClass.HeaderText = "班級";
-            this.colClass.MinimumWidth = 59;
-            this.colClass.Name = "colClass";
-            this.colClass.ReadOnly = true;
-            this.colClass.Width = 59;
-            // 
-            // colSeatNum
-            // 
-            this.colSeatNum.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.colSeatNum.DataPropertyName = "SeatNo";
-            this.colSeatNum.HeaderText = "座號";
-            this.colSeatNum.MinimumWidth = 59;
-            this.colSeatNum.Name = "colSeatNum";
-            this.colSeatNum.ReadOnly = true;
-            this.colSeatNum.Width = 59;
-            // 
-            // colStudentNum
-            // 
-            this.colStudentNum.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.colStudentNum.DataPropertyName = "StudentNumber";
-            this.colStudentNum.HeaderText = "學號";
-            this.colStudentNum.MinimumWidth = 59;
-            this.colStudentNum.Name = "colStudentNum";
-            this.colStudentNum.ReadOnly = true;
-            this.colStudentNum.Width = 59;
-            // 
-            // colStudentName
-            // 
-            this.colStudentName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.colStudentName.DataPropertyName = "Name";
-            this.colStudentName.HeaderText = "姓名";
-            this.colStudentName.MinimumWidth = 59;
-            this.colStudentName.Name = "colStudentName";
-            this.colStudentName.ReadOnly = true;
-            this.colStudentName.Width = 59;
-            // 
-            // colSchoolRank
-            // 
-            this.colSchoolRank.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.colSchoolRank.DataPropertyName = "RankGradeYear";
-            this.colSchoolRank.HeaderText = "母群：年排名";
-            this.colSchoolRank.MinimumWidth = 111;
-            this.colSchoolRank.Name = "colSchoolRank";
-            this.colSchoolRank.ReadOnly = true;
-            this.colSchoolRank.Width = 111;
-            // 
-            // colClassRank
-            // 
-            this.colClassRank.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.colClassRank.DataPropertyName = "RankClassName";
-            this.colClassRank.HeaderText = "母群：班排名";
-            this.colClassRank.MinimumWidth = 111;
-            this.colClassRank.Name = "colClassRank";
-            this.colClassRank.ReadOnly = true;
-            this.colClassRank.Width = 111;
-            // 
-            // colRankType1
-            // 
-            this.colRankType1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colRankType1.DataPropertyName = "StudentTag1";
-            this.colRankType1.HeaderText = "母群：類別一";
-            this.colRankType1.MinimumWidth = 111;
-            this.colRankType1.Name = "colRankType1";
-            this.colRankType1.ReadOnly = true;
-            // 
-            // colRankType2
-            // 
-            this.colRankType2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colRankType2.DataPropertyName = "StudentTag2";
-            this.colRankType2.HeaderText = "母群：類別二";
-            this.colRankType2.MinimumWidth = 111;
-            this.colRankType2.Name = "colRankType2";
-            this.colRankType2.ReadOnly = true;
             // 
             // plStudentView
             // 
@@ -885,14 +809,101 @@
             this.labelX11.TabIndex = 2;
             this.labelX11.Text = "參與排名科目：";
             // 
+            // colClass
+            // 
+            this.colClass.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.colClass.DataPropertyName = "ClassName";
+            this.colClass.HeaderText = "班級";
+            this.colClass.MinimumWidth = 59;
+            this.colClass.Name = "colClass";
+            this.colClass.ReadOnly = true;
+            this.colClass.Width = 59;
+            // 
+            // colSeatNum
+            // 
+            this.colSeatNum.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.colSeatNum.DataPropertyName = "SeatNo";
+            this.colSeatNum.HeaderText = "座號";
+            this.colSeatNum.MinimumWidth = 59;
+            this.colSeatNum.Name = "colSeatNum";
+            this.colSeatNum.ReadOnly = true;
+            this.colSeatNum.Width = 59;
+            // 
+            // colStudentNum
+            // 
+            this.colStudentNum.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.colStudentNum.DataPropertyName = "StudentNumber";
+            this.colStudentNum.HeaderText = "學號";
+            this.colStudentNum.MinimumWidth = 59;
+            this.colStudentNum.Name = "colStudentNum";
+            this.colStudentNum.ReadOnly = true;
+            this.colStudentNum.Width = 59;
+            // 
+            // colStudentName
+            // 
+            this.colStudentName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.colStudentName.DataPropertyName = "Name";
+            this.colStudentName.HeaderText = "姓名";
+            this.colStudentName.MinimumWidth = 59;
+            this.colStudentName.Name = "colStudentName";
+            this.colStudentName.ReadOnly = true;
+            this.colStudentName.Width = 59;
+            // 
+            // colSchoolRank
+            // 
+            this.colSchoolRank.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.colSchoolRank.DataPropertyName = "RankGradeYear";
+            this.colSchoolRank.HeaderText = "母群：年排名";
+            this.colSchoolRank.MinimumWidth = 111;
+            this.colSchoolRank.Name = "colSchoolRank";
+            this.colSchoolRank.ReadOnly = true;
+            this.colSchoolRank.Width = 111;
+            // 
+            // colDeptRank
+            // 
+            this.colDeptRank.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.colDeptRank.HeaderText = "母群：科排名";
+            this.colDeptRank.MinimumWidth = 80;
+            this.colDeptRank.Name = "colDeptRank";
+            this.colDeptRank.ReadOnly = true;
+            this.colDeptRank.Width = 111;
+            // 
+            // colClassRank
+            // 
+            this.colClassRank.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.colClassRank.DataPropertyName = "RankClassName";
+            this.colClassRank.HeaderText = "母群：班排名";
+            this.colClassRank.MinimumWidth = 111;
+            this.colClassRank.Name = "colClassRank";
+            this.colClassRank.ReadOnly = true;
+            this.colClassRank.Width = 111;
+            // 
+            // colRankType1
+            // 
+            this.colRankType1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colRankType1.DataPropertyName = "StudentTag1";
+            this.colRankType1.HeaderText = "母群：類別一";
+            this.colRankType1.MinimumWidth = 111;
+            this.colRankType1.Name = "colRankType1";
+            this.colRankType1.ReadOnly = true;
+            // 
+            // colRankType2
+            // 
+            this.colRankType2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colRankType2.DataPropertyName = "StudentTag2";
+            this.colRankType2.HeaderText = "母群：類別二";
+            this.colRankType2.MinimumWidth = 111;
+            this.colRankType2.Name = "colRankType2";
+            this.colRankType2.ReadOnly = true;
+            // 
             // CalculateRegularAssessmentRank
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(859, 556);
             this.Controls.Add(this.pbLoading);
-            this.Controls.Add(this.plSetting);
             this.Controls.Add(this.plStudentView);
+            this.Controls.Add(this.plSetting);
             this.DoubleBuffered = true;
             this.MaximizeBox = true;
             this.Name = "CalculateRegularAssessmentRank";
@@ -948,14 +959,6 @@
         private DevComponents.DotNetBar.ButtonX btnImport;
         private DevComponents.DotNetBar.ButtonX btnCacluate;
         private DevComponents.DotNetBar.Controls.DataGridViewX dgvStudentList;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colClass;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colSeatNum;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentNum;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentName;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colSchoolRank;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colClassRank;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType1;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType2;
         private DevComponents.DotNetBar.PanelEx plStudentView;
         private DevComponents.DotNetBar.ButtonX btnPrevious;
         private System.Windows.Forms.PictureBox pbLoading;
@@ -977,5 +980,14 @@
         private System.Windows.Forms.Panel panel1;
         private DevComponents.DotNetBar.Controls.ListViewEx lvCalcSubject;
         private DevComponents.DotNetBar.LabelX labelX11;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colClass;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colSeatNum;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentNum;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colSchoolRank;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colDeptRank;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colClassRank;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType2;
     }
 }

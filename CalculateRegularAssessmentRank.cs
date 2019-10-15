@@ -314,6 +314,7 @@ ORDER BY
             string studentTag1 = cboStudentTag1.Text.Trim('[', ']');
             string studentTag2 = cboStudentTag2.Text.Trim('[', ']');
             Exception bkwException = null;
+            DataTable deptDataTable = new DataTable();
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
 
@@ -347,6 +348,33 @@ ORDER BY
                         _FilterStudentList = _FilterStudentList.Where(x => !filterStudentID.Contains(x.ID)).ToList();
                     }
 
+                    bkw.ReportProgress(70);
+                    #region 取得篩選學生的科別
+                    string studentIDs = string.Join(",", _FilterStudentList.Select(x => x.ID).ToList());
+
+                    #region 取得科別的SQL
+                    string queryDeptSQL = @"
+SELECT
+	student.id AS student_id
+	, COALESCE(dept.name, '') AS deptname
+FROM
+	student
+	LEFT OUTER JOIN class
+		ON class.id = student.ref_class_id
+	LEFT OUTER JOIN dept
+		ON dept.id = COALESCE(student.ref_dept_id, class.ref_dept_id)
+WHERE
+	student.id IN
+	(
+		" + studentIDs + @"
+	)
+";
+                    #endregion
+
+                    QueryHelper queryHelper = new QueryHelper();
+                    deptDataTable = queryHelper.Select(queryDeptSQL);
+
+                    #endregion
                     bkw.ReportProgress(100);
                     #endregion
                 }
@@ -419,16 +447,18 @@ ORDER BY
                     row.Cells[2].Value = studentView[rowIndex].StudentNumber;
                     row.Cells[3].Value = studentView[rowIndex].Name;
                     row.Cells[4].Value = studentView[rowIndex].RankGradeYear;
-                    row.Cells[5].Value = studentView[rowIndex].RankClassName;
+                    DataRow[] dataRow = deptDataTable.Select("student_id = '" + studentView[rowIndex].studentId + "'");
+                    row.Cells[5].Value = dataRow.First()["deptname"];
+                    row.Cells[6].Value = studentView[rowIndex].RankClassName;
                     if (studentTag1List.Select(x => x.RefStudentID).Contains(studentView[rowIndex].studentId))
                     {
                         tag1 = studentTag1List.First(x => x.RefStudentID == studentView[rowIndex].studentId).Name;
-                        row.Cells[6].Value = tag1;
+                        row.Cells[7].Value = tag1;
                     }
                     if (studentTag2List.Select(x => x.RefStudentID).Contains(studentView[rowIndex].studentId))
                     {
                         tag2 = studentTag2List.First(x => x.RefStudentID == studentView[rowIndex].studentId).Name;
-                        row.Cells[7].Value = tag2;
+                        row.Cells[8].Value = tag2;
                     }
 
                     rowList.Add(row);
@@ -525,9 +555,10 @@ ORDER BY
         '" + row.Tag + @"'::BIGINT AS student_id
         ,'" + row.Cells[3].Value + @"'::TEXT AS student_name
         ,'" + ("" + row.Cells[4].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
-        ,'" + "" + row.Cells[5].Value + @"'::TEXT AS rank_class_name
-        ,'" + "" + row.Cells[6].Value + @"'::TEXT AS rank_tag1
-        ,'" + "" + row.Cells[7].Value + @"'::TEXT AS rank_tag2
+        ,'" + "" + row.Cells[5].Value + @"'::TEXT AS rank_dept_name
+        ,'" + "" + row.Cells[6].Value + @"'::TEXT AS rank_class_name
+        ,'" + "" + row.Cells[7].Value + @"'::TEXT AS rank_tag1
+        ,'" + "" + row.Cells[8].Value + @"'::TEXT AS rank_tag2
     ");
             }
 
