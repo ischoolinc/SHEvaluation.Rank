@@ -2185,12 +2185,12 @@ WITH row AS (
 		, '科排名'::TEXT AS rank_type
 		, rank_dept_name AS rank_name
 		, true AS is_alive
-		, class_count AS matrix_count
-		, AVG(score::DECIMAL)FILTER(WHERE class_rank <= TRUNC(class_count * 0.25)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_25
-		, AVG(score::DECIMAL)FILTER(WHERE class_rank <= TRUNC(class_count * 0.5)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_50
+		, dept_count AS matrix_count
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank <= TRUNC(dept_count * 0.25)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_25
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank <= TRUNC(dept_count * 0.5)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_50
 		, AVG(score::DECIMAL)OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg
-		, AVG(score::DECIMAL)FILTER(WHERE class_rank >= TRUNC(class_count * 0.5)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_50
-		, AVG(score::DECIMAL)FILTER(WHERE class_rank >= TRUNC(class_count * 0.75)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_25
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank >= TRUNC(dept_count * 0.5)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_50
+		, AVG(score::DECIMAL)FILTER(WHERE class_rank >= TRUNC(dept_count * 0.75)) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_25
 		, COUNT(*) FILTER (WHERE 100::DECIMAL<=score::DECIMAL ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_gte100 
 		, COUNT(*) FILTER (WHERE 90::DECIMAL<=score AND score <100::DECIMAL)  OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_90
 		, COUNT(*) FILTER (WHERE 80::DECIMAL<=score AND score <90::DECIMAL)  OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_80
