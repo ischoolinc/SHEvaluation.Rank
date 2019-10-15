@@ -671,27 +671,15 @@ WITH row AS (
 		, course.subject
 		, course.domain
 		, course.credit
-		, exam_template.id AS template_id
-		, exam_template.name AS template_name
-		, ('0'||unnest(xpath('/Extension/ScorePercentage/text()',xmlparse(content exam_template.extension)))::text)::DECIMAL AS exam_weight
-		, 100::DECIMAL- ('0'||unnest(xpath('/Extension/ScorePercentage/text()',xmlparse(content exam_template.extension)))::text)::DECIMAL AS assignment_weight
 		, exam.id AS exam_id
 		, exam.exam_name
 		, student_row.rank_class_name
 		, student_row.rank_grade_year
 		, student_row.rank_tag1
 		, student_row.rank_tag2
-		,CASE
-			WHEN xpath('/Extension/Score/text()',xmlparse(content sce_take.extension)) IS NULL OR array_length(xpath('/Extension/Score/text()',xmlparse(content sce_take.extension)),1) IS NULL 
-			THEN NULL 
-			ELSE 	('0'||unnest(xpath('/Extension/Score/text()',xmlparse(content sce_take.extension)))::text)::DECIMAL  
-		    END AS exam_score
-		,CASE
-			WHEN	 xpath('/Extension/AssignmentScore/text()',xmlparse(content sce_take.extension)) IS NULL OR array_length(xpath('/Extension/AssignmentScore/text()',xmlparse(content sce_take.extension)),1) IS NULL 
-			THEN  NULL 
-		    ELSE	('0'||unnest(xpath('/Extension/AssignmentScore/text()',xmlparse(content sce_take.extension)))::text)::DECIMAL 
-		    END AS assignment_score	
-	FROM  sce_take
+		, sce_take.score
+	FROM  
+        sce_take
 		LEFT JOIN sc_attend 
 			ON ref_sc_attend_id = sc_attend.id
 		LEFT JOIN exam 
@@ -703,39 +691,21 @@ WITH row AS (
             )
 		INNER JOIN student_row
 			ON sc_attend.ref_student_id = student_row.student_id
-		LEFT JOIN exam_template
-			ON  exam_template.id = course.ref_exam_template_id
 		INNER JOIN row
 			ON course.school_year = row.rank_school_year::int
 			AND course.semester = row.rank_semester::int
 			AND student_row.rank_grade_year = row.rank_grade_year::int
 			AND exam.exam_name= row.rank_exam_name
+	WHERE 
+        sce_take.score IS NOT NULL
 
     --2.1 科目成績 年排名
     --2.2 科目成績 班排名
 ), exam_score AS (-------結算定期評量總成績
 	SELECT	
 		score_detail_row.*
-		, CASE
-			WHEN exam_score IS NOT NULL AND assignment_score IS NOT NULL
-			THEN ( exam_score::DECIMAL * exam_weight::DECIMAL + assignment_score::DECIMAL * assignment_weight::DECIMAL )/( exam_weight + assignment_weight )
-			WHEN exam_score IS NOT NULL AND assignment_score IS NULL
-			THEN exam_score::DECIMAL
-			WHEN assignment_score IS NOT NULL AND exam_score IS NULL
-			THEN assignment_score::DECIMAL
-		END AS score
 	FROM 
 		score_detail_row
-	WHERE 
-	    template_id IS NOT NULL
-	    AND (
-		    exam_score IS NOT NULL
-		    OR assignment_score IS NOT NULL 
-	    )
-	    AND (
-		    exam_weight IS NOT NULL
-		    OR assignment_weight IS NOT NULL
-	    )
 ), subject_rank_row AS (--------計算科目排名
 	SELECT
 		exam_score.student_id
