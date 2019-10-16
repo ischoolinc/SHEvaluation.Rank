@@ -730,6 +730,7 @@ WITH row AS (
 			AND exam.exam_name= row.rank_exam_name
 	WHERE 
         sce_take.score IS NOT NULL
+        AND sce_take.score <> -1
 
     --2.1 科目成績 年排名
     --2.2 科目成績 班排名
