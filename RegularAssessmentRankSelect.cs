@@ -314,6 +314,9 @@ WHERE
                 return;
 
             _IsLoading = true;
+            btnExportToExcel.Enabled = false;
+            btnExportToExcel.Text = "資料載入中";
+
             dgvScoreRank.Rows.Clear();
             _FilterExamName = cboExamName.Text;
             _FilterItemName = cboItemName.Text;
@@ -321,6 +324,8 @@ WHERE
             _FilterStudentNumber = txtStudentNum.Text;
 
             List<DataGridViewRow> newList = new List<DataGridViewRow>();
+
+
             foreach (DataGridViewRow gridViewRow in _RowList)
             {
                 var show = true;
@@ -387,6 +392,8 @@ WHERE
             }
 
             _IsLoading = false;
+            btnExportToExcel.Text = "匯出";
+            btnExportToExcel.Enabled = true;
         }
 
         private void dgvScoreRank_CellContentClick(object sender, DataGridViewCellEventArgs e)
