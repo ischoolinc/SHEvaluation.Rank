@@ -2245,9 +2245,9 @@ WITH row AS (
 		, COUNT(*) FILTER (WHERE score<10::DECIMAL) OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_lt10 
 		, student_id
 		, score
-		, class_rank AS rank
-		, classrank_percentage AS percentile
-		, classrank_pr AS pr
+		, dept_rank AS rank
+		, deptrank_percentage AS percentile
+		, deptrank_pr AS pr
 		, rank_class_name
 		, rank_tag1
 		, rank_tag2
@@ -2446,9 +2446,9 @@ WITH row AS (
 		, COUNT(*) FILTER (WHERE score<10::DECIMAL) OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_lt10 
 		, student_id
 		, score
-		, class_rank AS rank
-		, classrank_percentage AS percentile
-		, classrank_pr AS pr
+		, dept_rank AS rank
+		, deptrank_percentage AS percentile
+		, deptrank_pr AS pr
 		, rank_class_name
 		, rank_tag1
 		, rank_tag2
@@ -2563,9 +2563,9 @@ WITH row AS (
 		, COUNT(*) FILTER (WHERE score<10::DECIMAL) OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_lt10 
 		, student_id
 		, score
-		, class_rank AS rank
-		, classrank_percentage AS percentile
-		, classrank_pr AS pr
+		, dept_rank AS rank
+		, deptrank_percentage AS percentile
+		, deptrank_pr AS pr
 		, rank_class_name
 		, rank_tag1
 		, rank_tag2
@@ -2764,9 +2764,9 @@ WITH row AS (
 		, COUNT(*) FILTER (WHERE score<10::DECIMAL) OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_lt10 
 		, student_id
 		, score
-		, class_rank AS rank
-		, classrank_percentage AS percentile
-		, classrank_pr AS pr
+		, dept_rank AS rank
+		, deptrank_percentage AS percentile
+		, deptrank_pr AS pr
 		, rank_class_name
 		, rank_tag1
 		, rank_tag2
@@ -2965,9 +2965,9 @@ WITH row AS (
 		, COUNT(*) FILTER (WHERE score<10::DECIMAL) OVER (PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_lt10 
 		, student_id
 		, score
-		, class_rank AS rank
-		, classrank_percentage AS percentile
-		, classrank_pr AS pr
+		, dept_rank AS rank
+		, deptrank_percentage AS percentile
+		, deptrank_pr AS pr
 		, rank_class_name
 		, rank_tag1
 		, rank_tag2
