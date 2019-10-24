@@ -127,6 +127,7 @@ WHERE
                 && !string.IsNullOrEmpty(cboScoreType.Text)
                 && !string.IsNullOrEmpty(cboScoreCategory.Text))
             {
+                btnExportToExcel.Enabled = false;
                 _IsLoading = true;
                 dgvScoreRank.Rows.Clear();
                 _LoadSchoolYear = cboSchoolYear.Text;
@@ -300,7 +301,10 @@ WHERE
                         FISCA.Presentation.MotherForm.SetStatusBarMessage("資料讀取完成");
                         pbLoading.Visible = false;
                         _IsLoading = false;
+                        btnExportToExcel.Text = "資料載入中";
                         FillingDataGridView(null, null);
+                        btnExportToExcel.Text = "匯出";
+                        btnExportToExcel.Enabled = true;
                     }
                 };
 
