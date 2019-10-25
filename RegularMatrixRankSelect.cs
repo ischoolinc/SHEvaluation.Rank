@@ -90,6 +90,7 @@ FROM
     INNER JOIN rank_matrix
 		ON rank_matrix.school_year = source.school_year
 		AND rank_matrix.semester = source.semester
+		AND rank_matrix.grade_year = source.grade_year
 		AND rank_matrix.item_type = source.item_type
 		AND rank_matrix.ref_exam_id = source.ref_exam_id
 		AND rank_matrix.item_name = source.item_name
