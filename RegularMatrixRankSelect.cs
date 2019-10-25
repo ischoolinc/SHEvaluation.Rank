@@ -16,14 +16,28 @@ namespace SHEvaluation.Rank
 {
     public partial class RegularMatrixRankSelect : BaseForm
     {
-        bool _IsLoading = false;
-        string _RankName = "", _RankMatrixId = "";
-        Dictionary<string, string> _MatrixIdDic = new Dictionary<string, string>();
+        private bool _IsLoading = false;
+        private string _RankName = "";
+        private string _RankMatrixID = "";
+        private string _RefStudentID = "";
+        private Dictionary<string, string> _MatrixIdDic = new Dictionary<string, string>();
 
-        public RegularMatrixRankSelect(string rankMatrixId, string schoolYear, string semester, string scoreType, string scoreCategory, string examName, string itemName, string rankType, string rankName)
+        public RegularMatrixRankSelect(
+            string rankMatrixID
+            , string refStudentID
+            , string schoolYear
+            , string semester
+            , string scoreType
+            , string scoreCategory
+            , string examName
+            , string itemName
+            , string rankType
+            , string rankName)
         {
             InitializeComponent();
 
+            _RankMatrixID = rankMatrixID;
+            _RefStudentID = refStudentID;
             lbSchoolYear.Text = schoolYear;
             lbSemester.Text = semester;
             lbScoreType.Text = scoreType;
@@ -32,7 +46,6 @@ namespace SHEvaluation.Rank
             lbItemName.Text = itemName;
             lbRankType.Text = rankType;
             _RankName = rankName;
-            _RankMatrixId = rankMatrixId;
         }
 
         private void RegularMatrixRankSelect_Load(object sender, EventArgs e)
@@ -59,11 +72,16 @@ FROM
 		, rank_matrix.semester 
 		, rank_matrix.is_alive
 		, rank_matrix.create_time
-	FROM rank_matrix 
-		LEFT OUTER JOIN 
-			rank_detail ON rank_detail.ref_matrix_id = rank_matrix.id
-		LEFT OUTER JOIN 
-			exam ON exam.id=rank_matrix.ref_exam_id
+	FROM 
+        rank_matrix 
+		LEFT OUTER JOIN rank_detail 
+            ON rank_detail.ref_matrix_id = rank_matrix.id
+		LEFT OUTER JOIN exam 
+            ON exam.id=rank_matrix.ref_exam_id
+    WHERE
+        rank_matrix.id IN (
+            SELECT ref_matrix_id FROM rank_detail WHERE ref_student_id = " + _RefStudentID + @"::BIGINT
+        )
 	ORDER BY
 		create_time DESC
 ) AS Rank_Table

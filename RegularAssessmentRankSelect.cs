@@ -177,6 +177,7 @@ FROM
         , rank_matrix.school_year
         , rank_matrix.semester 
         , rank_matrix.create_time
+        , rank_detail.ref_student_id 
     FROM rank_matrix 
         LEFT OUTER JOIN 
             rank_detail ON rank_detail.ref_matrix_id = rank_matrix.id 
@@ -294,6 +295,7 @@ WHERE
                             gridViewRow.Cells[14].Value = Int32.TryParse("" + dt.Rows[rowIndex]["percentile"], out tryParseInt) ? (int?)tryParseInt : null;
                             gridViewRow.Cells[16].Value = "" + dt.Rows[rowIndex]["school_year"];
                             gridViewRow.Cells[17].Value = "" + dt.Rows[rowIndex]["semester"];
+                            gridViewRow.Tag = "" + dt.Rows[rowIndex]["ref_student_id"];
                             _RowList.Add(gridViewRow);
                         }
                         #endregion
@@ -412,15 +414,17 @@ WHERE
                 return;
             }
 
-            RegularMatrixRankSelect frm = new RegularMatrixRankSelect("" + dgvScoreRank[0, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[16, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[17, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[1, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[2, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[3, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[4, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[5, e.RowIndex].Value
-                                                      , "" + dgvScoreRank[6, e.RowIndex].Value);
+            RegularMatrixRankSelect frm = new RegularMatrixRankSelect(
+                "" + dgvScoreRank[0, e.RowIndex].Value
+                , "" + dgvScoreRank.Rows[e.RowIndex].Tag
+                , "" + dgvScoreRank[16, e.RowIndex].Value
+                , "" + dgvScoreRank[17, e.RowIndex].Value
+                , "" + dgvScoreRank[1, e.RowIndex].Value
+                , "" + dgvScoreRank[2, e.RowIndex].Value
+                , "" + dgvScoreRank[3, e.RowIndex].Value
+                , "" + dgvScoreRank[4, e.RowIndex].Value
+                , "" + dgvScoreRank[5, e.RowIndex].Value
+                , "" + dgvScoreRank[6, e.RowIndex].Value);
             frm.ShowDialog();
         }
 
