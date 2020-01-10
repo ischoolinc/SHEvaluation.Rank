@@ -171,6 +171,7 @@ FROM
         , student.seat_no 
         , student.student_number
         , student.name AS student_name
+        , rank_detail.ref_student_id
         , rank_detail.score
         , rank_detail.rank
         , rank_detail.pr
@@ -279,6 +280,7 @@ WHERE
                             gridViewRow.Cells[13].Value = Int32.TryParse("" + dt.Rows[rowIndex]["percentile"], out tryParseInt) ? (int?)tryParseInt : null;
                             gridViewRow.Cells[15].Value = "" + dt.Rows[rowIndex]["school_year"];
                             gridViewRow.Cells[16].Value = "" + dt.Rows[rowIndex]["semester"];
+                            gridViewRow.Tag = "" + dt.Rows[rowIndex]["ref_student_id"];
                             _RowList.Add(gridViewRow);
                         }
                         #endregion
@@ -383,6 +385,7 @@ WHERE
             }
 
             SemesterMatrixRankSelect frm = new SemesterMatrixRankSelect("" + dgvScoreRank[0, e.RowIndex].Value
+                                                      , "" + dgvScoreRank.Rows[e.RowIndex].Tag
                                                       , "" + dgvScoreRank[15, e.RowIndex].Value
                                                       , "" + dgvScoreRank[16, e.RowIndex].Value
                                                       , "" + dgvScoreRank[1, e.RowIndex].Value

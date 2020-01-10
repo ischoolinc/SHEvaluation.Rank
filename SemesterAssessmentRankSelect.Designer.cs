@@ -28,8 +28,8 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
             this.MatrixId = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ScoreCategory = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ItemName = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -153,8 +153,8 @@
             // score
             // 
             this.score.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            dataGridViewCellStyle1.NullValue = null;
-            this.score.DefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle3.NullValue = null;
+            this.score.DefaultCellStyle = dataGridViewCellStyle3;
             this.score.HeaderText = "排名分數";
             this.score.MinimumWidth = 85;
             this.score.Name = "score";
@@ -232,7 +232,7 @@
             this.btnExit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnExit.BackColor = System.Drawing.Color.Transparent;
             this.btnExit.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnExit.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.btnExit.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.btnExit.Location = new System.Drawing.Point(1031, 551);
             this.btnExit.Name = "btnExit";
             this.btnExit.Size = new System.Drawing.Size(91, 28);
@@ -250,10 +250,10 @@
             // 
             this.labelX8.BackgroundStyle.Class = "";
             this.labelX8.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX8.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX8.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX8.Location = new System.Drawing.Point(468, 49);
             this.labelX8.Name = "labelX8";
-            this.labelX8.Size = new System.Drawing.Size(47, 22);
+            this.labelX8.Size = new System.Drawing.Size(54, 24);
             this.labelX8.TabIndex = 63;
             this.labelX8.Text = "母群：";
             // 
@@ -266,10 +266,10 @@
             // 
             this.labelX7.BackgroundStyle.Class = "";
             this.labelX7.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX7.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX7.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX7.Location = new System.Drawing.Point(233, 49);
             this.labelX7.Name = "labelX7";
-            this.labelX7.Size = new System.Drawing.Size(47, 22);
+            this.labelX7.Size = new System.Drawing.Size(54, 24);
             this.labelX7.TabIndex = 62;
             this.labelX7.Text = "項目：";
             // 
@@ -282,10 +282,10 @@
             // 
             this.labelX5.BackgroundStyle.Class = "";
             this.labelX5.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX5.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX5.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX5.Location = new System.Drawing.Point(12, 49);
             this.labelX5.Name = "labelX5";
-            this.labelX5.Size = new System.Drawing.Size(47, 22);
+            this.labelX5.Size = new System.Drawing.Size(54, 24);
             this.labelX5.TabIndex = 61;
             this.labelX5.Text = "類別：";
             // 
@@ -299,10 +299,10 @@
             // 
             this.labelX4.BackgroundStyle.Class = "";
             this.labelX4.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX4.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX4.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX4.Location = new System.Drawing.Point(910, 15);
             this.labelX4.Name = "labelX4";
-            this.labelX4.Size = new System.Drawing.Size(47, 22);
+            this.labelX4.Size = new System.Drawing.Size(54, 24);
             this.labelX4.TabIndex = 60;
             this.labelX4.Text = "學號：";
             // 
@@ -315,10 +315,10 @@
             // 
             this.labelX3.BackgroundStyle.Class = "";
             this.labelX3.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX3.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX3.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX3.Location = new System.Drawing.Point(468, 12);
             this.labelX3.Name = "labelX3";
-            this.labelX3.Size = new System.Drawing.Size(47, 22);
+            this.labelX3.Size = new System.Drawing.Size(54, 24);
             this.labelX3.TabIndex = 59;
             this.labelX3.Text = "類型：";
             // 
@@ -331,10 +331,10 @@
             // 
             this.labelX2.BackgroundStyle.Class = "";
             this.labelX2.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX2.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX2.Location = new System.Drawing.Point(233, 12);
             this.labelX2.Name = "labelX2";
-            this.labelX2.Size = new System.Drawing.Size(47, 22);
+            this.labelX2.Size = new System.Drawing.Size(54, 24);
             this.labelX2.TabIndex = 58;
             this.labelX2.Text = "學期：";
             // 
@@ -347,10 +347,10 @@
             // 
             this.labelX1.BackgroundStyle.Class = "";
             this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX1.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX1.Location = new System.Drawing.Point(12, 12);
             this.labelX1.Name = "labelX1";
-            this.labelX1.Size = new System.Drawing.Size(62, 22);
+            this.labelX1.Size = new System.Drawing.Size(69, 24);
             this.labelX1.TabIndex = 57;
             this.labelX1.Text = "學年度：";
             // 
@@ -380,14 +380,14 @@
             this.view,
             this.SchoolYear,
             this.Semester});
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle2.Font = new System.Drawing.Font("Microsoft JhengHei", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvScoreRank.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle4.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle4.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle4.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvScoreRank.DefaultCellStyle = dataGridViewCellStyle4;
             this.dgvScoreRank.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvScoreRank.HighlightSelectedColumnHeaders = false;
             this.dgvScoreRank.Location = new System.Drawing.Point(12, 82);
@@ -416,7 +416,7 @@
             // 
             this.txtStudentNum.Border.Class = "TextBoxBorder";
             this.txtStudentNum.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.txtStudentNum.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.txtStudentNum.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.txtStudentNum.Location = new System.Drawing.Point(966, 13);
             this.txtStudentNum.Name = "txtStudentNum";
             this.txtStudentNum.Size = new System.Drawing.Size(156, 27);
@@ -429,7 +429,7 @@
             this.btnExportToExcel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.btnExportToExcel.BackColor = System.Drawing.Color.Transparent;
             this.btnExportToExcel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnExportToExcel.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.btnExportToExcel.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.btnExportToExcel.Location = new System.Drawing.Point(12, 551);
             this.btnExportToExcel.Name = "btnExportToExcel";
             this.btnExportToExcel.Size = new System.Drawing.Size(91, 28);
@@ -443,10 +443,10 @@
             this.cboItemName.DisplayMember = "Text";
             this.cboItemName.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboItemName.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboItemName.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboItemName.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboItemName.FormattingEnabled = true;
             this.cboItemName.ItemHeight = 21;
-            this.cboItemName.Location = new System.Drawing.Point(289, 47);
+            this.cboItemName.Location = new System.Drawing.Point(289, 48);
             this.cboItemName.Name = "cboItemName";
             this.cboItemName.Size = new System.Drawing.Size(164, 27);
             this.cboItemName.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -458,10 +458,10 @@
             this.cboScoreCategory.DisplayMember = "Text";
             this.cboScoreCategory.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboScoreCategory.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboScoreCategory.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboScoreCategory.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboScoreCategory.FormattingEnabled = true;
             this.cboScoreCategory.ItemHeight = 21;
-            this.cboScoreCategory.Location = new System.Drawing.Point(65, 47);
+            this.cboScoreCategory.Location = new System.Drawing.Point(72, 48);
             this.cboScoreCategory.Name = "cboScoreCategory";
             this.cboScoreCategory.Size = new System.Drawing.Size(159, 27);
             this.cboScoreCategory.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -473,7 +473,7 @@
             this.cboScoreType.DisplayMember = "Text";
             this.cboScoreType.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboScoreType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboScoreType.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboScoreType.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboScoreType.FormattingEnabled = true;
             this.cboScoreType.ItemHeight = 21;
             this.cboScoreType.Location = new System.Drawing.Point(524, 10);
@@ -488,7 +488,7 @@
             this.cboSemester.DisplayMember = "Text";
             this.cboSemester.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboSemester.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboSemester.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboSemester.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboSemester.FormattingEnabled = true;
             this.cboSemester.ItemHeight = 21;
             this.cboSemester.Location = new System.Drawing.Point(289, 10);
@@ -503,7 +503,7 @@
             this.cboSchoolYear.DisplayMember = "Text";
             this.cboSchoolYear.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboSchoolYear.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboSchoolYear.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboSchoolYear.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboSchoolYear.FormattingEnabled = true;
             this.cboSchoolYear.ItemHeight = 21;
             this.cboSchoolYear.Location = new System.Drawing.Point(84, 10);
@@ -518,10 +518,10 @@
             this.cboRankType.DisplayMember = "Text";
             this.cboRankType.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboRankType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboRankType.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboRankType.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboRankType.FormattingEnabled = true;
             this.cboRankType.ItemHeight = 21;
-            this.cboRankType.Location = new System.Drawing.Point(524, 47);
+            this.cboRankType.Location = new System.Drawing.Point(524, 48);
             this.cboRankType.Name = "cboRankType";
             this.cboRankType.Size = new System.Drawing.Size(167, 27);
             this.cboRankType.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
