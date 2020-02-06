@@ -61,6 +61,17 @@ namespace SHEvaluation.Rank
                     semesterAssessmentRankSelect.ShowDialog();
                 };
             }
+
+            {
+                var key = "CA11374B-7F8C-4288-836A-0DDE65DB56B9";
+                RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "技職繁星多學期成績固定排名計算"));
+                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星多學期成績固定排名計算"].Enable = FISCA.Permission.UserAcl.Current[key].Executable;
+                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星多學期成績固定排名計算"].Click += delegate
+                {
+                    CalculateTechnologyAssessmentRankStep1 ctrs1 = new CalculateTechnologyAssessmentRankStep1();
+                    ctrs1.ShowDialog();
+                };
+            }
         }
     }
 }
