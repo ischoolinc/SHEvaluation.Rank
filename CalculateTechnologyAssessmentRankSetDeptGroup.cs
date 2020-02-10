@@ -88,6 +88,9 @@ namespace SHEvaluation.Rank
 
             RegistrationDeptList.SaveAll();
 
+            // 排序
+            RegistrationDeptList = RegistrationDeptList.OrderBy(x => x.DeptName).ToList();
+
             // 載入畫面
             dgData.Rows.Clear();
             foreach (udtRegistrationDept data in RegistrationDeptList)
@@ -96,11 +99,12 @@ namespace SHEvaluation.Rank
                 dgData.Rows[rowIdx].Tag = data;
                 dgData.Rows[rowIdx].Cells[colDeptName.Index].Value = data.DeptName;
                 dgData.Rows[rowIdx].Cells[colRefDeptName.Index].Value = data.RegDeptName;
-                dgData.Rows[rowIdx].Cells[colGroupCode.Index].Value = data.RegGroupCode;
+                dgData.Rows[rowIdx].Cells[colGroupCode.Index].Value = data.RegGroupCode;            
                 dgData.Rows[rowIdx].Cells[colGroupName.Index].Value = data.RegGroupName;
             }
 
             lblMsg.Text = "共 " + dgData.Rows.Count + " 筆";
+            
             btnSave.Enabled = dgData.Enabled = true;
         }
 

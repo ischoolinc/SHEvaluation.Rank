@@ -37,6 +37,11 @@
             this.btnSetDeptGroup = new DevComponents.DotNetBar.ButtonX();
             this.btnSetSubject = new DevComponents.DotNetBar.ButtonX();
             this.btnNext = new DevComponents.DotNetBar.ButtonX();
+            this.lblMsg = new DevComponents.DotNetBar.LabelX();
+            this.labelX1 = new DevComponents.DotNetBar.LabelX();
+            this.iptParseNum = new DevComponents.Editors.IntegerInput();
+            this.labelX2 = new DevComponents.DotNetBar.LabelX();
+            ((System.ComponentModel.ISupportInitialize)(this.iptParseNum)).BeginInit();
             this.SuspendLayout();
             // 
             // cboStudentTag2
@@ -44,7 +49,6 @@
             this.cboStudentTag2.DisplayMember = "Text";
             this.cboStudentTag2.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboStudentTag2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboStudentTag2.Enabled = false;
             this.cboStudentTag2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentTag2.FormattingEnabled = true;
             this.cboStudentTag2.ItemHeight = 21;
@@ -53,6 +57,7 @@
             this.cboStudentTag2.Size = new System.Drawing.Size(242, 27);
             this.cboStudentTag2.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboStudentTag2.TabIndex = 2;
+            this.cboStudentTag2.SelectedIndexChanged += new System.EventHandler(this.cboStudentTag2_SelectedIndexChanged);
             // 
             // labelX5
             // 
@@ -84,6 +89,7 @@
             this.cboStudentTag1.Size = new System.Drawing.Size(242, 27);
             this.cboStudentTag1.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboStudentTag1.TabIndex = 1;
+            this.cboStudentTag1.SelectedIndexChanged += new System.EventHandler(this.cboStudentTag1_SelectedIndexChanged);
             // 
             // labelX4
             // 
@@ -115,6 +121,7 @@
             this.cboStudentFilter.Size = new System.Drawing.Size(242, 27);
             this.cboStudentFilter.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboStudentFilter.TabIndex = 0;
+            this.cboStudentFilter.SelectedIndexChanged += new System.EventHandler(this.cboStudentFilter_SelectedIndexChanged);
             // 
             // labelX3
             // 
@@ -139,7 +146,7 @@
             this.btnSetDeptGroup.AutoSize = true;
             this.btnSetDeptGroup.BackColor = System.Drawing.Color.Transparent;
             this.btnSetDeptGroup.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSetDeptGroup.Location = new System.Drawing.Point(22, 162);
+            this.btnSetDeptGroup.Location = new System.Drawing.Point(22, 257);
             this.btnSetDeptGroup.Name = "btnSetDeptGroup";
             this.btnSetDeptGroup.Size = new System.Drawing.Size(118, 25);
             this.btnSetDeptGroup.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -153,7 +160,7 @@
             this.btnSetSubject.AutoSize = true;
             this.btnSetSubject.BackColor = System.Drawing.Color.Transparent;
             this.btnSetSubject.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSetSubject.Location = new System.Drawing.Point(165, 162);
+            this.btnSetSubject.Location = new System.Drawing.Point(165, 257);
             this.btnSetSubject.Name = "btnSetSubject";
             this.btnSetSubject.Size = new System.Drawing.Size(118, 25);
             this.btnSetSubject.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -167,7 +174,7 @@
             this.btnNext.AutoSize = true;
             this.btnNext.BackColor = System.Drawing.Color.Transparent;
             this.btnNext.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnNext.Location = new System.Drawing.Point(410, 162);
+            this.btnNext.Location = new System.Drawing.Point(410, 257);
             this.btnNext.Name = "btnNext";
             this.btnNext.Size = new System.Drawing.Size(75, 25);
             this.btnNext.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -175,11 +182,81 @@
             this.btnNext.Text = "下一步";
             this.btnNext.Click += new System.EventHandler(this.btnNext_Click);
             // 
+            // lblMsg
+            // 
+            this.lblMsg.BackColor = System.Drawing.Color.Transparent;
+            // 
+            // 
+            // 
+            this.labelX1.BackgroundStyle.Class = "";
+            this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblMsg.Location = new System.Drawing.Point(22, 186);
+            this.lblMsg.Name = "lblMsg";
+            this.lblMsg.Size = new System.Drawing.Size(479, 56);
+            this.lblMsg.TabIndex = 12;
+            this.lblMsg.Text = "說明：\r\n學生沒有設定學群不會被加入排名。";
+            this.lblMsg.WordWrap = true;
+            // 
+            // labelX1
+            // 
+            this.labelX1.AutoSize = true;
+            this.labelX1.BackColor = System.Drawing.Color.Transparent;
+            // 
+            // 
+            // 
+            this.labelX1.BackgroundStyle.Class = "";
+            this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX1.ForeColor = System.Drawing.Color.Black;
+            this.labelX1.Location = new System.Drawing.Point(30, 149);
+            this.labelX1.Name = "labelX1";
+            this.labelX1.Size = new System.Drawing.Size(85, 24);
+            this.labelX1.TabIndex = 13;
+            this.labelX1.Text = "成績小數第";
+            // 
+            // iptParseNum
+            // 
+            this.iptParseNum.AllowEmptyState = false;
+            this.iptParseNum.BackColor = System.Drawing.Color.Transparent;
+            // 
+            // 
+            // 
+            this.iptParseNum.BackgroundStyle.Class = "DateTimeInputBackground";
+            this.iptParseNum.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.iptParseNum.ButtonFreeText.Shortcut = DevComponents.DotNetBar.eShortcut.F2;
+            this.iptParseNum.Location = new System.Drawing.Point(120, 149);
+            this.iptParseNum.Name = "iptParseNum";
+            this.iptParseNum.ShowUpDown = true;
+            this.iptParseNum.Size = new System.Drawing.Size(59, 25);
+            this.iptParseNum.TabIndex = 14;
+            this.iptParseNum.ValueChanged += new System.EventHandler(this.iptParseNum_ValueChanged);
+            // 
+            // labelX2
+            // 
+            this.labelX2.AutoSize = true;
+            this.labelX2.BackColor = System.Drawing.Color.Transparent;
+            // 
+            // 
+            // 
+            this.labelX2.BackgroundStyle.Class = "";
+            this.labelX2.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX2.ForeColor = System.Drawing.Color.Black;
+            this.labelX2.Location = new System.Drawing.Point(185, 149);
+            this.labelX2.Name = "labelX2";
+            this.labelX2.Size = new System.Drawing.Size(69, 24);
+            this.labelX2.TabIndex = 15;
+            this.labelX2.Text = "四捨五入";
+            // 
             // CalculateTechnologyAssessmentRankStep1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(517, 207);
+            this.ClientSize = new System.Drawing.Size(518, 303);
+            this.Controls.Add(this.labelX2);
+            this.Controls.Add(this.iptParseNum);
+            this.Controls.Add(this.labelX1);
+            this.Controls.Add(this.lblMsg);
             this.Controls.Add(this.btnNext);
             this.Controls.Add(this.btnSetSubject);
             this.Controls.Add(this.btnSetDeptGroup);
@@ -193,6 +270,7 @@
             this.Name = "CalculateTechnologyAssessmentRankStep1";
             this.Text = "技職繁星多學期成績固定排名設定";
             this.Load += new System.EventHandler(this.CalculateTechnologyAssessmentRankStep1_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.iptParseNum)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -209,5 +287,9 @@
         private DevComponents.DotNetBar.ButtonX btnSetDeptGroup;
         private DevComponents.DotNetBar.ButtonX btnSetSubject;
         private DevComponents.DotNetBar.ButtonX btnNext;
+        private DevComponents.DotNetBar.LabelX lblMsg;
+        private DevComponents.DotNetBar.LabelX labelX1;
+        private DevComponents.Editors.IntegerInput iptParseNum;
+        private DevComponents.DotNetBar.LabelX labelX2;
     }
 }

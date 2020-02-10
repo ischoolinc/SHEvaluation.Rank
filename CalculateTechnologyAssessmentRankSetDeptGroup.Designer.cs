@@ -30,12 +30,12 @@
         {
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dgData = new DevComponents.DotNetBar.Controls.DataGridViewX();
-            this.btnSave = new DevComponents.DotNetBar.ButtonX();
-            this.btnExit = new DevComponents.DotNetBar.ButtonX();
             this.colDeptName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colRefDeptName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colGroupCode = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colGroupName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnSave = new DevComponents.DotNetBar.ButtonX();
+            this.btnExit = new DevComponents.DotNetBar.ButtonX();
             this.lblMsg = new DevComponents.DotNetBar.LabelX();
             ((System.ComponentModel.ISupportInitialize)(this.dgData)).BeginInit();
             this.SuspendLayout();
@@ -69,6 +69,30 @@
             this.dgData.Size = new System.Drawing.Size(636, 228);
             this.dgData.TabIndex = 0;
             // 
+            // colDeptName
+            // 
+            this.colDeptName.HeaderText = "科別名稱";
+            this.colDeptName.Name = "colDeptName";
+            this.colDeptName.ReadOnly = true;
+            this.colDeptName.Width = 150;
+            // 
+            // colRefDeptName
+            // 
+            this.colRefDeptName.HeaderText = "報名科名稱";
+            this.colRefDeptName.Name = "colRefDeptName";
+            this.colRefDeptName.Width = 150;
+            // 
+            // colGroupCode
+            // 
+            this.colGroupCode.HeaderText = "報名群代碼";
+            this.colGroupCode.Name = "colGroupCode";
+            // 
+            // colGroupName
+            // 
+            this.colGroupName.HeaderText = "報名群名稱";
+            this.colGroupName.Name = "colGroupName";
+            this.colGroupName.Width = 150;
+            // 
             // btnSave
             // 
             this.btnSave.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
@@ -99,32 +123,9 @@
             this.btnExit.Text = "離開";
             this.btnExit.Click += new System.EventHandler(this.btnExit_Click);
             // 
-            // colDeptName
-            // 
-            this.colDeptName.HeaderText = "科別名稱";
-            this.colDeptName.Name = "colDeptName";
-            this.colDeptName.ReadOnly = true;
-            this.colDeptName.Width = 150;
-            // 
-            // colRefDeptName
-            // 
-            this.colRefDeptName.HeaderText = "報名科名稱";
-            this.colRefDeptName.Name = "colRefDeptName";
-            this.colRefDeptName.Width = 150;
-            // 
-            // colGroupCode
-            // 
-            this.colGroupCode.HeaderText = "報名群代碼";
-            this.colGroupCode.Name = "colGroupCode";
-            // 
-            // colGroupName
-            // 
-            this.colGroupName.HeaderText = "報名群名稱";
-            this.colGroupName.Name = "colGroupName";
-            this.colGroupName.Width = 150;
-            // 
             // lblMsg
             // 
+            this.lblMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lblMsg.BackColor = System.Drawing.Color.Transparent;
             // 
             // 

@@ -140,6 +140,7 @@
     <Compile Include="CalculateTechnologyAssessmentRankStep2.Designer.cs">
       <DependentUpon>CalculateTechnologyAssessmentRankStep2.cs</DependentUpon>
     </Compile>
+    <Compile Include="DAO\GradeYearSemesterInfo.cs" />
     <Compile Include="DAO\QueryData.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
