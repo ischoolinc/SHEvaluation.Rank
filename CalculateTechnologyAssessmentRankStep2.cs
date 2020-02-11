@@ -13,12 +13,14 @@ using SHEvaluation.Rank.UDT;
 using System.Xml;
 using SHEvaluation.Rank.DAO;
 
+
 namespace SHEvaluation.Rank
 {
     public partial class CalculateTechnologyAssessmentRankStep2 : BaseForm
     {
 
         List<StudentRecord> StudentFilterList = new List<StudentRecord>();
+        List<string> RankStudentIDList = new List<string>();
         List<StudentTagRecord> Tag1Student = new List<StudentTagRecord>();
         List<StudentTagRecord> Tag2Student = new List<StudentTagRecord>();
         Dictionary<string, List<GradeYearSemesterInfo>> StudGradeYearSemsDict = new Dictionary<string, List<GradeYearSemesterInfo>>();
@@ -103,8 +105,12 @@ namespace SHEvaluation.Rank
             #region 將資料填入dataGridView
             List<DataGridViewRow> rowList = new List<DataGridViewRow>();
 
+            // 學生群索引
             StudentGroupDict.Clear();
+            // 畫面上學生
             dgvStudentList.Rows.Clear();
+            // 需要排名學生ID
+            RankStudentIDList.Clear();
 
             bool hasGroup = false;
             foreach (var student in studentViewList)
@@ -149,7 +155,11 @@ namespace SHEvaluation.Rank
 
                 // 有群別再加入
                 if (hasGroup)
+                {
+                    RankStudentIDList.Add(student.studentID);
                     rowList.Add(row);
+                }
+
             }
 
             dgvStudentList.Rows.AddRange(rowList.ToArray());
@@ -170,59 +180,6 @@ namespace SHEvaluation.Rank
         private void btnCacluate_Click(object sender, EventArgs e)
         {
 
-            #region 產生學生清單的SQL
-            List<string> studentSqlList = new List<string>();
-            foreach (DataGridViewRow row in dgvStudentList.Rows)
-            {
-                #region 單筆學生資料的SQL
-                string studentSql = @"
-    SELECT
-        '" + row.Tag + @"'::BIGINT AS student_id
-        , '" + "" + row.Cells[colStudentName.Index].Value + @"'::TEXT AS student_name
-        , '" + ("" + row.Cells[colSchoolRank.Index].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
-        , '" + "" + row.Cells[colDeptName.Index].Value + @"'::TEXT AS rank_dept_name
-        , '" + "" + row.Cells[colClassRank.Index].Value + @"'::TEXT AS rank_class_name
-        , '" + "" + row.Cells[colRankType1.Index].Value + @"'::TEXT AS rank_tag1
-        , '" + "" + row.Cells[colRankType2.Index].Value + @"'::TEXT AS rank_tag2
-        , '" + "" + row.Cells[colRegGroup.Index].Value + @"'::TEXT AS rank_group_name
-    ";
-                #endregion
-                //把單筆學生資料的SQL加入到List
-                studentSqlList.Add(studentSql);
-            }
-
-            //把剛剛組好的學生資料的SQL的List拆開
-            #region 所有學生資料的SQL
-            string studentListSql = @"
-WITH student_list AS
-(
-    " + string.Join(@"
-    UNION ALL", studentSqlList) + @"
-)
-";
-            #endregion
-            #endregion
-
-
-            string calculationSetting = "";
-
-            #region 產生計算規則的SQL
-            #region 產生要儲存到rank_batch的setting的Xml
-            XmlDocument xdoc = new XmlDocument();
-            var settingEle = xdoc.CreateElement("Setting");
-            settingEle.SetAttribute("考試名稱", "學期成績");
-            settingEle.SetAttribute("不排名學生類別", SelStudentFilter);
-            settingEle.SetAttribute("類別一", SelStudentTag1);
-            settingEle.SetAttribute("類別二", SelStudentTag2);
-            settingEle.SetAttribute("年級", "3");
-
-            calculationSetting = settingEle.OuterXml;
-            #endregion
-            #endregion
-
-            #region 產生學生學期成績對照表
-
-            #endregion
 
 
 
@@ -239,6 +196,226 @@ WITH student_list AS
 
             bkw.DoWork += delegate
             {
+                bkw.ReportProgress(1);
+                #region 產生學生清單的SQL
+                List<string> studentSqlList = new List<string>();
+                foreach (DataGridViewRow row in dgvStudentList.Rows)
+                {
+                    #region 單筆學生資料的SQL
+                    string studentSql = @"
+    SELECT
+        '" + row.Tag + @"'::BIGINT AS student_id
+        , '" + "" + row.Cells[colStudentName.Index].Value + @"'::TEXT AS student_name
+        , '" + ("" + row.Cells[colSchoolRank.Index].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
+        , '" + "" + row.Cells[colDeptName.Index].Value + @"'::TEXT AS rank_dept_name
+        , '" + "" + row.Cells[colClassRank.Index].Value + @"'::TEXT AS rank_class_name
+        , '" + "" + row.Cells[colRankType1.Index].Value + @"'::TEXT AS rank_tag1
+        , '" + "" + row.Cells[colRankType2.Index].Value + @"'::TEXT AS rank_tag2
+        , '" + "" + row.Cells[colRegGroup.Index].Value + @"'::TEXT AS rank_group_name
+    ";
+                    #endregion
+                    //把單筆學生資料的SQL加入到List
+                    studentSqlList.Add(studentSql);
+                }
+
+                //把剛剛組好的學生資料的SQL的List拆開
+                #region 所有學生資料的SQL
+                string studentListSql = @"
+WITH student_list AS
+(
+    " + string.Join(@"
+    UNION ALL", studentSqlList) + @"
+)
+";
+                #endregion
+                #endregion
+
+                //// debug 
+                //string fiPath = Application.StartupPath + @"\sql1.txt";
+                //using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
+                //{
+                //    fi.WriteLine(studentListSql);
+                //}
+
+
+                string calculationSetting = "";
+
+                #region 產生計算規則的SQL
+                #region 產生要儲存到rank_batch的setting的Xml
+                XmlDocument xdoc = new XmlDocument();
+                var settingEle = xdoc.CreateElement("Setting");
+                settingEle.SetAttribute("考試名稱", "學期成績");
+                settingEle.SetAttribute("不排名學生類別", SelStudentFilter);
+                settingEle.SetAttribute("類別一", SelStudentTag1);
+                settingEle.SetAttribute("類別二", SelStudentTag2);
+                settingEle.SetAttribute("年級", "3");
+
+                calculationSetting = settingEle.OuterXml;
+                #endregion
+                #endregion
+
+                #region 產生學生學期成績對照表
+                List<string> StudSemsSQLList = new List<string>();
+                foreach (string sid in RankStudentIDList)
+                {
+                    if (StudGradeYearSemsDict.ContainsKey(sid))
+                    {
+                        foreach (GradeYearSemesterInfo gs in StudGradeYearSemsDict[sid])
+                        {
+                            // 取五學期 3 年級第2學期不取
+                            if (gs.GradeYear == 3 && gs.Semester == 2)
+                                continue;
+
+                            string qry = @"
+SELECT " + sid + @" ::BIGINT AS student_id
+, " + gs.GradeYear + @" ::INT AS sems_grade_year
+, " + gs.Semester + @" ::INT AS sems_semester 
+, " + gs.SchoolYear + @" ::INT AS sems_school_year";
+
+                            StudSemsSQLList.Add(qry);
+                        }
+                    }
+                }
+
+                string StudSemsSQL = @"
+, student_sems AS
+(
+    " + string.Join(@"
+    UNION ALL", StudSemsSQLList) + @"
+)";
+
+                string insertRankSql = @"
+" + studentListSql + @"
+" + StudSemsSQL + @"
+,parse_number AS
+(
+    SELECT " + parseNumber + @" ::INT AS parse_number
+)
+,entry_score_list AS
+(
+	SELECT		
+		student_list.student_id
+		, student_list.student_name
+        , student_list.rank_grade_year
+        , student_list.rank_dept_name
+		, student_list.rank_class_name
+		, student_list.rank_tag1
+		, student_list.rank_tag2
+		, student_list.rank_group_name		
+		, array_to_string(xpath('/root/Entry/@分項', xmlparse(content  concat('<root>', entry_score_ele , '</root>'))),'')::TEXT As entry
+		, AVG(NULLIF(array_to_string(xpath('/root/Entry/@成績', xmlparse(content   concat('<root>', entry_score_ele , '</root>'))), ''),'')::DECIMAL) AS entry_score
+        ,(select parse_number from parse_number)::INT AS parse_number
+	FROM
+	(
+		SELECT
+			sems_entry_score.*
+			, unnest(xpath('/root/SemesterEntryScore/Entry', xmlparse(content  concat('<root>', sems_entry_score.score_info , '</root>') ))) As entry_score_ele
+		FROM
+		sems_entry_score
+	) AS sems_entry_score_ext
+	INNER JOIN student_list
+		ON sems_entry_score_ext.ref_student_id = student_list.student_id
+	INNER JOIN student_sems
+		ON sems_entry_score_ext.school_year = student_sems.sems_school_year::INT
+		AND sems_entry_score_ext.ref_student_id = student_sems.student_id::INT
+        AND sems_entry_score_ext.semester = student_sems.sems_semester::INT
+		AND sems_entry_score_ext.grade_year = student_sems.sems_grade_year::INT 
+GROUP BY student_list.student_id
+        , student_list.student_name
+        , student_list.rank_grade_year
+        , student_list.rank_dept_name
+        , student_list.rank_class_name
+        , student_list.rank_tag1
+        , student_list.rank_tag2
+        , student_list.rank_group_name
+        , entry
+)
+,entry_score_avg_list AS (
+        SELECT 
+            student_id
+            , student_name
+            , rank_grade_year
+            , rank_dept_name
+            , rank_class_name
+            , rank_tag1
+            , rank_tag2
+            , rank_group_name
+            , entry
+            , ROUND(entry_score,parse_number) AS entry_score 
+        FROM entry_score_list WHERE entry = '學業(原始)'
+) 
+,entry_rank_list AS
+(
+	SELECT
+		 rank_grade_year
+		, rank_dept_name
+		, rank_class_name		
+		, entry::TEXT AS item_name
+		, student_id
+		, rank_tag1
+		, rank_tag2
+        ,rank_group_name
+		, entry_score
+		, RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score DESC) AS grade_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score DESC) AS dept_rank
+		, RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score DESC) AS class_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score DESC) AS tag1_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score DESC) AS tag2_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name, entry ORDER BY entry_score DESC) AS group_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score ASC) AS grade_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score ASC) AS dept_rank_reverse
+        , RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score ASC) AS class_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score ASC) AS tag1_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score ASC) AS tag2_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name, entry ORDER BY entry_score ASC) AS group_rank_reverse
+		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, entry) AS grade_count
+		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, entry) AS dept_count
+		, COUNT(student_id) OVER(PARTITION BY rank_class_name, entry) AS class_count
+		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1, entry) AS tag1_count
+		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2, entry) AS tag2_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_group_name, entry) AS group_count
+	FROM
+		entry_score_avg_list
+	WHERE
+		entry IS NOT NULL
+		AND entry_score IS NOT NULL
+), entry_rank_expand AS
+(
+	SELECT
+		entry_rank_list.*
+		, FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
+		, FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
+		, FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
+		, FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
+		, FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+        , FLOOR((group_rank::DECIMAL - 1)*100::DECIMAL / group_count) + 1 AS grouprank_percentage
+        , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
+        , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
+        , FLOOR((tag1_rank_reverse::DECIMAL-1)*100::DECIMAL/tag1_count) AS tag1ank_pr
+        , FLOOR((tag2_rank_reverse::DECIMAL-1)*100::DECIMAL/tag2_count) AS tag2rank_pr
+        , FLOOR((group_rank_reverse::DECIMAL-1)*100::DECIMAL/group_count) AS grouprank_pr
+	FROM
+		entry_rank_list
+)
+
+";
+
+                // debug 
+                string fiPath = Application.StartupPath + @"\sql1.sql";
+                using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
+                {
+                    fi.WriteLine(insertRankSql);
+                }
+
+                #endregion
+
+
+
+
+
+
+                bkw.ReportProgress(100);
             };
 
             bkw.RunWorkerCompleted += delegate

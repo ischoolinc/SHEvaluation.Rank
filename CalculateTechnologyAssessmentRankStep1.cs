@@ -326,7 +326,7 @@ student.id IN
             cboStudentFilter.Enabled = value;
             cboStudentTag1.Enabled = value;
             cboStudentTag2.Enabled = value;
-
+            iptParseNum.Enabled = value;
         }
 
         private void cboStudentFilter_SelectedIndexChanged(object sender, EventArgs e)

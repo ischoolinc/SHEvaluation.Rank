@@ -146,7 +146,7 @@
             this.btnSetDeptGroup.AutoSize = true;
             this.btnSetDeptGroup.BackColor = System.Drawing.Color.Transparent;
             this.btnSetDeptGroup.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSetDeptGroup.Location = new System.Drawing.Point(22, 257);
+            this.btnSetDeptGroup.Location = new System.Drawing.Point(30, 205);
             this.btnSetDeptGroup.Name = "btnSetDeptGroup";
             this.btnSetDeptGroup.Size = new System.Drawing.Size(118, 25);
             this.btnSetDeptGroup.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -160,7 +160,7 @@
             this.btnSetSubject.AutoSize = true;
             this.btnSetSubject.BackColor = System.Drawing.Color.Transparent;
             this.btnSetSubject.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSetSubject.Location = new System.Drawing.Point(165, 257);
+            this.btnSetSubject.Location = new System.Drawing.Point(173, 205);
             this.btnSetSubject.Name = "btnSetSubject";
             this.btnSetSubject.Size = new System.Drawing.Size(118, 25);
             this.btnSetSubject.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -174,7 +174,7 @@
             this.btnNext.AutoSize = true;
             this.btnNext.BackColor = System.Drawing.Color.Transparent;
             this.btnNext.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnNext.Location = new System.Drawing.Point(410, 257);
+            this.btnNext.Location = new System.Drawing.Point(416, 205);
             this.btnNext.Name = "btnNext";
             this.btnNext.Size = new System.Drawing.Size(75, 25);
             this.btnNext.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -188,13 +188,13 @@
             // 
             // 
             // 
-            this.labelX1.BackgroundStyle.Class = "";
-            this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lblMsg.Location = new System.Drawing.Point(22, 186);
+            this.lblMsg.BackgroundStyle.Class = "";
+            this.lblMsg.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblMsg.Location = new System.Drawing.Point(22, 245);
             this.lblMsg.Name = "lblMsg";
-            this.lblMsg.Size = new System.Drawing.Size(479, 56);
+            this.lblMsg.Size = new System.Drawing.Size(479, 36);
             this.lblMsg.TabIndex = 12;
-            this.lblMsg.Text = "說明：\r\n學生沒有設定學群不會被加入排名。";
+            this.lblMsg.Text = "說明：學生沒有設定學群不會被加入排名。";
             this.lblMsg.WordWrap = true;
             // 
             // labelX1
@@ -252,7 +252,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(518, 303);
+            this.ClientSize = new System.Drawing.Size(518, 308);
             this.Controls.Add(this.labelX2);
             this.Controls.Add(this.iptParseNum);
             this.Controls.Add(this.labelX1);
