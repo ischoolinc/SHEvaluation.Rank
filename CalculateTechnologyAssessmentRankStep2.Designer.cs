@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.btnPrevious = new DevComponents.DotNetBar.ButtonX();
             this.dgvStudentList = new DevComponents.DotNetBar.Controls.DataGridViewX();
             this.colClass = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -44,7 +44,9 @@
             this.btnCacluate = new DevComponents.DotNetBar.ButtonX();
             this.labelX13 = new DevComponents.DotNetBar.LabelX();
             this.lblMsg = new DevComponents.DotNetBar.LabelX();
+            this.pbLoading = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStudentList)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).BeginInit();
             this.SuspendLayout();
             // 
             // btnPrevious
@@ -83,14 +85,14 @@
             this.colRankType1,
             this.colRankType2,
             this.colRegGroup});
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle2.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle1;
             this.dgvStudentList.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvStudentList.HighlightSelectedColumnHeaders = false;
             this.dgvStudentList.Location = new System.Drawing.Point(24, 47);
@@ -243,11 +245,23 @@
             this.lblMsg.Size = new System.Drawing.Size(813, 23);
             this.lblMsg.TabIndex = 42;
             // 
+            // pbLoading
+            // 
+            this.pbLoading.BackColor = System.Drawing.Color.Transparent;
+            this.pbLoading.Image = global::SHEvaluation.Rank.Properties.Resources.loading;
+            this.pbLoading.Location = new System.Drawing.Point(547, 215);
+            this.pbLoading.Name = "pbLoading";
+            this.pbLoading.Size = new System.Drawing.Size(32, 32);
+            this.pbLoading.TabIndex = 58;
+            this.pbLoading.TabStop = false;
+            this.pbLoading.Visible = false;
+            // 
             // CalculateTechnologyAssessmentRankStep2
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1127, 463);
+            this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.lblMsg);
             this.Controls.Add(this.btnPrevious);
             this.Controls.Add(this.dgvStudentList);
@@ -258,6 +272,7 @@
             this.Text = "技職繁星多學期成績固定排名計算";
             this.Load += new System.EventHandler(this.CalculateTechnologyAssessmentRankStep2_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dgvStudentList)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -280,5 +295,6 @@
         private DevComponents.DotNetBar.ButtonX btnCacluate;
         private DevComponents.DotNetBar.LabelX labelX13;
         private DevComponents.DotNetBar.LabelX lblMsg;
+        private System.Windows.Forms.PictureBox pbLoading;
     }
 }
