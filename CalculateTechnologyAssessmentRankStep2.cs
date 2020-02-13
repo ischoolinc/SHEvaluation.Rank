@@ -12,7 +12,7 @@ using K12.Data;
 using SHEvaluation.Rank.UDT;
 using System.Xml;
 using SHEvaluation.Rank.DAO;
-
+using FISCA.Data;
 
 namespace SHEvaluation.Rank
 {
@@ -248,10 +248,8 @@ namespace SHEvaluation.Rank
 
         private void btnCacluate_Click(object sender, EventArgs e)
         {
-
-
-
-
+            btnCacluate.Enabled = false;
+            btnPrevious.Enabled = false;
 
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
@@ -313,11 +311,11 @@ WITH student_list AS
                 #region 產生要儲存到rank_batch的setting的Xml
                 XmlDocument xdoc = new XmlDocument();
                 var settingEle = xdoc.CreateElement("Setting");
-                settingEle.SetAttribute("考試名稱", "學期成績");
                 settingEle.SetAttribute("不排名學生類別", SelStudentFilter);
                 settingEle.SetAttribute("類別一", SelStudentTag1);
-                settingEle.SetAttribute("類別二", SelStudentTag2);
+                //settingEle.SetAttribute("類別二", SelStudentTag2);
                 settingEle.SetAttribute("年級", "3");
+                settingEle.SetAttribute("成績四捨五入小數位數", "3");
 
                 calculationSetting = settingEle.OuterXml;
                 #endregion
@@ -419,12 +417,12 @@ GROUP BY student_list.student_id
 		 rank_grade_year
 		, rank_dept_name
 		, rank_class_name		
-		, entry::TEXT AS item_name
+		, '學業'::TEXT AS item_name
 		, student_id
 		, rank_tag1
 		, rank_tag2
         ,rank_group_name
-		, entry_score
+		, entry_score AS avg_score
 		, RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score DESC) AS grade_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score DESC) AS dept_rank
 		, RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score DESC) AS class_rank
@@ -648,6 +646,7 @@ student_id
         ,student_name
         ,rank_grade_year
         ,rank_dept_name
+        ,'專業及實習'::TEXT AS item_name
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
@@ -864,6 +863,7 @@ student_id
         ,student_name
         ,rank_grade_year
         ,rank_dept_name
+        ,'國文'::TEXT AS item_name
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
@@ -1078,6 +1078,7 @@ student_id
         ,student_name
         ,rank_grade_year
         ,rank_dept_name
+        ,'英文'::TEXT AS item_name
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
@@ -1292,6 +1293,7 @@ student_id
         ,student_name
         ,rank_grade_year
         ,rank_dept_name
+        ,'數學'::TEXT AS item_name
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
@@ -1342,8 +1344,330 @@ student_id
 
 ";
 
+                StringBuilder sbScoreListSQL = new StringBuilder();
+                List<string> scNameList = new List<string>();
+                scNameList.Add("entry_rank_expand");
+                scNameList.Add("subject_score_pro_avg_expand");
+                scNameList.Add("subject_score_chinese_avg_expand");
+                scNameList.Add("subject_score_english_avg_expand");
+                scNameList.Add("subject_score_math_avg_expand");
 
-                insertRankSql += sbSubjectSore.ToString() + Strsubject_score_pro_avg_list + sbSubjectChineseScore.ToString() + Strsubject_score_chinese_avg_list + sbSubjectEnglishScore.ToString() + Strsubject_score_english_avg_list + sbSubjectMathScore.ToString() + Strsubject_score_math_avg_list;
+                sbScoreListSQL.AppendLine(", score_list AS(");
+                int sbScoreItemNum = 1;
+                foreach (string name in scNameList)
+                {
+                    // 成績總表
+                    string scoreListSQL = @"
+    SELECT
+		-1 :: INT AS rank_school_year
+		, -1 :: INT AS rank_semester
+		, rank_grade_year
+		, '5學期/技職繁星比序'::TEXT AS item_type
+		, -1 :: INT AS ref_exam_id
+		, item_name
+		, '年排名'::TEXT AS rank_type
+		, '' || rank_grade_year || '年級'::TEXT AS rank_name
+		, true AS is_alive
+		, grade_count AS matrix_count		
+		, student_id
+		, avg_score AS score
+		, grade_rank AS rank
+		, graderank_percentage AS percentile
+        , graderank_pr AS pr
+		, rank_dept_name
+		, rank_class_name
+		, rank_tag1
+		, rank_tag2
+        , rank_group_name
+	FROM
+		" + name + @"
+     UNION ALL
+    SELECT
+		-1 :: INT AS rank_school_year
+		, -1 :: INT AS rank_semester
+		, rank_grade_year
+		, '5學期/技職繁星比序'::TEXT AS item_type
+		, -1 :: INT AS ref_exam_id
+		, item_name
+		, '科排名'::TEXT AS rank_type
+		, rank_dept_name::TEXT AS rank_name
+		, true AS is_alive
+		, dept_count AS matrix_count		
+		, student_id
+		, avg_score AS score
+		, dept_rank AS rank
+		, deptrank_percentage AS percentile
+        , deptrank_pr AS pr
+		, rank_dept_name
+		, rank_class_name
+		, rank_tag1
+		, rank_tag2
+        , rank_group_name
+	FROM
+		" + name + @"
+UNION ALL
+    SELECT
+		-1 :: INT AS rank_school_year
+		, -1 :: INT AS rank_semester
+		, rank_grade_year
+		, '5學期/技職繁星比序'::TEXT AS item_type
+		, -1 :: INT AS ref_exam_id
+		, item_name
+		, '班排名'::TEXT AS rank_type
+		, rank_class_name::TEXT AS rank_name
+		, true AS is_alive
+		, class_count AS matrix_count		
+		, student_id
+		, avg_score AS score
+		, class_rank AS rank
+		, classrank_percentage AS percentile
+        , classrank_pr AS pr
+		, rank_dept_name
+		, rank_class_name
+		, rank_tag1
+		, rank_tag2
+        , rank_group_name
+	FROM
+		" + name + @"
+UNION ALL
+    SELECT
+		-1 :: INT AS rank_school_year
+		, -1 :: INT AS rank_semester
+		, rank_grade_year
+		, '5學期/技職繁星比序'::TEXT AS item_type
+		, -1 :: INT AS ref_exam_id
+		, item_name
+		, '類別1排名'::TEXT AS rank_type
+		, rank_tag1::TEXT AS rank_name
+		, true AS is_alive
+		, tag1_count AS matrix_count		
+		, student_id
+		, avg_score AS score
+		, tag1_rank AS rank
+		, tag1rank_percentage AS percentile
+        , tag1ank_pr AS pr
+		, rank_dept_name
+		, rank_class_name
+		, rank_tag1
+		, rank_tag2
+        , rank_group_name
+	FROM
+		" + name + @"
+	WHERE
+		rank_tag1 IS NOT NULL
+		AND rank_tag1 <> ''
+
+ UNION ALL
+    SELECT
+		-1 :: INT AS rank_school_year
+		, -1 :: INT AS rank_semester
+		, rank_grade_year
+		, '5學期/技職繁星比序'::TEXT AS item_type
+		, -1 :: INT AS ref_exam_id
+		, item_name
+		, '學群排名'::TEXT AS rank_type
+		, rank_group_name::TEXT AS rank_name
+		, true AS is_alive
+		, group_count AS matrix_count		
+		, student_id
+		, avg_score AS score
+		, group_rank AS rank
+		, grouprank_percentage AS percentile
+        , grouprank_pr AS pr
+		, rank_dept_name
+		, rank_class_name
+		, rank_tag1
+		, rank_tag2
+        , rank_group_name
+	FROM
+		" + name + @"
+";
+                    sbScoreListSQL.AppendLine(scoreListSQL);
+
+                    if (sbScoreItemNum > 0 && sbScoreItemNum <= 4)
+                        sbScoreListSQL.AppendLine(" UNION ALL");
+                    sbScoreItemNum++;
+
+                }
+                sbScoreListSQL.AppendLine(")");
+                //sbScoreListSQL.AppendLine("select * from score_list");
+
+
+                //select * from score_list
+                //";
+
+
+
+
+
+
+                string insertUpdateSQL = @"
+, update_data AS
+(
+	UPDATE
+		rank_matrix
+	SET
+		is_alive = NULL	
+	WHERE
+		rank_matrix.is_alive = true
+		AND rank_matrix.school_year = -1
+		AND rank_matrix.semester = -1
+		AND rank_matrix.grade_year = 3		
+		AND rank_matrix.item_type = '5學期/技職繁星比序'
+
+	RETURNING rank_matrix.*
+), insert_batch_data AS
+(
+	INSERT INTO
+		rank_batch
+		(
+			school_year
+			, semester
+			, calculation_description
+			, setting
+		)
+		VALUES
+        (" + K12.Data.School.DefaultSchoolYear + @"
+            ," + K12.Data.School.DefaultSemester + @"
+            ,'" + K12.Data.School.DefaultSchoolYear + "學年度 第" + K12.Data.School.DefaultSemester + @"學期 技職繁星比序'
+            ,'" + calculationSetting + @"'
+        )
+
+	RETURNING *
+)
+, insert_matrix_data AS
+(
+	INSERT INTO
+		rank_matrix
+		(
+			ref_batch_id
+			, school_year
+			, semester
+			, grade_year
+			, item_type
+			, ref_exam_id
+			, item_name
+			, rank_type
+			, rank_name
+			, is_alive
+			, matrix_count			
+		)
+		SELECT
+			insert_batch_data.id AS ref_batch_id
+			, score_list.rank_school_year::INT
+			, score_list.rank_semester::INT
+			, score_list.rank_grade_year::INT
+			, score_list.item_type
+			, score_list.ref_exam_id
+			, score_list.item_name
+			, score_list.rank_type
+			, score_list.rank_name
+			, score_list.is_alive
+			, score_list.matrix_count			
+		FROM
+			score_list
+			LEFT OUTER JOIN update_data
+				ON update_data.id  < 0 --永遠為false，只是為了讓insert等待update執行完
+			CROSS JOIN insert_batch_data
+		GROUP BY
+			insert_batch_data.id
+			, score_list.rank_school_year
+			, score_list.rank_semester
+			, score_list.rank_grade_year
+			, score_list.item_type
+			, score_list.ref_exam_id
+			, score_list.item_name
+			, score_list.rank_type
+			, score_list.rank_name
+			, score_list.is_alive
+			, score_list.matrix_count			
+
+	RETURNING *
+)
+, insert_batch_student_data AS
+(
+	INSERT INTO
+		rank_batch_student
+		(
+			ref_batch_id
+			, ref_student_id
+			, grade_year
+			, matrix_grade
+			, matrix_class
+            , matrix_dept
+			, matrix_tag1
+			, matrix_tag2
+		)
+		SELECT
+			insert_batch_data.id AS ref_batch_id
+			, score_list.student_id
+			, score_list.rank_grade_year::INT
+			, score_list.rank_grade_year||'年級' AS matrix_grade
+			, score_list.rank_class_name
+            , score_list.rank_dept_name
+			, score_list.rank_tag1
+			, score_list.rank_group_name
+		FROM
+			score_list
+			CROSS JOIN insert_batch_data
+)
+, insert_detail_data AS
+(
+	INSERT INTO
+		rank_detail
+		(
+			ref_matrix_id
+			, ref_student_id
+			, score
+			, rank
+            ,pr
+			, percentile
+		)
+		SELECT
+			insert_matrix_data.id AS ref_matrix_id
+			, score_list.student_id AS ref_student_id
+			, score_list.score AS score
+			, score_list.rank AS rank
+            , score_list.pr AS pr
+			, score_list.percentile AS percentile
+		FROM
+			score_list
+			LEFT OUTER JOIN
+				insert_matrix_data
+					ON insert_matrix_data.school_year = score_list.rank_school_year::INT
+					AND insert_matrix_data.semester = score_list.rank_semester::INT
+					AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
+					AND insert_matrix_data.item_type = score_list.item_type
+					AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
+					AND insert_matrix_data.item_name = score_list.item_name
+					AND insert_matrix_data.rank_type = score_list.rank_type
+					AND insert_matrix_data.rank_name = score_list.rank_name
+)
+SELECT
+	score_list.rank_school_year::INT
+	, score_list.rank_semester::INT
+	, score_list.rank_grade_year::INT
+	, score_list.item_type
+	, score_list.ref_exam_id
+	, score_list.item_name
+	, score_list.rank_type
+	, score_list.rank_name
+	, score_list.student_id
+FROM 
+	score_list
+	LEFT OUTER JOIN insert_matrix_data
+		ON insert_matrix_data.school_year = score_list.rank_school_year::INT
+		AND insert_matrix_data.semester = score_list.rank_semester::INT
+		AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
+		AND insert_matrix_data.item_type = score_list.item_type
+		AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
+		AND insert_matrix_data.item_name = score_list.item_name
+		AND insert_matrix_data.rank_type = score_list.rank_type
+		AND insert_matrix_data.rank_name = score_list.rank_name
+
+                ";
+
+                insertRankSql += sbSubjectSore.ToString() + Strsubject_score_pro_avg_list + sbSubjectChineseScore.ToString() + Strsubject_score_chinese_avg_list + sbSubjectEnglishScore.ToString() + Strsubject_score_english_avg_list + sbSubjectMathScore.ToString() + Strsubject_score_math_avg_list + sbScoreListSQL.ToString() + insertUpdateSQL;
 
 
                 // debug 
@@ -1355,6 +1679,10 @@ student_id
 
                 #endregion
 
+                bkw.ReportProgress(50);
+
+                QueryHelper queryHelper = new QueryHelper();
+                queryHelper.Select(insertRankSql);
 
 
 
@@ -1381,6 +1709,11 @@ student_id
             };
 
             bkw.RunWorkerAsync();
+        }
+
+        private void CalculateTechnologyAssessmentRankStep2_Resize(object sender, EventArgs e)
+        {
+            pbLoading.Location = new Point(this.Width / 2 - 20, this.Height / 2 - 20);
         }
     }
 }

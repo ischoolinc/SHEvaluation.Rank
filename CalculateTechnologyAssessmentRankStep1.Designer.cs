@@ -52,7 +52,7 @@
             this.cboStudentTag2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentTag2.FormattingEnabled = true;
             this.cboStudentTag2.ItemHeight = 21;
-            this.cboStudentTag2.Location = new System.Drawing.Point(120, 109);
+            this.cboStudentTag2.Location = new System.Drawing.Point(128, 343);
             this.cboStudentTag2.Name = "cboStudentTag2";
             this.cboStudentTag2.Size = new System.Drawing.Size(242, 27);
             this.cboStudentTag2.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -70,7 +70,7 @@
             this.labelX5.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX5.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX5.ForeColor = System.Drawing.Color.Black;
-            this.labelX5.Location = new System.Drawing.Point(22, 111);
+            this.labelX5.Location = new System.Drawing.Point(30, 345);
             this.labelX5.Name = "labelX5";
             this.labelX5.Size = new System.Drawing.Size(100, 24);
             this.labelX5.TabIndex = 11;
@@ -146,7 +146,7 @@
             this.btnSetDeptGroup.AutoSize = true;
             this.btnSetDeptGroup.BackColor = System.Drawing.Color.Transparent;
             this.btnSetDeptGroup.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSetDeptGroup.Location = new System.Drawing.Point(30, 205);
+            this.btnSetDeptGroup.Location = new System.Drawing.Point(30, 170);
             this.btnSetDeptGroup.Name = "btnSetDeptGroup";
             this.btnSetDeptGroup.Size = new System.Drawing.Size(118, 25);
             this.btnSetDeptGroup.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -160,7 +160,7 @@
             this.btnSetSubject.AutoSize = true;
             this.btnSetSubject.BackColor = System.Drawing.Color.Transparent;
             this.btnSetSubject.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSetSubject.Location = new System.Drawing.Point(173, 205);
+            this.btnSetSubject.Location = new System.Drawing.Point(173, 170);
             this.btnSetSubject.Name = "btnSetSubject";
             this.btnSetSubject.Size = new System.Drawing.Size(118, 25);
             this.btnSetSubject.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -174,7 +174,7 @@
             this.btnNext.AutoSize = true;
             this.btnNext.BackColor = System.Drawing.Color.Transparent;
             this.btnNext.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnNext.Location = new System.Drawing.Point(416, 205);
+            this.btnNext.Location = new System.Drawing.Point(416, 170);
             this.btnNext.Name = "btnNext";
             this.btnNext.Size = new System.Drawing.Size(75, 25);
             this.btnNext.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -190,7 +190,7 @@
             // 
             this.lblMsg.BackgroundStyle.Class = "";
             this.lblMsg.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lblMsg.Location = new System.Drawing.Point(22, 245);
+            this.lblMsg.Location = new System.Drawing.Point(22, 210);
             this.lblMsg.Name = "lblMsg";
             this.lblMsg.Size = new System.Drawing.Size(479, 36);
             this.lblMsg.TabIndex = 12;
@@ -208,7 +208,7 @@
             this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX1.ForeColor = System.Drawing.Color.Black;
-            this.labelX1.Location = new System.Drawing.Point(30, 149);
+            this.labelX1.Location = new System.Drawing.Point(30, 114);
             this.labelX1.Name = "labelX1";
             this.labelX1.Size = new System.Drawing.Size(85, 24);
             this.labelX1.TabIndex = 13;
@@ -224,7 +224,7 @@
             this.iptParseNum.BackgroundStyle.Class = "DateTimeInputBackground";
             this.iptParseNum.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.iptParseNum.ButtonFreeText.Shortcut = DevComponents.DotNetBar.eShortcut.F2;
-            this.iptParseNum.Location = new System.Drawing.Point(120, 149);
+            this.iptParseNum.Location = new System.Drawing.Point(120, 114);
             this.iptParseNum.Name = "iptParseNum";
             this.iptParseNum.ShowUpDown = true;
             this.iptParseNum.Size = new System.Drawing.Size(59, 25);
@@ -242,7 +242,7 @@
             this.labelX2.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX2.ForeColor = System.Drawing.Color.Black;
-            this.labelX2.Location = new System.Drawing.Point(185, 149);
+            this.labelX2.Location = new System.Drawing.Point(185, 114);
             this.labelX2.Name = "labelX2";
             this.labelX2.Size = new System.Drawing.Size(69, 24);
             this.labelX2.TabIndex = 15;
@@ -252,7 +252,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(518, 308);
+            this.ClientSize = new System.Drawing.Size(518, 256);
             this.Controls.Add(this.labelX2);
             this.Controls.Add(this.iptParseNum);
             this.Controls.Add(this.labelX1);

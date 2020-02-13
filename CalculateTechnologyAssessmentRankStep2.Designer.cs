@@ -271,6 +271,7 @@
             this.Name = "CalculateTechnologyAssessmentRankStep2";
             this.Text = "技職繁星多學期成績固定排名計算";
             this.Load += new System.EventHandler(this.CalculateTechnologyAssessmentRankStep2_Load);
+            this.Resize += new System.EventHandler(this.CalculateTechnologyAssessmentRankStep2_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.dgvStudentList)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).EndInit();
             this.ResumeLayout(false);
