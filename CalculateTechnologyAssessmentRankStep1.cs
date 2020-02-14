@@ -122,6 +122,33 @@ namespace SHEvaluation.Rank
                     _StudentFilterList = _StudentFilterList.Where(x => !studentIDList.Contains(x.ID)).ToList();
                 }
 
+
+                AccessHelper accessHelper = new AccessHelper();
+
+                Dictionary<string, udtRegistrationDept> tmpDeptDict = new Dictionary<string, udtRegistrationDept>();
+                // 設定群別 key: DeptName
+                List<udtRegistrationDept> udtDeptList = accessHelper.Select<udtRegistrationDept>();
+                foreach (udtRegistrationDept data in udtDeptList)
+                {
+                    if (!tmpDeptDict.ContainsKey(data.DeptName))
+                        tmpDeptDict.Add(data.DeptName, data);
+                }
+                ctrr2.SetRegistrationDept(tmpDeptDict);
+
+                // 設定科目 key: SubjectName
+                Dictionary<string, udtRegistrationSubject> tmpSubjDict = new Dictionary<string, udtRegistrationSubject>();
+
+                List<udtRegistrationSubject> udtSubjList = accessHelper.Select<udtRegistrationSubject>();
+
+                foreach (udtRegistrationSubject data in udtSubjList)
+                {
+                    if (!tmpSubjDict.ContainsKey(data.SubjectName))
+                        tmpSubjDict.Add(data.SubjectName, data);
+                }
+                ctrr2.SetRegistrationSubject(tmpSubjDict);
+
+
+
                 #region 取得篩選學生的科別
                 string studentIDs = string.Join(",", _StudentFilterList.Select(x => x.ID).ToList());
 
@@ -161,29 +188,7 @@ student.id IN
 
                 #endregion
 
-                AccessHelper accessHelper = new AccessHelper();
 
-                Dictionary<string, udtRegistrationDept> tmpDeptDict = new Dictionary<string, udtRegistrationDept>();
-                // 設定群別 key: DeptName
-                List<udtRegistrationDept> udtDeptList = accessHelper.Select<udtRegistrationDept>();
-                foreach (udtRegistrationDept data in udtDeptList)
-                {
-                    if (!tmpDeptDict.ContainsKey(data.DeptName))
-                        tmpDeptDict.Add(data.DeptName, data);
-                }
-                ctrr2.SetRegistrationDept(tmpDeptDict);
-
-                // 設定科目 key: SubjectName
-                Dictionary<string, udtRegistrationSubject> tmpSubjDict = new Dictionary<string, udtRegistrationSubject>();
-
-                List<udtRegistrationSubject> udtSubjList = accessHelper.Select<udtRegistrationSubject>();
-
-                foreach (udtRegistrationSubject data in udtSubjList)
-                {
-                    if (!tmpSubjDict.ContainsKey(data.SubjectName))
-                        tmpSubjDict.Add(data.SubjectName, data);
-                }
-                ctrr2.SetRegistrationSubject(tmpSubjDict);
             }
             catch (Exception ex)
             {

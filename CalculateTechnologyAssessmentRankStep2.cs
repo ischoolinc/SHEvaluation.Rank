@@ -182,10 +182,12 @@ namespace SHEvaluation.Rank
 
                 if (deptDict.ContainsKey(student.studentID))
                 {
-                    row.Cells[colDeptName.Index].Value = deptDict[student.studentID];
+
                     if (RegistrationDeptDict.ContainsKey(deptDict[student.studentID]))
                     {
                         row.Cells[colRegGroup.Index].Value = RegistrationDeptDict[deptDict[student.studentID]].RegGroupName;
+
+                        row.Cells[colDeptName.Index].Value = RegistrationDeptDict[deptDict[student.studentID]].RegDeptName;
 
                         if (!string.IsNullOrEmpty(RegistrationDeptDict[deptDict[student.studentID]].RegGroupName))
                             hasGroup = true;
@@ -315,7 +317,7 @@ WITH student_list AS
                 settingEle.SetAttribute("類別一", SelStudentTag1);
                 //settingEle.SetAttribute("類別二", SelStudentTag2);
                 settingEle.SetAttribute("年級", "3");
-                settingEle.SetAttribute("成績四捨五入小數位數", "3");
+                settingEle.SetAttribute("成績四捨五入小數位數", parseNumber.ToString());
 
                 calculationSetting = settingEle.OuterXml;
                 #endregion
