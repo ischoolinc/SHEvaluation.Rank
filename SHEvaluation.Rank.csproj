@@ -116,6 +116,12 @@
     <Compile Include="CalculateSemesterAssessmentRank.Designer.cs">
       <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
     </Compile>
+    <Compile Include="CalculateTechnologyAssessmentRankSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CalculateTechnologyAssessmentRankSelect.Designer.cs">
+      <DependentUpon>CalculateTechnologyAssessmentRankSelect.cs</DependentUpon>
+    </Compile>
     <Compile Include="CalculateTechnologyAssessmentRankSetDeptGroup.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -175,6 +181,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="CalculateSemesterAssessmentRank.resx">
       <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CalculateTechnologyAssessmentRankSelect.resx">
+      <DependentUpon>CalculateTechnologyAssessmentRankSelect.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="CalculateTechnologyAssessmentRankSetDeptGroup.resx">
       <DependentUpon>CalculateTechnologyAssessmentRankSetDeptGroup.cs</DependentUpon>

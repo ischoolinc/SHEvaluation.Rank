@@ -192,9 +192,9 @@
             this.lblMsg.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.lblMsg.Location = new System.Drawing.Point(22, 210);
             this.lblMsg.Name = "lblMsg";
-            this.lblMsg.Size = new System.Drawing.Size(479, 36);
+            this.lblMsg.Size = new System.Drawing.Size(479, 79);
             this.lblMsg.TabIndex = 12;
-            this.lblMsg.Text = "說明：\r\n學生沒有設定學群與學業成績不滿五學期不會被加入排名。";
+            this.lblMsg.Text = "說明：\r\n1.學生沒有設定學群與學業成績不滿五學期不會被加入排名。\r\n2.成績來源：原始成績。";
             this.lblMsg.WordWrap = true;
             // 
             // labelX1
@@ -253,7 +253,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(518, 260);
+            this.ClientSize = new System.Drawing.Size(518, 301);
             this.Controls.Add(this.labelX2);
             this.Controls.Add(this.iptParseNum);
             this.Controls.Add(this.labelX1);

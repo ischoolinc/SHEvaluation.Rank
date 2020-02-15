@@ -1672,12 +1672,12 @@ FROM
                 insertRankSql += sbSubjectSore.ToString() + Strsubject_score_pro_avg_list + sbSubjectChineseScore.ToString() + Strsubject_score_chinese_avg_list + sbSubjectEnglishScore.ToString() + Strsubject_score_english_avg_list + sbSubjectMathScore.ToString() + Strsubject_score_math_avg_list + sbScoreListSQL.ToString() + insertUpdateSQL;
 
 
-                // debug 
-                string fiPath = Application.StartupPath + @"\sql1.sql";
-                using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
-                {
-                    fi.WriteLine(insertRankSql);
-                }
+                //// debug 
+                //string fiPath = Application.StartupPath + @"\sql1.sql";
+                //using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
+                //{
+                //    fi.WriteLine(insertRankSql);
+                //}
 
                 #endregion
 
