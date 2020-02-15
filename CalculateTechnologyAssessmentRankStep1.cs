@@ -306,6 +306,13 @@ student.id IN
             _StudentFilterList.Clear();
             List<string> scoreErrIDList = new List<string>();
 
+            // 完全沒成績
+            foreach(string id in StudentIDListAll)
+            {
+                if (!StudGradeYearSemsDict.ContainsKey(id))
+                    scoreErrIDList.Add(id);
+            }
+
             // 學期成績未滿5學期不能使用
             foreach (string id in StudGradeYearSemsDict.Keys)
             {
