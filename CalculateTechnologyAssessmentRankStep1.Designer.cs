@@ -194,7 +194,7 @@
             this.lblMsg.Name = "lblMsg";
             this.lblMsg.Size = new System.Drawing.Size(479, 36);
             this.lblMsg.TabIndex = 12;
-            this.lblMsg.Text = "說明：學生沒有設定學群不會被加入排名。";
+            this.lblMsg.Text = "說明：\r\n學生沒有設定學群與學業成績不滿五學期不會被加入排名。";
             this.lblMsg.WordWrap = true;
             // 
             // labelX1
@@ -225,6 +225,7 @@
             this.iptParseNum.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.iptParseNum.ButtonFreeText.Shortcut = DevComponents.DotNetBar.eShortcut.F2;
             this.iptParseNum.Location = new System.Drawing.Point(120, 114);
+            this.iptParseNum.MinValue = 0;
             this.iptParseNum.Name = "iptParseNum";
             this.iptParseNum.ShowUpDown = true;
             this.iptParseNum.Size = new System.Drawing.Size(59, 25);
@@ -252,7 +253,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(518, 256);
+            this.ClientSize = new System.Drawing.Size(518, 260);
             this.Controls.Add(this.labelX2);
             this.Controls.Add(this.iptParseNum);
             this.Controls.Add(this.labelX1);

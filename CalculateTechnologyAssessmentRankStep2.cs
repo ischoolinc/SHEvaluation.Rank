@@ -1717,5 +1717,10 @@ FROM
         {
             pbLoading.Location = new Point(this.Width / 2 - 20, this.Height / 2 - 20);
         }
+
+        private void CalculateTechnologyAssessmentRankStep2_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            //this.DialogResult = DialogResult.Abort;
+        }
     }
 }

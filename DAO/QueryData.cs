@@ -45,13 +45,19 @@ namespace SHEvaluation.Rank.DAO
                 if (StudentIDList.Count > 0)
                 {
                     QueryHelper qh = new QueryHelper();
-                    string qry = "" +
-                       "WITH grade_semester AS( " +
-    "SELECT student.id AS student_id,sems_subj_score.school_year,sems_subj_score.semester,sems_subj_score.grade_year FROM student INNER JOIN class ON student.ref_class_id = class.id LEFT JOIN sems_subj_score ON sems_subj_score.ref_student_id = student.id WHERE student.id IN(" + string.Join(",", StudentIDList.ToArray()) + ") " +
-    "UNION ALL " +
-    "SELECT student.id AS student_id," + K12.Data.School.DefaultSchoolYear + " AS school_year," + K12.Data.School.DefaultSemester + " AS semester,class.grade_year FROM student INNER JOIN class ON student.ref_class_id = class.id WHERE student.id IN(" + string.Join(",", StudentIDList.ToArray()) + ")) " +
-    "SELECT student_id,max(school_year) AS school_year,semester,grade_year FROM grade_semester WHERE grade_year IS NOT NULL  GROUP BY student_id,semester,grade_year ORDER BY student_id,grade_year,semester " +
-                        "";
+                    //                string qry = "" +
+                    //                   "WITH grade_semester AS( " +
+                    //"SELECT student.id AS student_id,sems_subj_score.school_year,sems_subj_score.semester,sems_subj_score.grade_year FROM student INNER JOIN class ON student.ref_class_id = class.id LEFT JOIN sems_subj_score ON sems_subj_score.ref_student_id = student.id WHERE student.id IN(" + string.Join(",", StudentIDList.ToArray()) + ") " +
+                    //"UNION ALL " +
+                    //"SELECT student.id AS student_id," + K12.Data.School.DefaultSchoolYear + " AS school_year," + K12.Data.School.DefaultSemester + " AS semester,class.grade_year FROM student INNER JOIN class ON student.ref_class_id = class.id WHERE student.id IN(" + string.Join(",", StudentIDList.ToArray()) + ")) " +
+                    //"SELECT student_id,max(school_year) AS school_year,semester,grade_year FROM grade_semester WHERE grade_year IS NOT NULL  GROUP BY student_id,semester,grade_year ORDER BY student_id,grade_year,semester " +
+                    //                    "";
+
+                    // 實際分項有成績
+                    string qry = @"
+SELECT student.id AS student_id,sems_entry_score.school_year,sems_entry_score.semester,sems_entry_score.grade_year FROM student INNER JOIN class ON student.ref_class_id = class.id INNER JOIN sems_entry_score ON sems_entry_score.ref_student_id = student.id WHERE student.id IN(" + string.Join(",", StudentIDList.ToArray()) + ")";
+
+
                     DataTable dt = qh.Select(qry);
 
                     foreach (DataRow dr in dt.Rows)
