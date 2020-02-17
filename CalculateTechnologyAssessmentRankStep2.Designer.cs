@@ -28,13 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
             this.btnPrevious = new DevComponents.DotNetBar.ButtonX();
             this.dgvStudentList = new DevComponents.DotNetBar.Controls.DataGridViewX();
-            this.btnCacluate = new DevComponents.DotNetBar.ButtonX();
-            this.labelX13 = new DevComponents.DotNetBar.LabelX();
-            this.lblMsg = new DevComponents.DotNetBar.LabelX();
-            this.pbLoading = new System.Windows.Forms.PictureBox();
             this.colClass = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colSeatNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colStudentNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -45,6 +41,11 @@
             this.colRankType1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colRankType2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colRegGroup = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnCacluate = new DevComponents.DotNetBar.ButtonX();
+            this.labelX13 = new DevComponents.DotNetBar.LabelX();
+            this.lblMsg = new DevComponents.DotNetBar.LabelX();
+            this.pbLoading = new System.Windows.Forms.PictureBox();
+            this.btnExportNoRank = new DevComponents.DotNetBar.ButtonX();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStudentList)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).BeginInit();
             this.SuspendLayout();
@@ -85,14 +86,14 @@
             this.colRankType1,
             this.colRankType2,
             this.colRegGroup});
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle2.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle3.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle3.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle3;
             this.dgvStudentList.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvStudentList.HighlightSelectedColumnHeaders = false;
             this.dgvStudentList.Location = new System.Drawing.Point(24, 47);
@@ -102,65 +103,6 @@
             this.dgvStudentList.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvStudentList.Size = new System.Drawing.Size(1080, 363);
             this.dgvStudentList.TabIndex = 40;
-            // 
-            // btnCacluate
-            // 
-            this.btnCacluate.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnCacluate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCacluate.AutoSize = true;
-            this.btnCacluate.BackColor = System.Drawing.Color.Transparent;
-            this.btnCacluate.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnCacluate.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.btnCacluate.ForeColor = System.Drawing.Color.Black;
-            this.btnCacluate.Location = new System.Drawing.Point(1022, 423);
-            this.btnCacluate.Name = "btnCacluate";
-            this.btnCacluate.Size = new System.Drawing.Size(81, 28);
-            this.btnCacluate.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnCacluate.TabIndex = 39;
-            this.btnCacluate.Text = "計算排名";
-            this.btnCacluate.Click += new System.EventHandler(this.btnCacluate_Click);
-            // 
-            // labelX13
-            // 
-            this.labelX13.AutoSize = true;
-            this.labelX13.BackColor = System.Drawing.Color.Transparent;
-            // 
-            // 
-            // 
-            this.labelX13.BackgroundStyle.Class = "";
-            this.labelX13.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX13.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.labelX13.ForeColor = System.Drawing.Color.Black;
-            this.labelX13.Location = new System.Drawing.Point(27, 17);
-            this.labelX13.Name = "labelX13";
-            this.labelX13.Size = new System.Drawing.Size(85, 24);
-            this.labelX13.TabIndex = 38;
-            this.labelX13.Text = "母群資料：";
-            // 
-            // lblMsg
-            // 
-            this.lblMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.lblMsg.BackColor = System.Drawing.Color.Transparent;
-            // 
-            // 
-            // 
-            this.lblMsg.BackgroundStyle.Class = "";
-            this.lblMsg.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lblMsg.Location = new System.Drawing.Point(24, 426);
-            this.lblMsg.Name = "lblMsg";
-            this.lblMsg.Size = new System.Drawing.Size(813, 23);
-            this.lblMsg.TabIndex = 42;
-            // 
-            // pbLoading
-            // 
-            this.pbLoading.BackColor = System.Drawing.Color.Transparent;
-            this.pbLoading.Image = global::SHEvaluation.Rank.Properties.Resources.loading;
-            this.pbLoading.Location = new System.Drawing.Point(547, 215);
-            this.pbLoading.Name = "pbLoading";
-            this.pbLoading.Size = new System.Drawing.Size(32, 32);
-            this.pbLoading.TabIndex = 58;
-            this.pbLoading.TabStop = false;
-            this.pbLoading.Visible = false;
             // 
             // colClass
             // 
@@ -257,11 +199,87 @@
             this.colRegGroup.Name = "colRegGroup";
             this.colRegGroup.ReadOnly = true;
             // 
+            // btnCacluate
+            // 
+            this.btnCacluate.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnCacluate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCacluate.AutoSize = true;
+            this.btnCacluate.BackColor = System.Drawing.Color.Transparent;
+            this.btnCacluate.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnCacluate.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.btnCacluate.ForeColor = System.Drawing.Color.Black;
+            this.btnCacluate.Location = new System.Drawing.Point(1022, 423);
+            this.btnCacluate.Name = "btnCacluate";
+            this.btnCacluate.Size = new System.Drawing.Size(81, 28);
+            this.btnCacluate.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnCacluate.TabIndex = 39;
+            this.btnCacluate.Text = "計算排名";
+            this.btnCacluate.Click += new System.EventHandler(this.btnCacluate_Click);
+            // 
+            // labelX13
+            // 
+            this.labelX13.AutoSize = true;
+            this.labelX13.BackColor = System.Drawing.Color.Transparent;
+            // 
+            // 
+            // 
+            this.labelX13.BackgroundStyle.Class = "";
+            this.labelX13.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX13.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX13.ForeColor = System.Drawing.Color.Black;
+            this.labelX13.Location = new System.Drawing.Point(27, 17);
+            this.labelX13.Name = "labelX13";
+            this.labelX13.Size = new System.Drawing.Size(85, 24);
+            this.labelX13.TabIndex = 38;
+            this.labelX13.Text = "母群資料：";
+            // 
+            // lblMsg
+            // 
+            this.lblMsg.BackColor = System.Drawing.Color.Transparent;
+            // 
+            // 
+            // 
+            this.lblMsg.BackgroundStyle.Class = "";
+            this.lblMsg.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblMsg.Location = new System.Drawing.Point(112, 18);
+            this.lblMsg.Name = "lblMsg";
+            this.lblMsg.Size = new System.Drawing.Size(813, 23);
+            this.lblMsg.TabIndex = 42;
+            // 
+            // pbLoading
+            // 
+            this.pbLoading.BackColor = System.Drawing.Color.Transparent;
+            this.pbLoading.Image = global::SHEvaluation.Rank.Properties.Resources.loading;
+            this.pbLoading.Location = new System.Drawing.Point(547, 215);
+            this.pbLoading.Name = "pbLoading";
+            this.pbLoading.Size = new System.Drawing.Size(32, 32);
+            this.pbLoading.TabIndex = 58;
+            this.pbLoading.TabStop = false;
+            this.pbLoading.Visible = false;
+            // 
+            // btnExportNoRank
+            // 
+            this.btnExportNoRank.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnExportNoRank.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnExportNoRank.AutoSize = true;
+            this.btnExportNoRank.BackColor = System.Drawing.Color.Transparent;
+            this.btnExportNoRank.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnExportNoRank.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.btnExportNoRank.ForeColor = System.Drawing.Color.Black;
+            this.btnExportNoRank.Location = new System.Drawing.Point(24, 423);
+            this.btnExportNoRank.Name = "btnExportNoRank";
+            this.btnExportNoRank.Size = new System.Drawing.Size(120, 28);
+            this.btnExportNoRank.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnExportNoRank.TabIndex = 59;
+            this.btnExportNoRank.Text = "未列入排名清單";
+            this.btnExportNoRank.Click += new System.EventHandler(this.btnExportNoRank_Click);
+            // 
             // CalculateTechnologyAssessmentRankStep2
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1127, 463);
+            this.Controls.Add(this.btnExportNoRank);
             this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.lblMsg);
             this.Controls.Add(this.btnPrevious);
@@ -299,5 +317,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn colRankType1;
         private System.Windows.Forms.DataGridViewTextBoxColumn colRankType2;
         private System.Windows.Forms.DataGridViewTextBoxColumn colRegGroup;
+        private DevComponents.DotNetBar.ButtonX btnExportNoRank;
     }
 }

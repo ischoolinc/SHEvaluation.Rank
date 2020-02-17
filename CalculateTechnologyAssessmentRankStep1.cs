@@ -20,7 +20,14 @@ namespace SHEvaluation.Rank
     {
         List<TagConfigRecord> _TagList = new List<TagConfigRecord>();
         List<StudentRecord> _StudentList = new List<StudentRecord>();
+
+        // 不排名學生ID
+        List<string> studentFilterIDList = new List<string>();
+
+
         List<string> StudentIDListAll = new List<string>();
+        List<string> studentFilterTagIDs = new List<string>();
+        List<string> scoreErrIDList = new List<string>();
         DataTable deptDataTable = new DataTable();
         Dictionary<string, string> StudentDeptNameDict = new Dictionary<string, string>();
         Exception bkwException = null;
@@ -94,7 +101,7 @@ namespace SHEvaluation.Rank
             }
             #endregion
 
-            ctrr2.SetStudentDataList(_StudentFilterList, tag1Student, tag2Student, StudentDeptNameDict);
+            ctrr2.SetStudentDataList(_StudentFilterList, tag1Student, tag2Student, StudentDeptNameDict, scoreErrIDList, _StudentList, studentFilterIDList);
 
             ctrr2.StartPosition = FormStartPosition.CenterScreen;
             if (ctrr2.ShowDialog() == DialogResult.Cancel)
@@ -113,13 +120,13 @@ namespace SHEvaluation.Rank
             {
                 if (!string.IsNullOrEmpty(studentFilter))
                 {
-                    List<string> studentFilterTagIDs = _TagList.Where(x => x.Prefix == studentFilter).Select(x => x.ID).ToList();
+                    studentFilterTagIDs = _TagList.Where(x => x.Prefix == studentFilter).Select(x => x.ID).ToList();
                     if (studentFilterTagIDs.Count == 0)
                     {
                         studentFilterTagIDs = _TagList.Where(x => x.Name == studentFilter).Select(x => x.ID).ToList();
                     }
-                    List<string> studentIDList = StudentTag.SelectAll().Where(x => studentFilterTagIDs.Contains(x.RefTagID)).Select(x => x.RefStudentID).ToList();
-                    _StudentFilterList = _StudentFilterList.Where(x => !studentIDList.Contains(x.ID)).ToList();
+                    studentFilterIDList = StudentTag.SelectAll().Where(x => studentFilterTagIDs.Contains(x.RefTagID)).Select(x => x.RefStudentID).ToList();
+                    _StudentFilterList = _StudentFilterList.Where(x => !studentFilterIDList.Contains(x.ID)).ToList();
                 }
 
 
@@ -304,7 +311,7 @@ student.id IN
 
             // 過濾不排名名單與成績不滿5學期
             _StudentFilterList.Clear();
-            List<string> scoreErrIDList = new List<string>();
+            scoreErrIDList.Clear();
 
             // 完全沒成績
             foreach(string id in StudentIDListAll)

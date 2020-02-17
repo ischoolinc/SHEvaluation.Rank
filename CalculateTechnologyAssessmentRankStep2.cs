@@ -13,16 +13,26 @@ using SHEvaluation.Rank.UDT;
 using System.Xml;
 using SHEvaluation.Rank.DAO;
 using FISCA.Data;
+using Aspose.Cells;
+using System.IO;
 
 namespace SHEvaluation.Rank
 {
     public partial class CalculateTechnologyAssessmentRankStep2 : BaseForm
     {
 
+        // 全部被選學生
+        List<StudentRecord> StudentAllList = new List<StudentRecord>();
+
         List<StudentRecord> StudentFilterList = new List<StudentRecord>();
         List<string> RankStudentIDList = new List<string>();
         List<StudentTagRecord> Tag1Student = new List<StudentTagRecord>();
         List<StudentTagRecord> Tag2Student = new List<StudentTagRecord>();
+
+        // 不被列入排名清單
+        Dictionary<string, string> StudentNotRankDict = new Dictionary<string, string>();
+
+
         Dictionary<string, List<GradeYearSemesterInfo>> StudGradeYearSemsDict = new Dictionary<string, List<GradeYearSemesterInfo>>();
 
         List<GradeYearSemesterInfo> calSemesterList = new List<GradeYearSemesterInfo>();
@@ -136,11 +146,16 @@ namespace SHEvaluation.Rank
             SelStudentFilter = flt;
         }
 
-        public void SetStudentDataList(List<StudentRecord> StudList, List<StudentTagRecord> tagList1, List<StudentTagRecord> tagList2, Dictionary<string, string> deptDict)
+        public void SetStudentDataList(List<StudentRecord> StudList, List<StudentTagRecord> tagList1, List<StudentTagRecord> tagList2, Dictionary<string, string> deptDict, List<string> scoreErrorIDs, List<StudentRecord> studentAllList, List<string> studentFilterIDs)
         {
             StudentFilterList = StudList;
+            StudentAllList = studentAllList;
             Tag1Student = tagList1;
             Tag2Student = tagList2;
+            studentFilterIDs = studentFilterIDs.Distinct().ToList();
+
+            // 沒有群別
+            List<string> noGroupIDList = new List<string>();
 
             #region 整理學生基本資料
             var studentViewList = (from student in StudentFilterList
@@ -165,6 +180,8 @@ namespace SHEvaluation.Rank
             dgvStudentList.Rows.Clear();
             // 需要排名學生ID
             RankStudentIDList.Clear();
+            // 不排名
+            StudentNotRankDict.Clear();
 
             bool hasGroup = false;
             foreach (var student in studentViewList)
@@ -215,6 +232,11 @@ namespace SHEvaluation.Rank
                     RankStudentIDList.Add(student.studentID);
                     rowList.Add(row);
                 }
+                else
+                {
+                    if (!noGroupIDList.Contains(student.studentID))
+                        noGroupIDList.Add(student.studentID);
+                }
 
             }
 
@@ -222,6 +244,29 @@ namespace SHEvaluation.Rank
             #endregion
 
             lblMsg.Text = "共 " + dgvStudentList.Rows.Count + " 位學生";
+
+            // 整理不排名清單
+            foreach (string id in scoreErrorIDs)
+            {
+                if (!StudentNotRankDict.ContainsKey(id))
+                    StudentNotRankDict.Add(id, "學期科目成績未滿5學期");
+            }
+            foreach (string id in noGroupIDList)
+            {
+                if (!StudentNotRankDict.ContainsKey(id))
+                    StudentNotRankDict.Add(id, "沒有報名群");
+                else
+                    StudentNotRankDict[id] += ",沒有報名群";
+            }
+
+
+            foreach (string id in studentFilterIDs)
+            {
+                if (!StudentNotRankDict.ContainsKey(id))
+                    StudentNotRankDict.Add(id, "設定不排名學生");
+                else
+                    StudentNotRankDict[id] += ",設定不排名學生";
+            }
 
             btnPrevious.Enabled = true;
             btnCacluate.Enabled = true;
@@ -1721,6 +1766,106 @@ FROM
         private void CalculateTechnologyAssessmentRankStep2_FormClosing(object sender, FormClosingEventArgs e)
         {
             //this.DialogResult = DialogResult.Abort;
+        }
+
+        private void btnExportNoRank_Click(object sender, EventArgs e)
+        {
+            if (StudentNotRankDict.Count > 0)
+            {
+                try
+                {
+                    btnExportNoRank.Enabled = false;
+
+
+                    Workbook wb = new Workbook();
+                    wb.Worksheets[0].Name = "不排名學生";
+                    wb.Worksheets[0].Cells[0, 0].PutValue("學號");
+                    wb.Worksheets[0].Cells[0, 1].PutValue("班級");
+                    wb.Worksheets[0].Cells[0, 2].PutValue("座號");
+                    wb.Worksheets[0].Cells[0, 3].PutValue("姓名");
+                    wb.Worksheets[0].Cells[0, 4].PutValue("不排名原因");
+                    int rIdx = 1;
+                    foreach (StudentRecord studRec in StudentAllList)
+                    {
+                        if (StudentNotRankDict.ContainsKey(studRec.ID))
+                        {
+                            wb.Worksheets[0].Cells[rIdx, 0].PutValue(studRec.StudentNumber);
+                            if (studRec.Class != null)
+                                wb.Worksheets[0].Cells[rIdx, 1].PutValue(studRec.Class.Name);
+                            if (studRec.SeatNo.HasValue)
+                                wb.Worksheets[0].Cells[rIdx, 2].PutValue(studRec.SeatNo.Value);
+                            wb.Worksheets[0].Cells[rIdx, 3].PutValue(studRec.Name);
+                            wb.Worksheets[0].Cells[rIdx, 4].PutValue(StudentNotRankDict[studRec.ID]);
+                            rIdx++;
+                        }
+                    }
+
+                    if (wb != null)
+                    {
+                        #region 儲存檔案
+                        string reportName = "技職繁星不排名學生";
+
+                        string path = Path.Combine(System.Windows.Forms.Application.StartupPath, "Reports");
+                        if (!Directory.Exists(path))
+                            Directory.CreateDirectory(path);
+                        path = Path.Combine(path, reportName + ".xls");
+
+                        try
+                        {
+
+
+                            if (File.Exists(path))
+                            {
+                                int i = 1;
+                                while (true)
+                                {
+                                    string newPath = Path.GetDirectoryName(path) + "\\" + Path.GetFileNameWithoutExtension(path) + (i++) + Path.GetExtension(path);
+                                    if (!File.Exists(newPath))
+                                    {
+                                        path = newPath;
+                                        break;
+                                    }
+                                }
+                            }
+                            wb.Save(path, SaveFormat.Excel97To2003);
+                            System.Diagnostics.Process.Start(path);
+                        }
+                        catch
+                        {
+                            System.Windows.Forms.SaveFileDialog sd = new System.Windows.Forms.SaveFileDialog();
+                            sd.Title = "另存新檔";
+                            sd.FileName = reportName + ".xls";
+                            sd.Filter = "Excel檔案 (*.xls)|*.xls|所有檔案 (*.*)|*.*";
+                            if (sd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                            {
+                                try
+                                {
+                                    wb.Save(sd.FileName, SaveFormat.Excel97To2003);
+
+                                }
+                                catch
+                                {
+                                    FISCA.Presentation.Controls.MsgBox.Show("指定路徑無法存取。", "建立檔案失敗", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                                    return;
+                                }
+                            }
+                        }
+                        #endregion
+                    }
+                    else
+                    {
+                        MsgBox.Show("Excel 檔案無法產生。");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MsgBox.Show("產生不排名學生錯誤," + ex.Message);
+                    btnExportNoRank.Enabled = true;
+                }
+
+
+                btnExportNoRank.Enabled = true;
+            }
         }
     }
 }
