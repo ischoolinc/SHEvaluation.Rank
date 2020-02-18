@@ -115,7 +115,7 @@
             // 
             // colDeptName
             // 
-            this.colDeptName.HeaderText = "系統科別稱";
+            this.colDeptName.HeaderText = "系統科別名稱";
             this.colDeptName.Name = "colDeptName";
             this.colDeptName.ReadOnly = true;
             this.colDeptName.Width = 150;

@@ -62,10 +62,10 @@ namespace SHEvaluation.Rank
 
             // 取得UDT 資料
             RegistrationDeptList = accessHelper.Select<udtRegistrationDept>();
-            List<string> tmpID = new List<string>();
+            List<string> tmpName = new List<string>();
 
             foreach (udtRegistrationDept data in RegistrationDeptList)
-                tmpID.Add(data.RefDeptID);
+                tmpName.Add(data.DeptName);
 
             // 多於刪除
             foreach (udtRegistrationDept data in RegistrationDeptList)
@@ -75,18 +75,20 @@ namespace SHEvaluation.Rank
             }
 
             // 沒有資料加入
-            foreach (string key in DeptIDNameDict.Keys)
+            foreach (string key in DeptNameIDDict.Keys)
             {
-                if (!tmpID.Contains(key))
+                if (!tmpName.Contains(key))
                 {
                     udtRegistrationDept data = new udtRegistrationDept();
-                    data.DeptName = DeptIDNameDict[key];
-                    data.RefDeptID = key;
+                    data.DeptName = key;
+                    data.RefDeptID = DeptNameIDDict[key];
                     RegistrationDeptList.Add(data);
                 }
             }
 
             RegistrationDeptList.SaveAll();
+
+            RegistrationDeptList = accessHelper.Select<udtRegistrationDept>();
 
             // 排序
             RegistrationDeptList = RegistrationDeptList.OrderBy(x => x.DeptName).ToList();
