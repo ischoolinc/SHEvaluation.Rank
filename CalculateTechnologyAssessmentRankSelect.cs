@@ -95,6 +95,8 @@ namespace SHEvaluation.Rank
 
         private void LoadRowData(object sender, EventArgs e)
         {
+            UserControlEnable(false);
+
             if (_IsLoading)
             {
                 return;
@@ -107,7 +109,7 @@ namespace SHEvaluation.Rank
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
             Exception bkwException = null;
-            pbLoading.Visible = true;
+           
 
             bkw.ProgressChanged += delegate (object obj, ProgressChangedEventArgs eventArgs)
             {
@@ -255,7 +257,7 @@ FROM
                 #endregion
 
                 MotherForm.SetStatusBarMessage("資料讀取完成");
-                pbLoading.Visible = false;
+               
                 _IsLoading = false;
                 FillingDataGridView(null, null);
 
@@ -271,7 +273,8 @@ FROM
             {
                 return;
             }
-
+            lblRowCount.Text = "";
+            UserControlEnable(false);
             _IsLoading = true;
             dgvScoreRank.Rows.Clear();
             _FilterItemName = cboItemName.Text;
@@ -328,7 +331,9 @@ FROM
                 newList.Clear();
             }
 
+            lblRowCount.Text = "共 " + dgvScoreRank.Rows.Count+ " 筆";
             _IsLoading = false;
+            UserControlEnable(true);
         }
 
         private void CalculateTechnologyAssessmentRankSelect_FormClosing(object sender, FormClosingEventArgs e)
@@ -336,8 +341,19 @@ FROM
             _IsClosing = true;
         }
 
+        private void UserControlEnable(bool value)
+        {
+            btnExportToExcel.Enabled = value;
+            cboItemName.Enabled = value;
+            cboRankType.Enabled = value;
+            txtStudentNum.Enabled = value;
+            pbLoading.Visible = !value;
+        }
+
+
         private void CalculateTechnologyAssessmentRankSelect_Load(object sender, EventArgs e)
         {
+           
             ItemNameList.Clear();
             RankTypeList.Clear();
             ItemNameList.Add("學業");

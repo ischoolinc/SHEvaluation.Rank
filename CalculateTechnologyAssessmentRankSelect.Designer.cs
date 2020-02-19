@@ -28,8 +28,8 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.btnExit = new DevComponents.DotNetBar.ButtonX();
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.pbLoading = new System.Windows.Forms.PictureBox();
@@ -37,10 +37,6 @@
             this.labelX7 = new DevComponents.DotNetBar.LabelX();
             this.labelX4 = new DevComponents.DotNetBar.LabelX();
             this.dgvScoreRank = new DevComponents.DotNetBar.Controls.DataGridViewX();
-            this.txtStudentNum = new DevComponents.DotNetBar.Controls.TextBoxX();
-            this.btnExportToExcel = new DevComponents.DotNetBar.ButtonX();
-            this.cboItemName = new DevComponents.DotNetBar.Controls.ComboBoxEx();
-            this.cboRankType = new DevComponents.DotNetBar.Controls.ComboBoxEx();
             this.MatrixId = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ScoreType = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ScoreCategory = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -58,6 +54,11 @@
             this.view = new DevComponents.DotNetBar.Controls.DataGridViewButtonXColumn();
             this.SchoolYear = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Semester = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.txtStudentNum = new DevComponents.DotNetBar.Controls.TextBoxX();
+            this.btnExportToExcel = new DevComponents.DotNetBar.ButtonX();
+            this.cboItemName = new DevComponents.DotNetBar.Controls.ComboBoxEx();
+            this.cboRankType = new DevComponents.DotNetBar.Controls.ComboBoxEx();
+            this.lblRowCount = new DevComponents.DotNetBar.LabelX();
             ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvScoreRank)).BeginInit();
             this.SuspendLayout();
@@ -163,14 +164,14 @@
             this.view,
             this.SchoolYear,
             this.Semester});
-            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle4.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle4.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle4.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvScoreRank.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle2.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvScoreRank.DefaultCellStyle = dataGridViewCellStyle2;
             this.dgvScoreRank.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvScoreRank.HighlightSelectedColumnHeaders = false;
             this.dgvScoreRank.Location = new System.Drawing.Point(12, 63);
@@ -181,66 +182,6 @@
             this.dgvScoreRank.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvScoreRank.Size = new System.Drawing.Size(1110, 483);
             this.dgvScoreRank.TabIndex = 82;
-            // 
-            // txtStudentNum
-            // 
-            this.txtStudentNum.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            // 
-            // 
-            // 
-            this.txtStudentNum.Border.Class = "TextBoxBorder";
-            this.txtStudentNum.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.txtStudentNum.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.txtStudentNum.Location = new System.Drawing.Point(966, 14);
-            this.txtStudentNum.Name = "txtStudentNum";
-            this.txtStudentNum.Size = new System.Drawing.Size(156, 27);
-            this.txtStudentNum.TabIndex = 86;
-            this.txtStudentNum.TextChanged += new System.EventHandler(this.FillingDataGridView);
-            // 
-            // btnExportToExcel
-            // 
-            this.btnExportToExcel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnExportToExcel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnExportToExcel.BackColor = System.Drawing.Color.Transparent;
-            this.btnExportToExcel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnExportToExcel.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.btnExportToExcel.Location = new System.Drawing.Point(12, 552);
-            this.btnExportToExcel.Name = "btnExportToExcel";
-            this.btnExportToExcel.Size = new System.Drawing.Size(91, 28);
-            this.btnExportToExcel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnExportToExcel.TabIndex = 90;
-            this.btnExportToExcel.Text = "匯出";
-            this.btnExportToExcel.Click += new System.EventHandler(this.btnExportToExcel_Click);
-            // 
-            // cboItemName
-            // 
-            this.cboItemName.DisplayMember = "Text";
-            this.cboItemName.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
-            this.cboItemName.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboItemName.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.cboItemName.FormattingEnabled = true;
-            this.cboItemName.ItemHeight = 21;
-            this.cboItemName.Location = new System.Drawing.Point(68, 16);
-            this.cboItemName.Name = "cboItemName";
-            this.cboItemName.Size = new System.Drawing.Size(164, 27);
-            this.cboItemName.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.cboItemName.TabIndex = 88;
-            this.cboItemName.SelectedIndexChanged += new System.EventHandler(this.FillingDataGridView);
-            // 
-            // cboRankType
-            // 
-            this.cboRankType.DisplayMember = "Text";
-            this.cboRankType.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
-            this.cboRankType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboRankType.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.cboRankType.FormattingEnabled = true;
-            this.cboRankType.ItemHeight = 21;
-            this.cboRankType.Location = new System.Drawing.Point(303, 16);
-            this.cboRankType.Name = "cboRankType";
-            this.cboRankType.Size = new System.Drawing.Size(167, 27);
-            this.cboRankType.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.cboRankType.TabIndex = 89;
-            this.cboRankType.SelectedIndexChanged += new System.EventHandler(this.FillingDataGridView);
             // 
             // MatrixId
             // 
@@ -258,7 +199,6 @@
             this.ScoreType.Name = "ScoreType";
             this.ScoreType.ReadOnly = true;
             this.ScoreType.Visible = false;
-            this.ScoreType.Width = 85;
             // 
             // ScoreCategory
             // 
@@ -268,7 +208,6 @@
             this.ScoreCategory.Name = "ScoreCategory";
             this.ScoreCategory.ReadOnly = true;
             this.ScoreCategory.Visible = false;
-            this.ScoreCategory.Width = 85;
             // 
             // ItemName
             // 
@@ -336,8 +275,8 @@
             // score
             // 
             this.score.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            dataGridViewCellStyle3.NullValue = null;
-            this.score.DefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle1.NullValue = null;
+            this.score.DefaultCellStyle = dataGridViewCellStyle1;
             this.score.HeaderText = "排名分數";
             this.score.MinimumWidth = 85;
             this.score.Name = "score";
@@ -380,7 +319,6 @@
             this.view.Text = "檢視";
             this.view.UseColumnTextForButtonValue = true;
             this.view.Visible = false;
-            this.view.Width = 40;
             // 
             // SchoolYear
             // 
@@ -398,11 +336,86 @@
             this.Semester.Visible = false;
             this.Semester.Width = 59;
             // 
+            // txtStudentNum
+            // 
+            this.txtStudentNum.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            // 
+            // 
+            // 
+            this.txtStudentNum.Border.Class = "TextBoxBorder";
+            this.txtStudentNum.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.txtStudentNum.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.txtStudentNum.Location = new System.Drawing.Point(966, 14);
+            this.txtStudentNum.Name = "txtStudentNum";
+            this.txtStudentNum.Size = new System.Drawing.Size(156, 27);
+            this.txtStudentNum.TabIndex = 86;
+            this.txtStudentNum.TextChanged += new System.EventHandler(this.FillingDataGridView);
+            // 
+            // btnExportToExcel
+            // 
+            this.btnExportToExcel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnExportToExcel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnExportToExcel.BackColor = System.Drawing.Color.Transparent;
+            this.btnExportToExcel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnExportToExcel.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.btnExportToExcel.Location = new System.Drawing.Point(12, 552);
+            this.btnExportToExcel.Name = "btnExportToExcel";
+            this.btnExportToExcel.Size = new System.Drawing.Size(91, 28);
+            this.btnExportToExcel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnExportToExcel.TabIndex = 90;
+            this.btnExportToExcel.Text = "匯出";
+            this.btnExportToExcel.Click += new System.EventHandler(this.btnExportToExcel_Click);
+            // 
+            // cboItemName
+            // 
+            this.cboItemName.DisplayMember = "Text";
+            this.cboItemName.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
+            this.cboItemName.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboItemName.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboItemName.FormattingEnabled = true;
+            this.cboItemName.ItemHeight = 21;
+            this.cboItemName.Location = new System.Drawing.Point(68, 16);
+            this.cboItemName.Name = "cboItemName";
+            this.cboItemName.Size = new System.Drawing.Size(164, 27);
+            this.cboItemName.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.cboItemName.TabIndex = 88;
+            this.cboItemName.SelectedIndexChanged += new System.EventHandler(this.FillingDataGridView);
+            // 
+            // cboRankType
+            // 
+            this.cboRankType.DisplayMember = "Text";
+            this.cboRankType.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
+            this.cboRankType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboRankType.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboRankType.FormattingEnabled = true;
+            this.cboRankType.ItemHeight = 21;
+            this.cboRankType.Location = new System.Drawing.Point(303, 16);
+            this.cboRankType.Name = "cboRankType";
+            this.cboRankType.Size = new System.Drawing.Size(167, 27);
+            this.cboRankType.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.cboRankType.TabIndex = 89;
+            this.cboRankType.SelectedIndexChanged += new System.EventHandler(this.FillingDataGridView);
+            // 
+            // lblRowCount
+            // 
+            this.lblRowCount.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblRowCount.BackColor = System.Drawing.Color.Transparent;
+            // 
+            // 
+            // 
+            this.lblRowCount.BackgroundStyle.Class = "";
+            this.lblRowCount.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblRowCount.Location = new System.Drawing.Point(123, 555);
+            this.lblRowCount.Name = "lblRowCount";
+            this.lblRowCount.Size = new System.Drawing.Size(290, 23);
+            this.lblRowCount.TabIndex = 93;
+            // 
             // CalculateTechnologyAssessmentRankSelect
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1134, 591);
+            this.Controls.Add(this.lblRowCount);
             this.Controls.Add(this.btnExit);
             this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.labelX8);
@@ -456,5 +469,6 @@
         private DevComponents.DotNetBar.Controls.DataGridViewButtonXColumn view;
         private System.Windows.Forms.DataGridViewTextBoxColumn SchoolYear;
         private System.Windows.Forms.DataGridViewTextBoxColumn Semester;
+        private DevComponents.DotNetBar.LabelX lblRowCount;
     }
 }
