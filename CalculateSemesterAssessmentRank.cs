@@ -482,6 +482,11 @@ WITH student_list AS
 		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_origin_score DESC) AS class_origin_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_origin_score DESC) AS tag1_origin_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_origin_score DESC) AS tag2_origin_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_origin_score ASC) AS grade_origin_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_origin_score ASC) AS dept_origin_rank_reverse
+		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_origin_score ASC) AS class_origin_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_origin_score ASC) AS tag1_origin_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_origin_score ASC) AS tag2_origin_rank_reverse
 		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, subject) AS grade_count
 		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, subject) AS dept_count
 		, COUNT(student_id) OVER(PARTITION BY rank_class_name, subject) AS class_count
@@ -512,6 +517,11 @@ WITH student_list AS
 		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_greatest_score DESC) AS class_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_greatest_score DESC) AS tag1_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_greatest_score DESC) AS tag2_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_greatest_score ASC) AS grade_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_greatest_score ASC) AS dept_rank_reverse
+		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_greatest_score ASC) AS class_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_greatest_score ASC) AS tag1_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_greatest_score ASC) AS tag2_rank_reverse
 		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, subject) AS grade_count
 		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, subject) AS dept_count
 		, COUNT(student_id) OVER(PARTITION BY rank_class_name, subject) AS class_count
@@ -532,6 +542,11 @@ WITH student_list AS
 		, FLOOR((class_origin_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_origin_percentage
 		, FLOOR((tag1_origin_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_origin_percentage
 		, FLOOR((tag2_origin_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_origin_percentage
+		, FLOOR((grade_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / grade_count)  AS graderank_origin_pr
+		, FLOOR((dept_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / dept_count)  AS deptrank_origin_pr
+		, FLOOR((class_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / class_count)  AS classrank_origin_pr
+		, FLOOR((tag1_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag1_count)  AS tag1rank_origin_pr
+		, FLOOR((tag2_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag2_count)  AS tag2rank_origin_pr
 	FROM
 		subj_origin_rank
 )
@@ -544,6 +559,11 @@ WITH student_list AS
 		, FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
 		, FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
 		, FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+		, FLOOR((grade_rank_reverse::DECIMAL - 1)*100::DECIMAL / grade_count) AS graderank_pr
+		, FLOOR((dept_rank_reverse::DECIMAL - 1)*100::DECIMAL / dept_count) AS deptrank_pr
+		, FLOOR((class_rank_reverse::DECIMAL - 1)*100::DECIMAL / class_count) AS classrank_pr
+		, FLOOR((tag1_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag1_count) AS tag1rank_pr
+		, FLOOR((tag2_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag2_count) AS tag2rank_pr
 	FROM
 		subj_greatest_rank
 )
@@ -596,6 +616,11 @@ WITH student_list AS
 		, RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score DESC) AS class_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score DESC) AS tag1_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score DESC) AS tag2_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score ASC) AS grade_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score ASC) AS dept_rank_reverse
+		, RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score ASC) AS class_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score ASC) AS tag1_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score ASC) AS tag2_rank_reverse
 		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, entry) AS grade_count
 		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, entry) AS dept_count
 		, COUNT(student_id) OVER(PARTITION BY rank_class_name, entry) AS class_count
@@ -616,6 +641,11 @@ WITH student_list AS
 		, FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
 		, FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
 		, FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+        , FLOOR((grade_rank_reverse::DECIMAL - 1)*100::DECIMAL / grade_count)  AS graderank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL - 1)*100::DECIMAL / dept_count)  AS deptrank_pr
+        , FLOOR((class_rank_reverse::DECIMAL - 1)*100::DECIMAL / class_count)  AS classrank_pr
+        , FLOOR((tag1_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag1_count)  AS tag1rank_pr
+        , FLOOR((tag2_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag2_count)  AS tag2rank_pr
 	FROM
 		entry_rank_list
 )
@@ -651,6 +681,7 @@ WITH student_list AS
 		, student_id
 		, origin_score AS score
 		, grade_origin_rank AS rank
+        , graderank_origin_pr AS pr
 		, graderank_origin_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -690,6 +721,7 @@ WITH student_list AS
 		, student_id
 		, origin_score AS score
 		, dept_origin_rank AS rank
+        , deptrank_origin_pr AS pr
 		, deptrank_origin_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -729,6 +761,7 @@ WITH student_list AS
 		, student_id
 		, origin_score AS score
 		, class_origin_rank AS rank
+        , classrank_origin_pr AS pr
 		, classrank_origin_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -768,6 +801,7 @@ WITH student_list AS
 		, student_id
 		, origin_score AS score
 		, tag1_origin_rank AS rank
+        , tag1rank_origin_pr AS pr
 		, tag1rank_origin_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -810,6 +844,7 @@ WITH student_list AS
 		, student_id
 		, origin_score AS score
 		, tag2_origin_rank AS rank
+        , tag2rank_origin_pr AS pr
 		, tag2rank_origin_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -852,6 +887,7 @@ WITH student_list AS
 		, student_id
 		, greatest_score AS score
 		, grade_rank AS rank
+        , graderank_pr AS pr
 		, graderank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -891,6 +927,7 @@ WITH student_list AS
 		, student_id
 		, greatest_score AS score
 		, dept_rank AS rank
+        , deptrank_pr AS pr
 		, deptrank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -930,6 +967,7 @@ WITH student_list AS
 		, student_id
 		, greatest_score AS score
 		, class_rank AS rank
+        , classrank_pr AS pr
 		, classrank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -969,6 +1007,7 @@ WITH student_list AS
 		, student_id
 		, greatest_score AS score
 		, tag1_rank AS rank
+        , tag1rank_pr AS pr
 		, tag1rank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1011,6 +1050,7 @@ WITH student_list AS
 		, student_id
 		, greatest_score AS score
 		, tag2_rank AS rank
+        , tag2rank_pr AS pr
 		, tag2rank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1053,6 +1093,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, grade_rank AS rank
+        , graderank_pr AS pr
 		, graderank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1094,6 +1135,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, dept_rank AS rank
+        , deptrank_pr AS pr
 		, deptrank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1135,6 +1177,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, class_rank AS rank
+        , classrank_pr AS pr
 		, classrank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1176,6 +1219,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, tag1_rank AS rank
+        , tag1rank_pr AS pr
 		, tag1rank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1219,6 +1263,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, tag2_rank AS rank
+        , tag2rank_pr AS pr
 		, tag2rank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1262,6 +1307,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, grade_rank AS rank
+        , graderank_pr AS pr
 		, graderank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1303,6 +1349,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, dept_rank AS rank
+        , deptrank_pr AS pr
 		, deptrank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1344,6 +1391,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, class_rank AS rank
+        , classrank_pr AS pr
 		, classrank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1385,6 +1433,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, tag1_rank AS rank
+        , tag1rank_pr AS pr
 		, tag1rank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1428,6 +1477,7 @@ WITH student_list AS
 		, student_id
 		, entry_score AS score
 		, tag2_rank AS rank
+        , tag2rank_pr AS pr
 		, tag2rank_percentage AS percentile
 		, rank_dept_name
 		, rank_class_name
@@ -1610,6 +1660,7 @@ WITH student_list AS
 			, ref_student_id
 			, score
 			, rank
+            , pr
 			, percentile
 		)
 		SELECT
@@ -1617,6 +1668,7 @@ WITH student_list AS
 			, score_list.student_id AS ref_student_id
 			, score_list.score AS score
 			, score_list.rank AS rank
+            , score_list.pr AS pr
 			, score_list.percentile AS percentile
 		FROM
 			score_list
@@ -1655,8 +1707,15 @@ FROM
 ";
                     #endregion
 
-                    bkw.ReportProgress(50);
+                    //// debug 
+                    //string fiPath = Application.StartupPath + @"\sems_sql1.sql";
+                    //using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
+                    //{
+                    //    fi.WriteLine(insertRankSql);
+                    //}
 
+                    bkw.ReportProgress(50);
+                    
                     QueryHelper queryHelper = new QueryHelper();
                     queryHelper.Select(insertRankSql);
 
