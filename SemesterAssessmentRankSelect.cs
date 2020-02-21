@@ -32,6 +32,8 @@ namespace SHEvaluation.Rank
 
         private void SemesterAssessmentRankSelect_Load(object sender, EventArgs e)
         {
+            btnExportToExcel.Enabled = false;
+
             #region 取得前四個ComboBox的資料的SQL
             string querySQL = @"
 SELECT
@@ -121,6 +123,7 @@ WHERE
 
         private void LoadRowData(object sender, EventArgs e)
         {
+            btnExportToExcel.Enabled = false;
             if (_IsLoading)
             {
                 return;
@@ -302,7 +305,9 @@ WHERE
             {
                 return;
             }
-
+            btnExportToExcel.Enabled = false;
+            pbLoading.Visible = true;
+            lblMsgCount.Text = "";
             _IsLoading = true;
             dgvScoreRank.Rows.Clear();
             _FilterItemName = cboItemName.Text;
@@ -369,6 +374,9 @@ WHERE
                 newList.Clear();
             }
 
+            btnExportToExcel.Enabled = true;
+            pbLoading.Visible = false;
+            lblMsgCount.Text = "共 " + dgvScoreRank.Rows.Count + " 筆";
             _IsLoading = false;
         }
 
@@ -403,6 +411,7 @@ WHERE
 
         private void btnExportToExcel_Click(object sender, EventArgs e)
         {
+            btnExportToExcel.Enabled = false;
             saveFileDialog.Title = "匯出排名資料";
             saveFileDialog.FileName = "匯出排名資料.xlsx";
             saveFileDialog.Filter = "Excel (*.xlsx)|*.xlsx|所有檔案 (*.*)|*.*";
@@ -443,7 +452,7 @@ WHERE
 
                         workbook.Save(saveFileDialog.FileName);
                     }
-
+                    btnExportToExcel.Enabled = true;
                     dialogResult = MessageBox.Show("檔案儲存完成，是否開啟？", "是否開啟", MessageBoxButtons.YesNo);
                     if (dialogResult == DialogResult.Yes)
                     {
@@ -456,10 +465,11 @@ WHERE
                             MessageBox.Show("檔案開啟失敗：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
-                }
+                }                
                 catch (Exception ex)
                 {
                     MessageBox.Show("檔案儲存失敗：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    btnExportToExcel.Enabled = true;
                 }
             }
         }
