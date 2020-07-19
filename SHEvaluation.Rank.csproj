@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>SHEvaluation.Rank</RootNamespace>
     <AssemblyName>SHEvaluation.Rank</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -237,6 +237,9 @@
     <Content Include="Library\Aspose.Cells_201402.dll" />
     <Content Include="Library\FISCA.Data.dll" />
     <Content Include="Library\FISCA.dll" />
+    <Content Include="Library\FISCA.DSAClient.dll" />
+    <Content Include="Library\FISCA.DSAClient.pdb" />
+    <Content Include="Library\FISCA.DSAClient.xml" />
     <Content Include="Library\FISCA.DSAUtil.dll" />
     <Content Include="Library\FISCA.LogAgent.dll" />
     <Content Include="Library\FISCA.Permission.dll" />

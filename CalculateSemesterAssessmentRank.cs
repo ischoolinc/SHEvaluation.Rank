@@ -315,37 +315,55 @@ WHERE
 
         private void btnCacluate_Click(object sender, EventArgs e)
         {
-            #region 產生學生清單的SQL
-            List<string> studentSqlList = new List<string>();
+
+            // 學生依年級分批使用
+            Dictionary<string, List<string>> gradeStudentDict = new Dictionary<string, List<string>>();
+
+
+            //        #region 產生學生清單的SQL
+            //        List<string> studentSqlList = new List<string>();
+            //        foreach (DataGridViewRow row in dgvStudentList.Rows)
+            //        {
+            //            #region 單筆學生資料的SQL
+            //            string studentSql = @"
+            //SELECT
+            //    '" + row.Tag + @"'::BIGINT AS student_id
+            //    , '" + "" + row.Cells[3].Value + @"'::TEXT AS student_name
+            //    , '" + ("" + row.Cells[4].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
+            //    , '" + "" + row.Cells[5].Value + @"'::TEXT AS rank_dept_name
+            //    , '" + "" + row.Cells[6].Value + @"'::TEXT AS rank_class_name
+            //    , '" + "" + row.Cells[7].Value + @"'::TEXT AS rank_tag1
+            //    , '" + "" + row.Cells[8].Value + @"'::TEXT AS rank_tag2
+            //";
+            //            #endregion
+            //            //把單筆學生資料的SQL加入到List
+            //            studentSqlList.Add(studentSql);
+            //        }
+
+            #region 依年級產生學生清單的SQL
             foreach (DataGridViewRow row in dgvStudentList.Rows)
             {
+                string gr = row.Cells[4].Value + "";
                 #region 單筆學生資料的SQL
                 string studentSql = @"
-    SELECT
-        '" + row.Tag + @"'::BIGINT AS student_id
-        , '" + "" + row.Cells[3].Value + @"'::TEXT AS student_name
-        , '" + ("" + row.Cells[4].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
-        , '" + "" + row.Cells[5].Value + @"'::TEXT AS rank_dept_name
-        , '" + "" + row.Cells[6].Value + @"'::TEXT AS rank_class_name
-        , '" + "" + row.Cells[7].Value + @"'::TEXT AS rank_tag1
-        , '" + "" + row.Cells[8].Value + @"'::TEXT AS rank_tag2
-    ";
-                #endregion
-                //把單筆學生資料的SQL加入到List
-                studentSqlList.Add(studentSql);
-            }
-
-            //把剛剛組好的學生資料的SQL的List拆開
-            #region 所有學生資料的SQL
-            string studentListSql = @"
-WITH student_list AS
-(
-    " + string.Join(@"
-    UNION ALL", studentSqlList) + @"
-)
+SELECT
+'" + row.Tag + @"'::BIGINT AS student_id
+, '" + "" + row.Cells[3].Value + @"'::TEXT AS student_name
+, '" + ("" + row.Cells[4].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
+, '" + "" + row.Cells[5].Value + @"'::TEXT AS rank_dept_name
+, '" + "" + row.Cells[6].Value + @"'::TEXT AS rank_class_name
+, '" + "" + row.Cells[7].Value + @"'::TEXT AS rank_tag1
+, '" + "" + row.Cells[8].Value + @"'::TEXT AS rank_tag2
 ";
+                #endregion
+
+                if (!gradeStudentDict.ContainsKey(gr))
+                    gradeStudentDict.Add(gr, new List<string>());
+
+                gradeStudentDict[gr].Add(studentSql);
+            }
             #endregion
-            #endregion
+
 
             btnCacluate.Enabled = false;
             btnPrevious.Enabled = false;
@@ -356,54 +374,7 @@ WITH student_list AS
             string tag2 = cboStudentTag2.Text.Trim('[', ']'); ;
             string calculationSetting = "";
 
-            #region 產生計算規則的SQL
-            #region 產生要儲存到rank_batch的setting的Xml
-            XmlDocument xdoc = new XmlDocument();
-            var settingEle = xdoc.CreateElement("Setting");
-            settingEle.SetAttribute("學年度", schoolYear);
-            settingEle.SetAttribute("學期", semester);
-            settingEle.SetAttribute("考試名稱", "學期成績");
-            settingEle.SetAttribute("不排名學生類別", studentFilter);
-            settingEle.SetAttribute("類別一", tag1);
-            settingEle.SetAttribute("類別二", tag2);
-            foreach (int gradeYear in _GradeYearList)
-            {
-                var gradeYearEle = xdoc.CreateElement("年級");
-                gradeYearEle.InnerText = "" + gradeYear;
-                settingEle.AppendChild(gradeYearEle);
-            }
-            calculationSetting = settingEle.OuterXml;
-            #endregion
 
-            List<string> calcConditionListSQL = new List<string>();
-            foreach (int gradeYear in _GradeYearList)
-            {
-                #region 單筆計算規則的SQL
-                string calcCondition = @"
-    SELECT
-        '" + gradeYear + @"'::TEXT AS rank_grade_year
-        , '" + schoolYear + @"'::TEXT AS rank_school_year
-        , '" + semester + @"'::TEXT AS rank_semester
-        , '-1'::TEXT AS ref_exam_id
-        , '學期成績'::TEXT AS rank_exam_name
-        , '" + calculationSetting + @"'::TEXT AS calculation_setting
-";
-                #endregion
-                //將單筆計算規則的SQL加到List
-                calcConditionListSQL.Add(calcCondition);
-            }
-
-            //將計算規則的List拆開
-            #region 計算規則的SQL
-            string calcConditionSQL = @"
-, calc_condition AS
-(
-    " + string.Join(@"
-    UNION ALL", calcConditionListSQL) + @"
-)
-";
-            #endregion
-            #endregion
 
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
@@ -421,8 +392,75 @@ WITH student_list AS
                 {
                     bkw.ReportProgress(1);
 
-                    #region 計算排名SQL
-                    string insertRankSql = @"
+                    QueryHelper queryHelper = new QueryHelper();
+
+                    int pr = 20;
+
+                    // 依年級分批計算
+                    foreach (string gr in gradeStudentDict.Keys)
+                    {
+
+                        #region 有學生資料的SQL
+                        string studentListSql = @"
+WITH student_list AS
+(
+    " + string.Join(@"
+    UNION ALL", gradeStudentDict[gr]) + @"
+)
+";
+                        #endregion
+
+
+                        #region 產生計算規則的SQL
+                        #region 產生要儲存到rank_batch的setting的Xml
+                        XmlDocument xdoc = new XmlDocument();
+                        var settingEle = xdoc.CreateElement("Setting");
+                        settingEle.SetAttribute("學年度", schoolYear);
+                        settingEle.SetAttribute("學期", semester);
+                        settingEle.SetAttribute("考試名稱", "學期成績");
+                        settingEle.SetAttribute("不排名學生類別", studentFilter);
+                        settingEle.SetAttribute("類別一", tag1);
+                        settingEle.SetAttribute("類別二", tag2);
+
+                        var gradeYearEle = xdoc.CreateElement("年級");
+                        gradeYearEle.InnerText = "" + gr.Trim('年', '級');
+                        settingEle.AppendChild(gradeYearEle);
+
+                        calculationSetting = settingEle.OuterXml;
+                        #endregion
+
+                        List<string> calcConditionListSQL = new List<string>();
+
+                        #region 單筆計算規則的SQL
+                        string calcCondition = @"
+    SELECT
+        '" + gr.Trim('年', '級') + @"'::TEXT AS rank_grade_year
+        , '" + schoolYear + @"'::TEXT AS rank_school_year
+        , '" + semester + @"'::TEXT AS rank_semester
+        , '-1'::TEXT AS ref_exam_id
+        , '學期成績'::TEXT AS rank_exam_name
+        , '" + calculationSetting + @"'::TEXT AS calculation_setting
+";
+                        #endregion
+                        //將單筆計算規則的SQL加到List
+                        calcConditionListSQL.Add(calcCondition);
+
+
+                        //將計算規則的List拆開
+                        #region 計算規則的SQL
+                        string calcConditionSQL = @"
+, calc_condition AS
+(
+    " + string.Join(@"
+    UNION ALL", calcConditionListSQL) + @"
+)
+";
+                        #endregion
+                        #endregion
+
+
+                        #region 計算排名SQL
+                        string insertRankSql = @"
 " + studentListSql + @"
 " + calcConditionSQL + @"
 , subject_score AS
@@ -1683,41 +1721,62 @@ WITH student_list AS
 					AND insert_matrix_data.rank_type = score_list.rank_type
 					AND insert_matrix_data.rank_name = score_list.rank_name
 )
-SELECT
-	score_list.rank_school_year::INT
-	, score_list.rank_semester::INT
-	, score_list.rank_grade_year::INT
-	, score_list.item_type
-	, score_list.ref_exam_id
-	, score_list.item_name
-	, score_list.rank_type
-	, score_list.rank_name
-	, score_list.student_id
-FROM 
-	score_list
-	LEFT OUTER JOIN insert_matrix_data
-		ON insert_matrix_data.school_year = score_list.rank_school_year::INT
-		AND insert_matrix_data.semester = score_list.rank_semester::INT
-		AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
-		AND insert_matrix_data.item_type = score_list.item_type
-		AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
-		AND insert_matrix_data.item_name = score_list.item_name
-		AND insert_matrix_data.rank_type = score_list.rank_type
-		AND insert_matrix_data.rank_name = score_list.rank_name
+SELECT count(*) FROM score_list
 ";
-                    #endregion
 
-                    //// debug 
-                    //string fiPath = Application.StartupPath + @"\sems_sql1.sql";
-                    //using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
-                    //{
-                    //    fi.WriteLine(insertRankSql);
-                    //}
+                        //SELECT
+                        //	score_list.rank_school_year::INT
+                        //	, score_list.rank_semester::INT
+                        //	, score_list.rank_grade_year::INT
+                        //	, score_list.item_type
+                        //	, score_list.ref_exam_id
+                        //	, score_list.item_name
+                        //	, score_list.rank_type
+                        //	, score_list.rank_name
+                        //	, score_list.student_id
+                        //FROM 
+                        //	score_list
+                        //	LEFT OUTER JOIN insert_matrix_data
+                        //		ON insert_matrix_data.school_year = score_list.rank_school_year::INT
+                        //		AND insert_matrix_data.semester = score_list.rank_semester::INT
+                        //		AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
+                        //		AND insert_matrix_data.item_type = score_list.item_type
+                        //		AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
+                        //		AND insert_matrix_data.item_name = score_list.item_name
+                        //		AND insert_matrix_data.rank_type = score_list.rank_type
+                        //		AND insert_matrix_data.rank_name = score_list.rank_name
+                        //";
+                        #endregion
 
-                    bkw.ReportProgress(50);
-                    
-                    QueryHelper queryHelper = new QueryHelper();
-                    queryHelper.Select(insertRankSql);
+                        //// debug 
+                        //string fiPath = Application.StartupPath + @"\sems_sql1.sql";
+                        //using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
+                        //{
+                        //    fi.WriteLine(insertRankSql);
+                        //}
+
+                        try
+                        {
+
+                            DataTable dt1 = queryHelper.Select(insertRankSql);
+                            //if (dt1.Rows.Count > 0)
+                            //{
+                            //    string fiPath = Application.StartupPath + @"\debug.txt";
+                            //    using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath,true))
+                            //    {
+                            //        fi.WriteLine(gr +" 筆數："+dt1.Rows[0][0].ToString());
+                            //    }
+                            //}
+
+                            bkw.ReportProgress(pr);
+                            pr += 20;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                        }
+
+                    }
 
                     bkw.ReportProgress(100);
                 }

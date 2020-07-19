@@ -23,6 +23,10 @@ namespace SHEvaluation.Rank
                      , _FilterStudentNumber = "", _FilterItemName = "", _FilterRankType = "";
         private List<DataGridViewRow> _RowList = new List<DataGridViewRow>();
 
+        // 讀取分批使用
+        List<string> gradeYearList = new List<string>();
+        List<string> rankTypeList = new List<string>();
+
         public SemesterAssessmentRankSelect()
         {
             InitializeComponent();
@@ -33,6 +37,26 @@ namespace SHEvaluation.Rank
         private void SemesterAssessmentRankSelect_Load(object sender, EventArgs e)
         {
             btnExportToExcel.Enabled = false;
+            rankTypeList.Clear();
+            rankTypeList.Add("班排名");
+            rankTypeList.Add("科排名");
+            rankTypeList.Add("年排名");
+            rankTypeList.Add("類別1排名");
+            rankTypeList.Add("類別2排名");
+            #region 取得學生年級
+            QueryHelper queryHelper = new QueryHelper();
+            gradeYearList.Clear();
+            string grQuery = "SELECT DISTINCT class.grade_year FROM class INNER JOIN student ON student.ref_class_id = class.id WHERE student.status = 1 ORDER BY class.grade_year ASC;";
+            DataTable dtG = queryHelper.Select(grQuery);
+            foreach (DataRow dr in dtG.Rows)
+            {
+                string gr = dr["grade_year"].ToString();
+                if (!string.IsNullOrWhiteSpace(gr))
+                    gradeYearList.Add(gr);
+            }
+
+            #endregion
+
 
             #region 取得前四個ComboBox的資料的SQL
             string querySQL = @"
@@ -49,7 +73,7 @@ WHERE
 ";
             #endregion
 
-            QueryHelper queryHelper = new QueryHelper();
+
             DataTable dt = queryHelper.Select(querySQL);
 
             if (dt.Rows.Count == 0)
@@ -124,6 +148,7 @@ WHERE
         private void LoadRowData(object sender, EventArgs e)
         {
             btnExportToExcel.Enabled = false;
+            lblMsgCount.Text = "";
             if (_IsLoading)
             {
                 return;
@@ -158,8 +183,16 @@ WHERE
                     {
                         bkw.ReportProgress(0);
 
-                        #region 要顯示的資料的sql字串
-                        string queryString = @"
+                        QueryHelper queryHelper = new QueryHelper();
+
+                        bool isFirst = true;
+                        int pr = 20;
+                        foreach (string gr in gradeYearList)
+                        {
+                            foreach (string rkType in rankTypeList)
+                            {
+                                #region 要顯示的資料的sql字串
+                                string queryString = @"
 SELECT 
     *
 FROM
@@ -182,6 +215,8 @@ FROM
         , rank_matrix.school_year
         , rank_matrix.semester 
         , rank_matrix.create_time
+        , rank_matrix.grade_year
+        , rank_matrix.item_type
     FROM rank_matrix 
         LEFT OUTER JOIN 
             rank_detail ON rank_detail.ref_matrix_id = rank_matrix.id 
@@ -200,13 +235,33 @@ WHERE
     school_year = " + _LoadSchoolYear + @"
     And semester = " + _LoadSemester + @"
     And score_type = '" + _LoadScoreType + @"'
-    And score_category = '" + _LoadScoreCategory + "'";
-                        #endregion
+    And score_category = '" + _LoadScoreCategory + "' AND item_type LIKE '學期%'" + " AND grade_year = '" + gr + "' AND rank_type = '" + rkType + "'";
+                                #endregion
 
-                        QueryHelper queryHelper = new QueryHelper();
-                        dt = queryHelper.Select(queryString);
 
-                        bkw.ReportProgress(50);
+                                // 第一次載入
+                                if (isFirst)
+                                {
+                                    dt = queryHelper.Select(queryString);
+                                    isFirst = false;
+                                }
+                                else
+                                {
+                                    DataTable dt1 = queryHelper.Select(queryString);
+
+                                    foreach (DataRow dr in dt1.Rows)
+                                    {
+                                        dt.ImportRow(dr);
+                                    }
+                                }
+
+                                bkw.ReportProgress(pr);
+                                pr += 5;
+
+
+                            }
+
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -465,7 +520,7 @@ WHERE
                             MessageBox.Show("檔案開啟失敗：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
-                }                
+                }
                 catch (Exception ex)
                 {
                     MessageBox.Show("檔案儲存失敗：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);

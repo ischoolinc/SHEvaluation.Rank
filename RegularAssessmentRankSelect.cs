@@ -22,6 +22,10 @@ namespace SHEvaluation.Rank
                         , _FilterExamName = "", _FilterItemName = "", _FilterRankType = "", _FilterStudentNumber = "";
         private List<DataGridViewRow> _RowList = new List<DataGridViewRow>();
 
+        // 讀取分批使用
+        List<string> gradeYearList = new List<string>();
+        List<string> rankTypeList = new List<string>();
+
         public RegularAssessmentRankSelect()
         {
             InitializeComponent();
@@ -46,6 +50,30 @@ WHERE
             #endregion
 
             QueryHelper queryHelper = new QueryHelper();
+
+            rankTypeList.Clear();
+            rankTypeList.Add("班排名");
+            rankTypeList.Add("科排名");
+            rankTypeList.Add("年排名");
+            rankTypeList.Add("類別1排名");
+            rankTypeList.Add("類別2排名");
+
+            #region 取得學生年級
+
+            gradeYearList.Clear();
+            string grQuery = "SELECT DISTINCT class.grade_year FROM class INNER JOIN student ON student.ref_class_id = class.id WHERE student.status = 1 ORDER BY class.grade_year ASC;";
+            DataTable dtG = queryHelper.Select(grQuery);
+            foreach (DataRow dr in dtG.Rows)
+            {
+                string gr = dr["grade_year"].ToString();
+                if (!string.IsNullOrWhiteSpace(gr))
+                    gradeYearList.Add(gr);
+            }
+
+            #endregion
+
+
+
             DataTable dt = queryHelper.Select(queryFilter);
 
             if (dt.Rows.Count == 0)
@@ -152,8 +180,16 @@ WHERE
                     {
                         bkw.ReportProgress(0);
 
-                        #region 要顯示的資料的sql字串
-                        string queryString = @"
+                        bool isFirst = true;
+                        int pr = 20;
+                        QueryHelper queryHelper = new QueryHelper();
+
+                        foreach (string gr in gradeYearList)
+                        {
+                            foreach (string rkType in rankTypeList)
+                            {
+                                #region 要顯示的資料的sql字串
+                                string queryString = @"
 SELECT 
     *
 FROM
@@ -177,7 +213,9 @@ FROM
         , rank_matrix.school_year
         , rank_matrix.semester 
         , rank_matrix.create_time
-        , rank_detail.ref_student_id 
+        , rank_detail.ref_student_id
+        , rank_matrix.grade_year
+        , rank_matrix.item_type
     FROM rank_matrix 
         LEFT OUTER JOIN 
             rank_detail ON rank_detail.ref_matrix_id = rank_matrix.id 
@@ -198,12 +236,32 @@ WHERE
     school_year = " + _LoadSchoolYear + @"
     And semester = " + _LoadSemester + @"
     And score_type = '" + _LoadScoreType + @"'
-    And score_category = '" + _LoadScoreCategory + "'";
-                        #endregion
+    And score_category = '" + _LoadScoreCategory + "' AND item_type LIKE '定期評量%'" + " AND grade_year = '" + gr + "' AND rank_type='" + rkType + "'";
+                                #endregion
 
-                        dt = new QueryHelper().Select(queryString);
+                                // 第一次載入
+                                if (isFirst)
+                                {
+                                    dt = queryHelper.Select(queryString);
 
-                        bkw.ReportProgress(100);
+                                                              
+                                    isFirst = false;
+
+                                }
+                                else
+                                {
+                                    DataTable dt1 = queryHelper.Select(queryString);
+
+                                    foreach (DataRow dr in dt1.Rows)
+                                    {
+                                        dt.ImportRow(dr);
+                                    }
+                                }
+
+                                bkw.ReportProgress(pr);
+                                pr += 5;
+                            }
+                        }
                     }
                     catch (Exception exc)
                     {

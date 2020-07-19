@@ -63,9 +63,13 @@ namespace SHEvaluation.Rank
             }
 
             {
+                // 因為東石專案所以 只有後面有報表才會啟動
                 var key = "CA11374B-7F8C-4288-836A-0DDE65DB56B9";
                 RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "技職繁星成績排名計算"));
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算"].Enable = FISCA.Permission.UserAcl.Current[key].Executable;
+
+                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算"].Visible = false;
+
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算"].Click += delegate
                 {
                     CalculateTechnologyAssessmentRankStep1 ctrs1 = new CalculateTechnologyAssessmentRankStep1();
@@ -77,6 +81,9 @@ namespace SHEvaluation.Rank
                 var key = "3B86FBA4-C7F4-4EF9-AA01-128914DB8C56";
                 RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "技職繁星成績排名資料檢索"));
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名資料檢索"].Enable = FISCA.Permission.UserAcl.Current[key].Executable;
+
+                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名資料檢索"].Visible = false;
+
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名資料檢索"].Click += delegate
                 {
                     CalculateTechnologyAssessmentRankSelect ctrs = new CalculateTechnologyAssessmentRankSelect();
