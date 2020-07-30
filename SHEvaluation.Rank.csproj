@@ -148,6 +148,7 @@
     </Compile>
     <Compile Include="DAO\GradeYearSemesterInfo.cs" />
     <Compile Include="DAO\QueryData.cs" />
+    <Compile Include="DAO\RankDataInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RegularMatrixRankSelect.cs">

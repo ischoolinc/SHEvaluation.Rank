@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using SHEvaluation.Rank.DAO;
 
 namespace SHEvaluation.Rank
 {
@@ -26,7 +27,7 @@ namespace SHEvaluation.Rank
         // 讀取分批使用
         List<string> gradeYearList = new List<string>();
         List<string> rankTypeList = new List<string>();
-
+        List<RankDataInfo> RankDataList = new List<RankDataInfo>();
         public SemesterAssessmentRankSelect()
         {
             InitializeComponent();
@@ -166,7 +167,7 @@ WHERE
                 _LoadScoreType = cboScoreType.Text;
                 _LoadScoreCategory = cboScoreCategory.Text;
 
-                DataTable dt = new DataTable();
+                //DataTable dt = new DataTable();
                 BackgroundWorker bkw = new BackgroundWorker();
                 bkw.WorkerReportsProgress = true;
                 Exception bkwException = null;
@@ -184,7 +185,7 @@ WHERE
                         bkw.ReportProgress(0);
 
                         QueryHelper queryHelper = new QueryHelper();
-
+                        RankDataList.Clear();
                         bool isFirst = true;
                         int pr = 20;
                         foreach (string gr in gradeYearList)
@@ -242,17 +243,77 @@ WHERE
                                 // 第一次載入
                                 if (isFirst)
                                 {
-                                    dt = queryHelper.Select(queryString);
+                                    //dt = queryHelper.Select(queryString);
+                                    //isFirst = false;
+                                    DataTable dt = queryHelper.Select(queryString);
+                                    foreach (DataRow dr in dt.Rows)
+                                    {
+                                        RankDataInfo rd = new RankDataInfo();
+                                        rd.rank_matrix_id = dr["rank_matrix_id"] + "";
+                                        rd.score_type = dr["score_type"] + "";
+                                        rd.score_category = dr["score_category"] + "";
+                                       
+                                        rd.item_name = dr["item_name"] + "";
+                                        rd.rank_type = dr["rank_type"] + "";
+                                        rd.rank_name = dr["rank_name"] + "";
+                                        rd.class_name = dr["class_name"] + "";
+                                        rd.seat_no = dr["seat_no"] + "";
+                                        rd.student_number = dr["student_number"] + "";
+                                        rd.student_name = dr["student_name"] + "";
+                                        rd.score = dr["score"] + "";
+                                        rd.rank = dr["rank"] + "";
+                                        rd.pr = dr["pr"] + "";
+                                        rd.percentile = dr["percentile"] + "";
+                                        rd.school_year = dr["school_year"] + "";
+                                        rd.semester = dr["semester"] + "";
+                                        rd.create_time = dr["create_time"] + "";
+                                        rd.ref_student_id = dr["ref_student_id"] + "";
+                                        rd.grade_year = dr["grade_year"] + "";
+                                        rd.item_type = dr["item_type"] + "";
+                                        RankDataList.Add(rd);
+                                    }
+                                    dt = null;
+                                    GC.Collect();
                                     isFirst = false;
                                 }
                                 else
                                 {
+                                    //DataTable dt1 = queryHelper.Select(queryString);
+
+                                    //foreach (DataRow dr in dt1.Rows)
+                                    //{
+                                    //    dt.ImportRow(dr);
+                                    //}
                                     DataTable dt1 = queryHelper.Select(queryString);
 
                                     foreach (DataRow dr in dt1.Rows)
                                     {
-                                        dt.ImportRow(dr);
+                                        RankDataInfo rd = new RankDataInfo();
+                                        rd.rank_matrix_id = dr["rank_matrix_id"] + "";
+                                        rd.score_type = dr["score_type"] + "";
+                                        rd.score_category = dr["score_category"] + "";
+                                        
+                                        rd.item_name = dr["item_name"] + "";
+                                        rd.rank_type = dr["rank_type"] + "";
+                                        rd.rank_name = dr["rank_name"] + "";
+                                        rd.class_name = dr["class_name"] + "";
+                                        rd.seat_no = dr["seat_no"] + "";
+                                        rd.student_number = dr["student_number"] + "";
+                                        rd.student_name = dr["student_name"] + "";
+                                        rd.score = dr["score"] + "";
+                                        rd.rank = dr["rank"] + "";
+                                        rd.pr = dr["pr"] + "";
+                                        rd.percentile = dr["percentile"] + "";
+                                        rd.school_year = dr["school_year"] + "";
+                                        rd.semester = dr["semester"] + "";
+                                        rd.create_time = dr["create_time"] + "";
+                                        rd.ref_student_id = dr["ref_student_id"] + "";
+                                        rd.grade_year = dr["grade_year"] + "";
+                                        rd.item_type = dr["item_type"] + "";
+                                        RankDataList.Add(rd);
                                     }
+                                    dt1 = null;
+                                    GC.Collect();
                                 }
 
                                 bkw.ReportProgress(pr);
@@ -290,9 +351,10 @@ WHERE
                         //項目ComboBox
                         cboItemName.Items.Clear();
                         cboItemName.Items.Add("全部");
-                        foreach (DataRow row in dt.Rows)
+                        //foreach (DataRow row in dt.Rows)
+                        foreach (RankDataInfo rd in RankDataList)
                         {
-                            string value = "" + row[3];
+                            string value = "" + rd.item_name;// row[3];
                             if (!cboItemName.Items.Contains(value))
                             {
                                 cboItemName.Items.Add(value);
@@ -303,9 +365,10 @@ WHERE
                         //母群ComboBox
                         cboRankType.Items.Clear();
                         cboRankType.Items.Add("全部");
-                        foreach (DataRow row in dt.Rows)
+                        // foreach (DataRow row in dt.Rows)
+                        foreach (RankDataInfo rd in RankDataList)
                         {
-                            string value = "" + row[4];
+                            string value = "" + rd.rank_type;//row[4];
                             if (!cboRankType.Items.Contains(value))
                             {
                                 cboRankType.Items.Add(value);
@@ -315,35 +378,56 @@ WHERE
                         #endregion
 
                         #region 整理資料
-                        _RowList = new List<DataGridViewRow>();
-                        for (int rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
+                        _RowList.Clear(); // = new List<DataGridViewRow>();
+                        //for (int rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
+                        foreach (RankDataInfo rd in RankDataList)
                         {
                             int tryParseInt;
                             decimal tryParseDecimal;
                             DataGridViewRow gridViewRow = new DataGridViewRow();
                             gridViewRow.CreateCells(dgvScoreRank);
-                            gridViewRow.Cells[0].Value = "" + dt.Rows[rowIndex]["rank_matrix_id"];
-                            gridViewRow.Cells[1].Value = "" + dt.Rows[rowIndex]["score_type"];
-                            gridViewRow.Cells[2].Value = "" + dt.Rows[rowIndex]["score_category"];
-                            gridViewRow.Cells[3].Value = "" + dt.Rows[rowIndex]["item_name"];
-                            gridViewRow.Cells[4].Value = "" + dt.Rows[rowIndex]["rank_type"];
-                            gridViewRow.Cells[5].Value = "" + dt.Rows[rowIndex]["rank_name"];
-                            gridViewRow.Cells[6].Value = "" + dt.Rows[rowIndex]["class_name"];
-                            gridViewRow.Cells[7].Value = Int32.TryParse("" + dt.Rows[rowIndex]["seat_no"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[8].Value = "" + dt.Rows[rowIndex]["student_number"];
-                            gridViewRow.Cells[9].Value = "" + dt.Rows[rowIndex]["student_name"];
-                            gridViewRow.Cells[10].Value = Decimal.TryParse("" + dt.Rows[rowIndex]["score"], out tryParseDecimal) ? (decimal?)tryParseDecimal : null;
-                            gridViewRow.Cells[11].Value = Int32.TryParse("" + dt.Rows[rowIndex]["rank"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[12].Value = Int32.TryParse("" + dt.Rows[rowIndex]["pr"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[13].Value = Int32.TryParse("" + dt.Rows[rowIndex]["percentile"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[15].Value = "" + dt.Rows[rowIndex]["school_year"];
-                            gridViewRow.Cells[16].Value = "" + dt.Rows[rowIndex]["semester"];
-                            gridViewRow.Tag = "" + dt.Rows[rowIndex]["ref_student_id"];
+                            //gridViewRow.Cells[0].Value = "" + dt.Rows[rowIndex]["rank_matrix_id"];
+                            //gridViewRow.Cells[1].Value = "" + dt.Rows[rowIndex]["score_type"];
+                            //gridViewRow.Cells[2].Value = "" + dt.Rows[rowIndex]["score_category"];
+                            //gridViewRow.Cells[3].Value = "" + dt.Rows[rowIndex]["item_name"];
+                            //gridViewRow.Cells[4].Value = "" + dt.Rows[rowIndex]["rank_type"];
+                            //gridViewRow.Cells[5].Value = "" + dt.Rows[rowIndex]["rank_name"];
+                            //gridViewRow.Cells[6].Value = "" + dt.Rows[rowIndex]["class_name"];
+                            //gridViewRow.Cells[7].Value = Int32.TryParse("" + dt.Rows[rowIndex]["seat_no"], out tryParseInt) ? (int?)tryParseInt : null;
+                            //gridViewRow.Cells[8].Value = "" + dt.Rows[rowIndex]["student_number"];
+                            //gridViewRow.Cells[9].Value = "" + dt.Rows[rowIndex]["student_name"];
+                            //gridViewRow.Cells[10].Value = Decimal.TryParse("" + dt.Rows[rowIndex]["score"], out tryParseDecimal) ? (decimal?)tryParseDecimal : null;
+                            //gridViewRow.Cells[11].Value = Int32.TryParse("" + dt.Rows[rowIndex]["rank"], out tryParseInt) ? (int?)tryParseInt : null;
+                            //gridViewRow.Cells[12].Value = Int32.TryParse("" + dt.Rows[rowIndex]["pr"], out tryParseInt) ? (int?)tryParseInt : null;
+                            //gridViewRow.Cells[13].Value = Int32.TryParse("" + dt.Rows[rowIndex]["percentile"], out tryParseInt) ? (int?)tryParseInt : null;
+                            //gridViewRow.Cells[15].Value = "" + dt.Rows[rowIndex]["school_year"];
+                            //gridViewRow.Cells[16].Value = "" + dt.Rows[rowIndex]["semester"];
+                            //gridViewRow.Tag = "" + dt.Rows[rowIndex]["ref_student_id"];
+                            gridViewRow.Cells[0].Value = "" + rd.rank_matrix_id;// dt.Rows[rowIndex]["rank_matrix_id"];
+                            gridViewRow.Cells[1].Value = "" + rd.score_type;// dt.Rows[rowIndex]["score_type"];
+                            gridViewRow.Cells[2].Value = "" + rd.score_category;//dt.Rows[rowIndex]["score_category"];                       
+                            gridViewRow.Cells[3].Value = "" + rd.item_name;//dt.Rows[rowIndex]["item_name"];
+                            gridViewRow.Cells[4].Value = "" + rd.rank_type; //dt.Rows[rowIndex]["rank_type"];
+                            gridViewRow.Cells[5].Value = "" + rd.rank_name;//dt.Rows[rowIndex]["rank_name"];
+                            gridViewRow.Cells[6].Value = "" + rd.class_name; //dt.Rows[rowIndex]["class_name"];
+                            gridViewRow.Cells[7].Value = Int32.TryParse("" + rd.seat_no, out tryParseInt) ? (int?)tryParseInt : null;
+                            gridViewRow.Cells[8].Value = "" + rd.student_number;// dt.Rows[rowIndex]["student_number"];
+                            gridViewRow.Cells[9].Value = "" + rd.student_name;//dt.Rows[rowIndex]["student_name"];
+                            gridViewRow.Cells[10].Value = Decimal.TryParse("" + rd.score, out tryParseDecimal) ? (decimal?)tryParseDecimal : null;
+                            gridViewRow.Cells[11].Value = Int32.TryParse("" + rd.rank, out tryParseInt) ? (int?)tryParseInt : null;
+                            gridViewRow.Cells[12].Value = Int32.TryParse("" + rd.pr, out tryParseInt) ? (int?)tryParseInt : null;
+                            gridViewRow.Cells[13].Value = Int32.TryParse("" + rd.percentile, out tryParseInt) ? (int?)tryParseInt : null;
+                            gridViewRow.Cells[15].Value = "" + rd.school_year;//dt.Rows[rowIndex]["school_year"];
+                            gridViewRow.Cells[16].Value = "" + rd.semester;//dt.Rows[rowIndex]["semester"];
+                            gridViewRow.Tag = "" + rd.ref_student_id; // dt.Rows[rowIndex]["ref_student_id"];
+
                             _RowList.Add(gridViewRow);
                         }
                         #endregion
 
                         MotherForm.SetStatusBarMessage("資料讀取完成");
+                        RankDataList.Clear();
+                        GC.Collect();
                         pbLoading.Visible = false;
                         _IsLoading = false;
                         FillingDataGridView(null, null);
