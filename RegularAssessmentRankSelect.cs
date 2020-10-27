@@ -64,7 +64,7 @@ WHERE
             #region 取得學生年級
 
             gradeYearList.Clear();
-            string grQuery = "SELECT DISTINCT class.grade_year FROM class INNER JOIN student ON student.ref_class_id = class.id WHERE student.status = 1 ORDER BY class.grade_year ASC;";
+            string grQuery = "SELECT DISTINCT class.grade_year FROM class INNER JOIN student ON student.ref_class_id = class.id WHERE student.status = 1 AND class.grade_year IS NOT NULL ORDER BY class.grade_year ASC;";
             DataTable dtG = queryHelper.Select(grQuery);
             foreach (DataRow dr in dtG.Rows)
             {
