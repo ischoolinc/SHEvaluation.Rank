@@ -68,7 +68,7 @@ namespace SHEvaluation.Rank
                 RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "技職繁星成績排名計算"));
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算"].Enable = FISCA.Permission.UserAcl.Current[key].Executable;
 
-                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算"].Visible = false;
+                //MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算"].Visible = true;
 
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算"].Click += delegate
                 {
@@ -82,7 +82,7 @@ namespace SHEvaluation.Rank
                 RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "技職繁星成績排名資料檢索"));
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名資料檢索"].Enable = FISCA.Permission.UserAcl.Current[key].Executable;
 
-                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名資料檢索"].Visible = false;
+                //MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名資料檢索"].Visible = true;
 
                 MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名資料檢索"].Click += delegate
                 {

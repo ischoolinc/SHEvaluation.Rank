@@ -357,7 +357,11 @@ FROM
             ItemNameList.Clear();
             RankTypeList.Clear();
             ItemNameList.Add("學業");
+            ItemNameList.Add("專業及實習部必");
             ItemNameList.Add("專業及實習");
+            ItemNameList.Add("國文部必");
+            ItemNameList.Add("英文部必");
+            ItemNameList.Add("數學部必");
             ItemNameList.Add("國文");
             ItemNameList.Add("英文");
             ItemNameList.Add("數學");

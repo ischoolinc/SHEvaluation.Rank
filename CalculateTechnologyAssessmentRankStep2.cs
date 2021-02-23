@@ -246,11 +246,12 @@ namespace SHEvaluation.Rank
             lblMsg.Text = "共 " + dgvStudentList.Rows.Count + " 位學生";
 
             // 整理不排名清單
-            foreach (string id in scoreErrorIDs)
-            {
-                if (!StudentNotRankDict.ContainsKey(id))
-                    StudentNotRankDict.Add(id, "學期科目成績未滿5學期");
-            }
+            // 先暫時註解未滿5學期限制
+            //foreach (string id in scoreErrorIDs)
+            //{
+            //    if (!StudentNotRankDict.ContainsKey(id))
+            //        StudentNotRankDict.Add(id, "學期科目成績未滿5學期");
+            //}
             foreach (string id in noGroupIDList)
             {
                 if (!StudentNotRankDict.ContainsKey(id))
@@ -351,6 +352,7 @@ WITH student_list AS
                 //    fi.WriteLine(studentListSql);
                 //}
 
+                //< Subject 不計學分 = "否" 不需評分 = "否" 修課必選修 = "必修" 修課校部訂 = "校訂" 原始成績 = "82" 學年調整成績 = "" 擇優採計成績 = "" 是否取得學分 = "是" 是否補修成績 = "否" 科目 = "英文文法" 科目級別 = "2" 補考成績 = "" 重修學年度 = "" 重修學期 = "" 重修成績 = "" 開課分項類別 = "學業" 開課學分數 = "1" />
 
                 string calculationSetting = "";
 
@@ -370,6 +372,7 @@ WITH student_list AS
 
                 #region 產生學生學期成績對照表
                 List<string> StudSemsSQLList = new List<string>();
+
                 foreach (string sid in RankStudentIDList)
                 {
                     if (StudGradeYearSemsDict.ContainsKey(sid))
@@ -404,115 +407,8 @@ SELECT " + sid + @" ::BIGINT AS student_id
 ,parse_number AS
 (
     SELECT " + parseNumber + @" ::INT AS parse_number
-)
-,entry_score_list AS
-(
-	SELECT		
-		student_list.student_id
-		, student_list.student_name
-        , student_list.rank_grade_year
-        , student_list.rank_dept_name
-		, student_list.rank_class_name
-		, student_list.rank_tag1
-		, student_list.rank_tag2
-		, student_list.rank_group_name		
-		, array_to_string(xpath('/root/Entry/@分項', xmlparse(content  concat('<root>', entry_score_ele , '</root>'))),'')::TEXT As entry
-		, AVG(NULLIF(array_to_string(xpath('/root/Entry/@成績', xmlparse(content   concat('<root>', entry_score_ele , '</root>'))), ''),'')::DECIMAL) AS entry_score
-        ,(select parse_number from parse_number)::INT AS parse_number
-	FROM
-	(
-		SELECT
-			sems_entry_score.*
-			, unnest(xpath('/root/SemesterEntryScore/Entry', xmlparse(content  concat('<root>', sems_entry_score.score_info , '</root>') ))) As entry_score_ele
-		FROM
-		sems_entry_score
-	) AS sems_entry_score_ext
-	INNER JOIN student_list
-		ON sems_entry_score_ext.ref_student_id = student_list.student_id
-	INNER JOIN student_sems
-		ON sems_entry_score_ext.school_year = student_sems.sems_school_year::INT
-		AND sems_entry_score_ext.ref_student_id = student_sems.student_id::INT
-        AND sems_entry_score_ext.semester = student_sems.sems_semester::INT
-		AND sems_entry_score_ext.grade_year = student_sems.sems_grade_year::INT 
-GROUP BY student_list.student_id
-        , student_list.student_name
-        , student_list.rank_grade_year
-        , student_list.rank_dept_name
-        , student_list.rank_class_name
-        , student_list.rank_tag1
-        , student_list.rank_tag2
-        , student_list.rank_group_name
-        , entry
-)
-,entry_score_avg_list AS (
-        SELECT 
-            student_id
-            , student_name
-            , rank_grade_year
-            , rank_dept_name
-            , rank_class_name
-            , rank_tag1
-            , rank_tag2
-            , rank_group_name
-            , entry
-            , ROUND(entry_score,parse_number) AS entry_score 
-        FROM entry_score_list WHERE entry = '學業(原始)'
-) 
-,entry_rank_list AS
-(
-	SELECT
-		 rank_grade_year
-		, rank_dept_name
-		, rank_class_name		
-		, '學業'::TEXT AS item_name
-		, student_id
-		, rank_tag1
-		, rank_tag2
-        ,rank_group_name
-		, entry_score AS avg_score
-		, RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score DESC) AS grade_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score DESC) AS dept_rank
-		, RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score DESC) AS class_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score DESC) AS tag1_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score DESC) AS tag2_rank
-        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name, entry ORDER BY entry_score DESC) AS group_rank
-        , RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score ASC) AS grade_rank_reverse
-        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score ASC) AS dept_rank_reverse
-        , RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score ASC) AS class_rank_reverse
-        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score ASC) AS tag1_rank_reverse
-        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score ASC) AS tag2_rank_reverse
-        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name, entry ORDER BY entry_score ASC) AS group_rank_reverse
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, entry) AS grade_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, entry) AS dept_count
-		, COUNT(student_id) OVER(PARTITION BY rank_class_name, entry) AS class_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1, entry) AS tag1_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2, entry) AS tag2_count
-        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_group_name, entry) AS group_count
-	FROM
-		entry_score_avg_list
-	WHERE
-		entry IS NOT NULL
-		AND entry_score IS NOT NULL
-), entry_rank_expand AS
-(
-	SELECT
-		entry_rank_list.*
-		, FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
-		, FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
-		, FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
-		, FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
-		, FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
-        , FLOOR((group_rank::DECIMAL - 1)*100::DECIMAL / group_count) + 1 AS grouprank_percentage
-        , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
-        , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
-        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
-        , FLOOR((tag1_rank_reverse::DECIMAL-1)*100::DECIMAL/tag1_count) AS tag1ank_pr
-        , FLOOR((tag2_rank_reverse::DECIMAL-1)*100::DECIMAL/tag2_count) AS tag2rank_pr
-        , FLOOR((group_rank_reverse::DECIMAL-1)*100::DECIMAL/group_count) AS grouprank_pr
-	FROM
-		entry_rank_list
-)
-, subject_score AS
+)              
+, subject_score_data AS
 (
 	SELECT
 		 student_list.student_id
@@ -529,7 +425,11 @@ GROUP BY student_list.student_id
 		, array_to_string(xpath('/root/Subject/@科目', xmlparse(content  concat('<root>', subj_score_ele , '</root>'))), '')::TEXT As subject
 		, NULLIF(array_to_string(xpath('/root/Subject/@原始成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::DECIMAL As subject_origin_score
 		, NULLIF(array_to_string(xpath('/root/Subject/@開課學分數', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::DECIMAL As subject_credit
-		, NULLIF(array_to_string(xpath('/root/Subject/@開課分項類別', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As subject_entry		
+		, NULLIF(array_to_string(xpath('/root/Subject/@開課分項類別', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As subject_entry
+        , NULLIF(array_to_string(xpath('/root/Subject/@修課必選修', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As subject_required
+        , NULLIF(array_to_string(xpath('/root/Subject/@修課校部訂', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As subject_requiredby
+         , NULLIF(array_to_string(xpath('/root/Subject/@不計學分', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As ns1
+         , NULLIF(array_to_string(xpath('/root/Subject/@不需評分', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As ns2
 	FROM 
 	(
 		SELECT 
@@ -544,9 +444,224 @@ GROUP BY student_list.student_id
 		ON sems_subj_score_ext.school_year = student_sems.sems_school_year::INT
 		AND sems_subj_score_ext.ref_student_id = student_sems.student_id::INT
         AND sems_subj_score_ext.semester = student_sems.sems_semester::INT
-		AND sems_subj_score_ext.grade_year = student_sems.sems_grade_year::INT 
-)";
+		AND sems_subj_score_ext.grade_year = student_sems.sems_grade_year::INT   
+),subject_score AS
+(
+    SELECT * FROM subject_score_data WHERE ns1 = '否' AND ns2 ='否'
+)
+"; // 過濾不需評分與不計學分
 
+                // 多學期學業加權平均
+                StringBuilder sbSubjectEntrySore = new StringBuilder();
+                foreach (GradeYearSemesterInfo gs in calSemesterList)
+                {
+                    string ss = "a";
+                    if (gs.Semester == 2)
+                        ss = "b";
+
+                    string str = @", subject_entry_score_pro_avg_" + gs.GradeYear + ss + @" AS
+(
+	SELECT
+		student_list.student_id
+		,student_list.student_name
+		,student_list.rank_grade_year
+		,student_list.rank_dept_name
+		,student_list.rank_class_name
+		,student_list.rank_tag1
+		,student_list.rank_tag2
+		,student_list.rank_group_name
+		,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
+	FROM 
+		subject_score
+	INNER JOIN student_list
+		ON subject_score.student_id = student_list.student_id
+	WHERE 
+		subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND subject_entry IN('學業')
+	GROUP BY 
+	student_list.student_id
+		,student_list.student_name
+		,student_list.rank_grade_year
+		,student_list.rank_dept_name
+		,student_list.rank_class_name
+		,student_list.rank_tag1
+		,student_list.rank_tag2
+		,student_list.rank_group_name
+
+)
+";
+                    sbSubjectEntrySore.AppendLine(str);
+                }
+
+                string Strsubject_entry_score_pro_avg_list = @"
+,subject_entry_score_pro_avg_list AS
+(
+
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    FROM
+    (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
+        ,(select parse_number from parse_number)::INT AS parse_number
+        FROM (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_entry_score_pro_avg_1a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_entry_score_pro_avg_1b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_entry_score_pro_avg_2a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_entry_score_pro_avg_2b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_entry_score_pro_avg_3a
+            ) as subject_score_pro_avg5
+group BY
+student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+    ) AS subject_entry_score_pro_avg_round
+)
+,subject_entry_score_pro_rank_list AS
+(
+    SELECT
+         student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,'學業'::TEXT AS item_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        , avg_score
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score DESC) AS grade_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score DESC) AS dept_rank
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score DESC) AS class_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score DESC) AS tag1_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score DESC) AS tag2_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score DESC) AS group_rank
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score ASC) AS grade_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score ASC) AS dept_rank_reverse
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score ASC) AS class_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score ASC) AS tag1_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score ASC) AS tag2_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score ASC) AS group_rank_reverse
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year) AS grade_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name) AS dept_count
+        , COUNT(student_id) OVER(PARTITION BY rank_class_name) AS class_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1) AS tag1_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2) AS tag2_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_group_name) AS group_count
+    FROM
+        subject_entry_score_pro_avg_list
+    WHERE       
+        avg_score IS NOT NULL
+)
+, subject_entry_score_pro_avg_expand AS
+(
+    SELECT
+        subject_entry_score_pro_rank_list.*
+        , FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
+        , FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
+        , FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
+        , FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
+        , FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+        , FLOOR((group_rank::DECIMAL - 1)*100::DECIMAL / group_count) + 1 AS grouprank_percentage
+        , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
+        , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
+        , FLOOR((tag1_rank_reverse::DECIMAL-1)*100::DECIMAL/tag1_count) AS tag1ank_pr
+        , FLOOR((tag2_rank_reverse::DECIMAL-1)*100::DECIMAL/tag2_count) AS tag2rank_pr
+        , FLOOR((group_rank_reverse::DECIMAL-1)*100::DECIMAL/group_count) AS grouprank_pr
+    FROM
+        subject_entry_score_pro_rank_list
+)
+
+";
+
+                // 多學期專業及實習加權平均
                 StringBuilder sbSubjectSore = new StringBuilder();
                 foreach (GradeYearSemesterInfo gs in calSemesterList)
                 {
@@ -565,7 +680,8 @@ GROUP BY student_list.student_id
 		,student_list.rank_tag1
 		,student_list.rank_tag2
 		,student_list.rank_group_name
-		,SUM(subject_origin_score*subject_credit)/SUM(subject_credit) AS subject_avg_score
+		,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
 	FROM 
 		subject_score
 	INNER JOIN student_list
@@ -600,7 +716,7 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,round(avgScore,parse_number) AS avg_score
+       ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
     FROM
     (
 SELECT
@@ -612,7 +728,8 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,AVG(subject_avg_score ) AS avgScore
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
         ,(select parse_number from parse_number)::INT AS parse_number
         FROM (
 SELECT
@@ -623,7 +740,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit         
         FROM 
         subject_score_pro_avg_1a
 UNION All 
@@ -635,7 +754,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score       
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit 
         FROM 
         subject_score_pro_avg_1b
 UNION All 
@@ -647,7 +768,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit     
         FROM 
         subject_score_pro_avg_2a
 UNION All 
@@ -659,7 +782,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_pro_avg_2b
 UNION All 
@@ -671,7 +796,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_pro_avg_3a
             ) as subject_score_pro_avg5
@@ -743,9 +870,217 @@ student_id
 )
 
 ";
+                // 多學期專業及實習部定必修加權平均
+                StringBuilder sbSubjectSore_req = new StringBuilder();
+                foreach (GradeYearSemesterInfo gs in calSemesterList)
+                {
+                    string ss = "a";
+                    if (gs.Semester == 2)
+                        ss = "b";
+
+                    string str = @", subject_score_pro_avgreq_" + gs.GradeYear + ss + @" AS
+(
+	SELECT
+		student_list.student_id
+		,student_list.student_name
+		,student_list.rank_grade_year
+		,student_list.rank_dept_name
+		,student_list.rank_class_name
+		,student_list.rank_tag1
+		,student_list.rank_tag2
+		,student_list.rank_group_name
+		,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
+	FROM 
+		subject_score
+	INNER JOIN student_list
+		ON subject_score.student_id = student_list.student_id
+	WHERE 
+		subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND subject_entry IN('實習科目','專業科目') AND subject_required ='必修' AND subject_requiredby = '部訂' 
+	GROUP BY 
+	student_list.student_id
+		,student_list.student_name
+		,student_list.rank_grade_year
+		,student_list.rank_dept_name
+		,student_list.rank_class_name
+		,student_list.rank_tag1
+		,student_list.rank_tag2
+		,student_list.rank_group_name
+
+)
+";
+                    sbSubjectSore_req.AppendLine(str);
+                }
+
+                string Strsubject_score_pro_avgreq_list = @"
+,subject_score_pro_avgreq_list AS
+(
+
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    FROM
+    (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
+        ,(select parse_number from parse_number)::INT AS parse_number
+        FROM (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_pro_avgreq_1a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit      
+        FROM 
+        subject_score_pro_avgreq_1b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit        
+        FROM 
+        subject_score_pro_avgreq_2a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_pro_avgreq_2b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_pro_avgreq_3a
+            ) as subject_score_pro_avg5
+group BY
+student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+    ) AS subject_score_pro_avgreq_round
+)
+,subject_scorereq_pro_rank_list AS
+(
+    SELECT
+         student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,'專業及實習部必'::TEXT AS item_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        , avg_score
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score DESC) AS grade_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score DESC) AS dept_rank
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score DESC) AS class_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score DESC) AS tag1_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score DESC) AS tag2_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score DESC) AS group_rank
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score ASC) AS grade_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score ASC) AS dept_rank_reverse
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score ASC) AS class_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score ASC) AS tag1_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score ASC) AS tag2_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score ASC) AS group_rank_reverse
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year) AS grade_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name) AS dept_count
+        , COUNT(student_id) OVER(PARTITION BY rank_class_name) AS class_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1) AS tag1_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2) AS tag2_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_group_name) AS group_count
+    FROM
+        subject_score_pro_avgreq_list
+    WHERE       
+        avg_score IS NOT NULL
+)
+, subject_score_pro_avgreq_expand AS
+(
+    SELECT
+        subject_scorereq_pro_rank_list.*
+        , FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
+        , FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
+        , FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
+        , FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
+        , FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+        , FLOOR((group_rank::DECIMAL - 1)*100::DECIMAL / group_count) + 1 AS grouprank_percentage
+        , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
+        , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
+        , FLOOR((tag1_rank_reverse::DECIMAL-1)*100::DECIMAL/tag1_count) AS tag1ank_pr
+        , FLOOR((tag2_rank_reverse::DECIMAL-1)*100::DECIMAL/tag2_count) AS tag2rank_pr
+        , FLOOR((group_rank_reverse::DECIMAL-1)*100::DECIMAL/group_count) AS grouprank_pr
+    FROM
+        subject_scorereq_pro_rank_list
+)
+";
 
                 // 處理國英數動態對照算成績
-
+                // 多學期國文加權平均
                 StringBuilder sbSubjectChineseScore = new StringBuilder();
                 foreach (GradeYearSemesterInfo gs in calSemesterList)
                 {
@@ -777,7 +1112,8 @@ student_id
         ,student_list.rank_tag1
         ,student_list.rank_tag2
         ,student_list.rank_group_name
-        ,SUM(subject_origin_score*subject_credit)/SUM(subject_credit) AS subject_avg_score
+        ,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
     FROM 
         subject_score
     INNER JOIN student_list
@@ -817,7 +1153,7 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,round(avgScore,parse_number) AS avg_score
+        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
     FROM
     (
 SELECT
@@ -829,7 +1165,8 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,AVG(subject_avg_score ) AS avgScore
+         ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
         ,(select parse_number from parse_number)::INT AS parse_number
         FROM (
 SELECT
@@ -840,7 +1177,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_chinese_avg_1a
 UNION All 
@@ -852,7 +1191,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score       
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_chinese_avg_1b
 UNION All 
@@ -864,7 +1205,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit     
         FROM 
         subject_score_chinese_avg_2a
 UNION All 
@@ -876,7 +1219,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_chinese_avg_2b
 UNION All 
@@ -888,7 +1233,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_chinese_avg_3a
             ) as subject_score_chinese_avg5
@@ -961,6 +1308,236 @@ student_id
 
 ";
 
+
+                // 多學期國文部定必修加權平均
+                StringBuilder sbSubjectChineseReqScore = new StringBuilder();
+                foreach (GradeYearSemesterInfo gs in calSemesterList)
+                {
+                    string ka = "";
+                    if (gs.Semester == 1)
+                        ka = gs.GradeYear + "a";
+                    if (gs.Semester == 2)
+                        ka = gs.GradeYear + "b";
+
+                    string inString = "";
+
+                    // 解析國文
+                    if (SubjectNameMapDict.ContainsKey("國文"))
+                    {
+                        if (SubjectNameMapDict["國文"].ContainsKey(ka))
+                            inString = SubjectNameMapDict["國文"][ka];
+                    }
+
+                    if (inString != "")
+                    {
+                        string str = @", subject_score_ChineseReq_avg_" + ka + @" AS
+(
+    SELECT
+        student_list.student_id
+        ,student_list.student_name
+        ,student_list.rank_grade_year
+        ,student_list.rank_dept_name
+        ,student_list.rank_class_name
+        ,student_list.rank_tag1
+        ,student_list.rank_tag2
+        ,student_list.rank_group_name
+        ,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
+    FROM 
+        subject_score
+    INNER JOIN student_list
+        ON subject_score.student_id = student_list.student_id
+    WHERE 
+        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND subject_entry = '學業' AND subject_required ='必修' AND subject_requiredby = '部訂' AND subject IN(" + inString + @")
+    GROUP BY 
+    student_list.student_id
+        ,student_list.student_name
+        ,student_list.rank_grade_year
+        ,student_list.rank_dept_name
+        ,student_list.rank_class_name
+        ,student_list.rank_tag1
+        ,student_list.rank_tag2
+        ,student_list.rank_group_name
+
+)
+";
+                        sbSubjectChineseReqScore.AppendLine(str);
+
+                    }
+                }
+
+
+
+
+                string Strsubject_score_ChineseReq_avg_list = @"
+,subject_score_ChineseReq_avg_list AS
+(
+
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+       ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    FROM
+    (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
+        ,(select parse_number from parse_number)::INT AS parse_number
+        FROM (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_ChineseReq_avg_1a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_ChineseReq_avg_1b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_ChineseReq_avg_2a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_ChineseReq_avg_2b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_ChineseReq_avg_3a
+            ) as subject_score_ChineseReq_avg5
+group BY
+student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+    ) AS subject_score_ChineseReq_avg_round
+)
+,subject_score_ChineseReq_rank_list AS
+(
+    SELECT
+         student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,'國文部必'::TEXT AS item_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        , avg_score
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score DESC) AS grade_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score DESC) AS dept_rank
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score DESC) AS class_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score DESC) AS tag1_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score DESC) AS tag2_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score DESC) AS group_rank
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score ASC) AS grade_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score ASC) AS dept_rank_reverse
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score ASC) AS class_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score ASC) AS tag1_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score ASC) AS tag2_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score ASC) AS group_rank_reverse
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year) AS grade_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name) AS dept_count
+        , COUNT(student_id) OVER(PARTITION BY rank_class_name) AS class_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1) AS tag1_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2) AS tag2_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_group_name) AS group_count
+    FROM
+        subject_score_ChineseReq_avg_list
+    WHERE       
+        avg_score IS NOT NULL
+)
+, subject_score_ChineseReq_avg_expand AS
+(
+    SELECT
+        subject_score_ChineseReq_rank_list.*
+        , FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
+        , FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
+        , FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
+        , FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
+        , FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+        , FLOOR((group_rank::DECIMAL - 1)*100::DECIMAL / group_count) + 1 AS grouprank_percentage
+        , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
+        , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
+        , FLOOR((tag1_rank_reverse::DECIMAL-1)*100::DECIMAL/tag1_count) AS tag1ank_pr
+        , FLOOR((tag2_rank_reverse::DECIMAL-1)*100::DECIMAL/tag2_count) AS tag2rank_pr
+        , FLOOR((group_rank_reverse::DECIMAL-1)*100::DECIMAL/group_count) AS grouprank_pr
+    FROM
+        subject_score_ChineseReq_rank_list
+)
+
+";
+
+                // 多學期英文加權平均
                 StringBuilder sbSubjectEnglishScore = new StringBuilder();
                 foreach (GradeYearSemesterInfo gs in calSemesterList)
                 {
@@ -992,7 +1569,8 @@ student_id
         ,student_list.rank_tag1
         ,student_list.rank_tag2
         ,student_list.rank_group_name
-        ,SUM(subject_origin_score*subject_credit)/SUM(subject_credit) AS subject_avg_score
+        ,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
     FROM 
         subject_score
     INNER JOIN student_list
@@ -1032,7 +1610,7 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,round(avgScore,parse_number) AS avg_score
+        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
     FROM
     (
 SELECT
@@ -1044,7 +1622,8 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,AVG(subject_avg_score ) AS avgScore
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
         ,(select parse_number from parse_number)::INT AS parse_number
         FROM (
 SELECT
@@ -1055,7 +1634,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_english_avg_1a
 UNION All 
@@ -1067,7 +1648,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score       
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_english_avg_1b
 UNION All 
@@ -1079,7 +1662,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_english_avg_2a
 UNION All 
@@ -1091,7 +1676,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_english_avg_2b
 UNION All 
@@ -1103,7 +1690,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_english_avg_3a
             ) as subject_score_english_avg5
@@ -1176,6 +1765,235 @@ student_id
 
 ";
 
+
+                // 多學期英文部定必修加權平均
+                StringBuilder sbSubjectEnglishReqScore = new StringBuilder();
+                foreach (GradeYearSemesterInfo gs in calSemesterList)
+                {
+                    string ka = "";
+                    if (gs.Semester == 1)
+                        ka = gs.GradeYear + "a";
+                    if (gs.Semester == 2)
+                        ka = gs.GradeYear + "b";
+
+                    string inString = "";
+
+                    // 解析英文
+                    if (SubjectNameMapDict.ContainsKey("英文"))
+                    {
+                        if (SubjectNameMapDict["英文"].ContainsKey(ka))
+                            inString = SubjectNameMapDict["英文"][ka];
+                    }
+
+                    if (inString != "")
+                    {
+                        string str = @", subject_score_EnglishReq_avg_" + ka + @" AS
+(
+    SELECT
+        student_list.student_id
+        ,student_list.student_name
+        ,student_list.rank_grade_year
+        ,student_list.rank_dept_name
+        ,student_list.rank_class_name
+        ,student_list.rank_tag1
+        ,student_list.rank_tag2
+        ,student_list.rank_group_name
+        ,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
+    FROM 
+        subject_score
+    INNER JOIN student_list
+        ON subject_score.student_id = student_list.student_id
+    WHERE 
+        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND subject_entry = '學業' AND subject_required ='必修' AND subject_requiredby = '部訂' AND subject IN(" + inString + @")
+    GROUP BY 
+    student_list.student_id
+        ,student_list.student_name
+        ,student_list.rank_grade_year
+        ,student_list.rank_dept_name
+        ,student_list.rank_class_name
+        ,student_list.rank_tag1
+        ,student_list.rank_tag2
+        ,student_list.rank_group_name
+
+)
+";
+                        sbSubjectEnglishReqScore.AppendLine(str);
+
+                    }
+                }
+
+
+
+
+                string Strsubject_score_EnglishReq_avg_list = @"
+,subject_score_EnglishReq_avg_list AS
+(
+
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    FROM
+    (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
+        ,(select parse_number from parse_number)::INT AS parse_number
+        FROM (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_EnglishReq_avg_1a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_EnglishReq_avg_1b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_EnglishReq_avg_2a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_EnglishReq_avg_2b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_EnglishReq_avg_3a
+            ) as subject_score_EnglishReq_avg5
+group BY
+student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+    ) AS subject_score_EnglishReq_avg_round
+)
+,subject_score_EnglishReq_rank_list AS
+(
+    SELECT
+         student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,'英文部必'::TEXT AS item_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        , avg_score
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score DESC) AS grade_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score DESC) AS dept_rank
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score DESC) AS class_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score DESC) AS tag1_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score DESC) AS tag2_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score DESC) AS group_rank
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score ASC) AS grade_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score ASC) AS dept_rank_reverse
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score ASC) AS class_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score ASC) AS tag1_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score ASC) AS tag2_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score ASC) AS group_rank_reverse
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year) AS grade_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name) AS dept_count
+        , COUNT(student_id) OVER(PARTITION BY rank_class_name) AS class_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1) AS tag1_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2) AS tag2_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_group_name) AS group_count
+    FROM
+        subject_score_EnglishReq_avg_list
+    WHERE       
+        avg_score IS NOT NULL
+)
+, subject_score_EnglishReq_avg_expand AS
+(
+    SELECT
+        subject_score_EnglishReq_rank_list.*
+        , FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
+        , FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
+        , FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
+        , FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
+        , FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+        , FLOOR((group_rank::DECIMAL - 1)*100::DECIMAL / group_count) + 1 AS grouprank_percentage
+        , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
+        , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
+        , FLOOR((tag1_rank_reverse::DECIMAL-1)*100::DECIMAL/tag1_count) AS tag1ank_pr
+        , FLOOR((tag2_rank_reverse::DECIMAL-1)*100::DECIMAL/tag2_count) AS tag2rank_pr
+        , FLOOR((group_rank_reverse::DECIMAL-1)*100::DECIMAL/group_count) AS grouprank_pr
+    FROM
+        subject_score_EnglishReq_rank_list
+)
+
+";
+                // 多學期數學加權平均
                 StringBuilder sbSubjectMathScore = new StringBuilder();
                 foreach (GradeYearSemesterInfo gs in calSemesterList)
                 {
@@ -1207,7 +2025,8 @@ student_id
         ,student_list.rank_tag1
         ,student_list.rank_tag2
         ,student_list.rank_group_name
-        ,SUM(subject_origin_score*subject_credit)/SUM(subject_credit) AS subject_avg_score
+        ,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
     FROM 
         subject_score
     INNER JOIN student_list
@@ -1247,7 +2066,7 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,round(avgScore,parse_number) AS avg_score
+        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
     FROM
     (
 SELECT
@@ -1259,7 +2078,8 @@ SELECT
         ,rank_tag1
         ,rank_tag2
         ,rank_group_name
-        ,AVG(subject_avg_score ) AS avgScore
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
         ,(select parse_number from parse_number)::INT AS parse_number
         FROM (
 SELECT
@@ -1270,7 +2090,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_math_avg_1a
 UNION All 
@@ -1282,7 +2104,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score       
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_math_avg_1b
 UNION All 
@@ -1294,7 +2118,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score         
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_math_avg_2a
 UNION All 
@@ -1306,7 +2132,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_math_avg_2b
 UNION All 
@@ -1318,7 +2146,9 @@ SELECT
         ,rank_class_name
         ,rank_tag1
         ,rank_tag2
-        ,rank_group_name,subject_avg_score
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
         FROM 
         subject_score_math_avg_3a
             ) as subject_score_math_avg5
@@ -1391,13 +2221,244 @@ student_id
 
 ";
 
+                // 多學期數學部定必修加權平均
+                StringBuilder sbSubjectMathReqScore = new StringBuilder();
+                foreach (GradeYearSemesterInfo gs in calSemesterList)
+                {
+                    string ka = "";
+                    if (gs.Semester == 1)
+                        ka = gs.GradeYear + "a";
+                    if (gs.Semester == 2)
+                        ka = gs.GradeYear + "b";
+
+                    string inString = "";
+
+                    // 解析數學
+                    if (SubjectNameMapDict.ContainsKey("數學"))
+                    {
+                        if (SubjectNameMapDict["數學"].ContainsKey(ka))
+                            inString = SubjectNameMapDict["數學"][ka];
+                    }
+
+                    if (inString != "")
+                    {
+                        string str = @", subject_score_MathReq_avg_" + ka + @" AS
+(
+    SELECT
+        student_list.student_id
+        ,student_list.student_name
+        ,student_list.rank_grade_year
+        ,student_list.rank_dept_name
+        ,student_list.rank_class_name
+        ,student_list.rank_tag1
+        ,student_list.rank_tag2
+        ,student_list.rank_group_name
+        ,SUM(subject_origin_score*subject_credit) AS sum_score
+        ,SUM(subject_credit) AS sum_credit
+    FROM 
+        subject_score
+    INNER JOIN student_list
+        ON subject_score.student_id = student_list.student_id
+    WHERE 
+        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND subject_entry = '學業' AND subject_required ='必修' AND subject_requiredby = '部訂' AND subject IN(" + inString + @")
+    GROUP BY 
+    student_list.student_id
+        ,student_list.student_name
+        ,student_list.rank_grade_year
+        ,student_list.rank_dept_name
+        ,student_list.rank_class_name
+        ,student_list.rank_tag1
+        ,student_list.rank_tag2
+        ,student_list.rank_group_name
+
+)
+";
+                        sbSubjectMathReqScore.AppendLine(str);
+
+                    }
+                }
+
+
+
+
+                string Strsubject_score_MathReq_avg_list = @"
+,subject_score_MathReq_avg_list AS
+(
+
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    FROM
+    (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,SUM(sum_score) AS sum_score_s
+        ,SUM(sum_credit) AS sum_credit_s
+        ,(select parse_number from parse_number)::INT AS parse_number
+        FROM (
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_MathReq_avg_1a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_MathReq_avg_1b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_MathReq_avg_2a
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_MathReq_avg_2b
+UNION All 
+SELECT
+        student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        ,sum_score
+        ,sum_credit
+        FROM 
+        subject_score_MathReq_avg_3a
+            ) as subject_score_MathReq_avg5
+group BY
+student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+    ) AS subject_score_MathReq_avg_round
+)
+,subject_score_MathReq_rank_list AS
+(
+    SELECT
+         student_id
+        ,student_name
+        ,rank_grade_year
+        ,rank_dept_name
+        ,'數學部必'::TEXT AS item_name
+        ,rank_class_name
+        ,rank_tag1
+        ,rank_tag2
+        ,rank_group_name
+        , avg_score
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score DESC) AS grade_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score DESC) AS dept_rank
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score DESC) AS class_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score DESC) AS tag1_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score DESC) AS tag2_rank
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score DESC) AS group_rank
+        , RANK() OVER(PARTITION BY rank_grade_year ORDER BY avg_score ASC) AS grade_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ORDER BY avg_score ASC) AS dept_rank_reverse
+        , RANK() OVER(PARTITION BY rank_class_name ORDER BY avg_score ASC) AS class_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag1 ORDER BY avg_score ASC) AS tag1_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_tag2 ORDER BY avg_score ASC) AS tag2_rank_reverse
+        , RANK() OVER(PARTITION BY rank_grade_year, rank_group_name ORDER BY avg_score ASC) AS group_rank_reverse
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year) AS grade_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name) AS dept_count
+        , COUNT(student_id) OVER(PARTITION BY rank_class_name) AS class_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1) AS tag1_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2) AS tag2_count
+        , COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_group_name) AS group_count
+    FROM
+        subject_score_MathReq_avg_list
+    WHERE       
+        avg_score IS NOT NULL
+)
+, subject_score_MathReq_avg_expand AS
+(
+    SELECT
+        subject_score_MathReq_rank_list.*
+        , FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
+        , FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
+        , FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
+        , FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
+        , FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
+        , FLOOR((group_rank::DECIMAL - 1)*100::DECIMAL / group_count) + 1 AS grouprank_percentage
+        , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
+        , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
+        , FLOOR((tag1_rank_reverse::DECIMAL-1)*100::DECIMAL/tag1_count) AS tag1ank_pr
+        , FLOOR((tag2_rank_reverse::DECIMAL-1)*100::DECIMAL/tag2_count) AS tag2rank_pr
+        , FLOOR((group_rank_reverse::DECIMAL-1)*100::DECIMAL/group_count) AS grouprank_pr
+    FROM
+        subject_score_MathReq_rank_list
+)
+
+";
                 StringBuilder sbScoreListSQL = new StringBuilder();
                 List<string> scNameList = new List<string>();
-                scNameList.Add("entry_rank_expand");
+                scNameList.Add("subject_entry_score_pro_avg_expand");
                 scNameList.Add("subject_score_pro_avg_expand");
+                scNameList.Add("subject_score_pro_avgreq_expand");
                 scNameList.Add("subject_score_chinese_avg_expand");
                 scNameList.Add("subject_score_english_avg_expand");
                 scNameList.Add("subject_score_math_avg_expand");
+                scNameList.Add("subject_score_chineseReq_avg_expand");
+                scNameList.Add("subject_score_englishReq_avg_expand");
+                scNameList.Add("subject_score_mathReq_avg_expand");
 
                 sbScoreListSQL.AppendLine(", score_list AS(");
                 int sbScoreItemNum = 1;
@@ -1531,7 +2592,7 @@ UNION ALL
 ";
                     sbScoreListSQL.AppendLine(scoreListSQL);
 
-                    if (sbScoreItemNum > 0 && sbScoreItemNum <= 4)
+                    if (sbScoreItemNum > 0 && sbScoreItemNum <= 8)
                         sbScoreListSQL.AppendLine(" UNION ALL");
                     sbScoreItemNum++;
 
@@ -1690,31 +2751,21 @@ UNION ALL
 					AND insert_matrix_data.rank_type = score_list.rank_type
 					AND insert_matrix_data.rank_name = score_list.rank_name
 )
-SELECT
-	score_list.rank_school_year::INT
-	, score_list.rank_semester::INT
-	, score_list.rank_grade_year::INT
-	, score_list.item_type
-	, score_list.ref_exam_id
-	, score_list.item_name
-	, score_list.rank_type
-	, score_list.rank_name
-	, score_list.student_id
-FROM 
-	score_list
-	LEFT OUTER JOIN insert_matrix_data
-		ON insert_matrix_data.school_year = score_list.rank_school_year::INT
-		AND insert_matrix_data.semester = score_list.rank_semester::INT
-		AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
-		AND insert_matrix_data.item_type = score_list.item_type
-		AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
-		AND insert_matrix_data.item_name = score_list.item_name
-		AND insert_matrix_data.rank_type = score_list.rank_type
-		AND insert_matrix_data.rank_name = score_list.rank_name
+SELECT * from score_list limit 1
+	
 
                 ";
 
-                insertRankSql += sbSubjectSore.ToString() + Strsubject_score_pro_avg_list + sbSubjectChineseScore.ToString() + Strsubject_score_chinese_avg_list + sbSubjectEnglishScore.ToString() + Strsubject_score_english_avg_list + sbSubjectMathScore.ToString() + Strsubject_score_math_avg_list + sbScoreListSQL.ToString() + insertUpdateSQL;
+                insertRankSql += sbSubjectEntrySore.ToString() + Strsubject_entry_score_pro_avg_list
+                + sbSubjectSore.ToString() + Strsubject_score_pro_avg_list +
+                sbSubjectSore_req.ToString() + Strsubject_score_pro_avgreq_list
+                + sbSubjectChineseScore.ToString() + Strsubject_score_chinese_avg_list
+                + sbSubjectChineseReqScore.ToString() + Strsubject_score_ChineseReq_avg_list +
+                sbSubjectEnglishScore.ToString() + Strsubject_score_english_avg_list +
+                sbSubjectEnglishReqScore.ToString() + Strsubject_score_EnglishReq_avg_list +
+                sbSubjectMathScore.ToString() + Strsubject_score_math_avg_list +
+                sbSubjectMathReqScore.ToString() + Strsubject_score_MathReq_avg_list +
+                sbScoreListSQL.ToString() + insertUpdateSQL;
 
 
                 //// debug 
@@ -1726,6 +2777,7 @@ FROM
 
                 #endregion
 
+     
                 bkw.ReportProgress(50);
 
                 QueryHelper queryHelper = new QueryHelper();

@@ -194,7 +194,7 @@
             this.lblMsg.Name = "lblMsg";
             this.lblMsg.Size = new System.Drawing.Size(479, 79);
             this.lblMsg.TabIndex = 12;
-            this.lblMsg.Text = "說明：\r\n1.學生沒有設定學群或學期科目成績不滿五學期不會被加入排名。\r\n2.成績來源：原始成績。";
+            this.lblMsg.Text = "說明：\r\n1.學生沒有設定學群不會被加入排名。\r\n2.成績來源：原始成績。";
             this.lblMsg.WordWrap = true;
             // 
             // labelX1

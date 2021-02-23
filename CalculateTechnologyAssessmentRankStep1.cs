@@ -40,6 +40,7 @@ namespace SHEvaluation.Rank
         string studentTag2 = "";
         int parseNumber = 0;
 
+
         CalculateTechnologyAssessmentRankStep2 ctrr2 = new CalculateTechnologyAssessmentRankStep2();
 
         public CalculateTechnologyAssessmentRankStep1()
@@ -254,6 +255,7 @@ student.id IN
             ctrr2.SetButtonEnable(false);
             ctrr2.SetSelStudentTag(studentTag1, studentTag2, studentFilter);
             ctrr2.SetParseNumber(parseNumber);
+    
             ctrr2.SetStudGradeYearSems(StudGradeYearSemsDict);
 
             _bgWorkerStep1Next.RunWorkerAsync();
@@ -281,6 +283,7 @@ student.id IN
         {
             this.MaximumSize = this.MinimumSize = this.Size;
             this.StartPosition = FormStartPosition.CenterScreen;
+
             UserControlEnale(false);
 
             _bgWorkerLoadDefaultData.RunWorkerAsync();
@@ -294,12 +297,13 @@ student.id IN
             _bgWorkerLoadDefaultData.ReportProgress(1);
             StudentIDListAll.Clear();
             // 三年級一般生
-            _StudentList = K12.Data.Student.SelectAll().Where(x => (x.Status == StudentRecord.StudentStatus.一般) && !string.IsNullOrEmpty(x.RefClassID) && x.Class.GradeYear != null && x.Class.GradeYear.Value == 3).ToList();
+            _StudentList = K12.Data.Student.SelectAll().Where(x => (x.Status == StudentRecord.StudentStatus.一般 ) && !string.IsNullOrEmpty(x.RefClassID) && x.Class.GradeYear != null && x.Class.GradeYear.Value == 3).ToList();
             _bgWorkerLoadDefaultData.ReportProgress(30);
             _TagList = K12.Data.TagConfig.SelectByCategory(TagCategory.Student);
 
             _bgWorkerLoadDefaultData.ReportProgress(50);
-            foreach (StudentRecord rec in _StudentList)
+
+           foreach (StudentRecord rec in _StudentList)
                 StudentIDListAll.Add(rec.ID);
 
             QueryData qd = new QueryData();
@@ -320,12 +324,13 @@ student.id IN
                     scoreErrIDList.Add(id);
             }
 
-            // 學期成績未滿5學期不能使用
-            foreach (string id in StudGradeYearSemsDict.Keys)
-            {
-                if (StudGradeYearSemsDict[id].Count < 5)
-                    scoreErrIDList.Add(id);
-            }
+            // 未滿五學期還是可以使用
+            //// 學期成績未滿5學期不能使用
+            //foreach (string id in StudGradeYearSemsDict.Keys)
+            //{
+            //    if (StudGradeYearSemsDict[id].Count < 5)
+            //        scoreErrIDList.Add(id);
+            //}
 
             foreach (StudentRecord rec in _StudentList)
             {
@@ -333,6 +338,7 @@ student.id IN
                     _StudentFilterList.Add(rec);
             }
 
+            
             _bgWorkerLoadDefaultData.ReportProgress(100);
 
         }
@@ -346,6 +352,7 @@ student.id IN
             cboStudentTag1.Enabled = value;
             cboStudentTag2.Enabled = value;
             iptParseNum.Enabled = value;
+        
         }
 
         private void cboStudentFilter_SelectedIndexChanged(object sender, EventArgs e)
@@ -385,5 +392,7 @@ student.id IN
         {
             parseNumber = iptParseNum.Value;
         }
+
+      
     }
 }
