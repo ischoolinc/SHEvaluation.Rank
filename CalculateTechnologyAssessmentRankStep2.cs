@@ -477,7 +477,7 @@ SELECT " + sid + @" ::BIGINT AS student_id
 	INNER JOIN student_list
 		ON subject_score.student_id = student_list.student_id
 	WHERE 
-		subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND subject_entry IN('學業')
+		subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" 
 	GROUP BY 
 	student_list.student_id
 		,student_list.student_name
