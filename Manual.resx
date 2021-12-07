@@ -117,11 +117,19 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="loading" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\loading.gif;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="labelX1.Text" xml:space="preserve">
+    <value>&lt;b&gt;【五標】&lt;/b&gt;&lt;br&gt;&lt;/br&gt;
+頂標：該項目前25%考生成績的平均分數&lt;br&gt;&lt;/br&gt;
+高標：該項目前50%考生成績的平均分數&lt;br&gt;&lt;/br&gt;
+均標：該項目全體考生成績的平均分數&lt;br&gt;&lt;/br&gt;
+低標：該項目後50%考生成績的平均分數&lt;br&gt;&lt;/br&gt;
+底標：該項目後25%考生成績的平均分數&lt;br&gt;&lt;/br&gt;
+&lt;br&gt;&lt;/br&gt;
+&lt;b&gt;【新五標】&lt;/b&gt;&lt;br&gt;&lt;/br&gt;
+新頂標：該項目成績位於第88百分位數之考生分數&lt;br&gt;&lt;/br&gt;
+新前標：該項目成績位於第75百分位數之考生分數&lt;br&gt;&lt;/br&gt;
+新均標：該項目成績位於第50百分位數之考生分數&lt;br&gt;&lt;/br&gt;
+新後標：該項目成績位於第25百分位數之考生分數&lt;br&gt;&lt;/br&gt;
+新底標：該項目成績位於第12百分位數之考生分數&lt;br&gt;&lt;/br&gt;</value>
   </data>
 </root>

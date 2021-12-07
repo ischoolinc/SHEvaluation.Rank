@@ -28,11 +28,30 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle26 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle25 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle27 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle34 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle28 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle29 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle30 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle31 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle32 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle33 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle35 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle48 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle36 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle37 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle38 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle39 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle40 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle41 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle42 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle43 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle44 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle45 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle46 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle47 = new System.Windows.Forms.DataGridViewCellStyle();
             this.lbMemo = new DevComponents.DotNetBar.LabelX();
             this.labelX11 = new DevComponents.DotNetBar.LabelX();
             this.cboBatchId = new DevComponents.DotNetBar.Controls.ComboBoxEx();
@@ -73,12 +92,19 @@
             this.labelX2 = new DevComponents.DotNetBar.LabelX();
             this.labelX1 = new DevComponents.DotNetBar.LabelX();
             this.btnExportToExcel = new DevComponents.DotNetBar.ButtonX();
+            this.dgvMatrixInfo2 = new DevComponents.DotNetBar.Controls.DataGridViewX();
+            this.Column1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Column2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Column3 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Column4 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn3 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn4 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn5 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn6 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvMatrixInfo = new DevComponents.DotNetBar.Controls.DataGridViewX();
             this.colMatrixCount = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colAvgTop25 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colAvgTop50 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colAvg = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colAvgBottom50 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colAvgBottom25 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colGTE100 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.col90 = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -91,7 +117,9 @@
             this.col20 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.col10 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colLT10 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             ((System.ComponentModel.ISupportInitialize)(this.dgvScoreRank)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvMatrixInfo2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvMatrixInfo)).BeginInit();
             this.SuspendLayout();
             // 
@@ -105,11 +133,12 @@
             this.lbMemo.BackgroundStyle.Class = "";
             this.lbMemo.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.lbMemo.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.lbMemo.Location = new System.Drawing.Point(65, 117);
+            this.lbMemo.Location = new System.Drawing.Point(795, 47);
             this.lbMemo.Name = "lbMemo";
-            this.lbMemo.Size = new System.Drawing.Size(34, 21);
+            this.lbMemo.Size = new System.Drawing.Size(41, 26);
             this.lbMemo.TabIndex = 82;
             this.lbMemo.Text = "說明";
+            this.lbMemo.Visible = false;
             // 
             // labelX11
             // 
@@ -121,11 +150,12 @@
             this.labelX11.BackgroundStyle.Class = "";
             this.labelX11.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX11.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.labelX11.Location = new System.Drawing.Point(12, 117);
+            this.labelX11.Location = new System.Drawing.Point(742, 47);
             this.labelX11.Name = "labelX11";
-            this.labelX11.Size = new System.Drawing.Size(47, 21);
+            this.labelX11.Size = new System.Drawing.Size(58, 26);
             this.labelX11.TabIndex = 81;
             this.labelX11.Text = "說明：";
+            this.labelX11.Visible = false;
             // 
             // cboBatchId
             // 
@@ -154,7 +184,7 @@
             this.labelX9.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX9.Location = new System.Drawing.Point(12, 82);
             this.labelX9.Name = "labelX9";
-            this.labelX9.Size = new System.Drawing.Size(47, 21);
+            this.labelX9.Size = new System.Drawing.Size(58, 26);
             this.labelX9.TabIndex = 79;
             this.labelX9.Text = "編號：";
             // 
@@ -170,7 +200,7 @@
             this.lbRankType.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbRankType.Location = new System.Drawing.Point(632, 47);
             this.lbRankType.Name = "lbRankType";
-            this.lbRankType.Size = new System.Drawing.Size(34, 21);
+            this.lbRankType.Size = new System.Drawing.Size(41, 26);
             this.lbRankType.TabIndex = 78;
             this.lbRankType.Text = "母群";
             // 
@@ -186,7 +216,7 @@
             this.lbItemName.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbItemName.Location = new System.Drawing.Point(441, 47);
             this.lbItemName.Name = "lbItemName";
-            this.lbItemName.Size = new System.Drawing.Size(34, 21);
+            this.lbItemName.Size = new System.Drawing.Size(41, 26);
             this.lbItemName.TabIndex = 77;
             this.lbItemName.Text = "項目";
             // 
@@ -202,7 +232,7 @@
             this.lbExamName.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbExamName.Location = new System.Drawing.Point(250, 47);
             this.lbExamName.Name = "lbExamName";
-            this.lbExamName.Size = new System.Drawing.Size(34, 21);
+            this.lbExamName.Size = new System.Drawing.Size(41, 26);
             this.lbExamName.TabIndex = 76;
             this.lbExamName.Text = "試別";
             // 
@@ -218,7 +248,7 @@
             this.lbScoreCategory.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbScoreCategory.Location = new System.Drawing.Point(59, 47);
             this.lbScoreCategory.Name = "lbScoreCategory";
-            this.lbScoreCategory.Size = new System.Drawing.Size(34, 21);
+            this.lbScoreCategory.Size = new System.Drawing.Size(41, 26);
             this.lbScoreCategory.TabIndex = 75;
             this.lbScoreCategory.Text = "類別";
             // 
@@ -234,7 +264,7 @@
             this.lbScoreType.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbScoreType.Location = new System.Drawing.Point(441, 12);
             this.lbScoreType.Name = "lbScoreType";
-            this.lbScoreType.Size = new System.Drawing.Size(34, 21);
+            this.lbScoreType.Size = new System.Drawing.Size(41, 26);
             this.lbScoreType.TabIndex = 74;
             this.lbScoreType.Text = "類別";
             // 
@@ -250,7 +280,7 @@
             this.lbSemester.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbSemester.Location = new System.Drawing.Point(250, 12);
             this.lbSemester.Name = "lbSemester";
-            this.lbSemester.Size = new System.Drawing.Size(34, 21);
+            this.lbSemester.Size = new System.Drawing.Size(41, 26);
             this.lbSemester.TabIndex = 73;
             this.lbSemester.Text = "學期";
             // 
@@ -266,13 +296,14 @@
             this.lbSchoolYear.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbSchoolYear.Location = new System.Drawing.Point(72, 12);
             this.lbSchoolYear.Name = "lbSchoolYear";
-            this.lbSchoolYear.Size = new System.Drawing.Size(47, 21);
+            this.lbSchoolYear.Size = new System.Drawing.Size(58, 26);
             this.lbSchoolYear.TabIndex = 72;
             this.lbSchoolYear.Text = "學年度";
             // 
             // Semester
             // 
             this.Semester.HeaderText = "學期";
+            this.Semester.MinimumWidth = 6;
             this.Semester.Name = "Semester";
             this.Semester.ReadOnly = true;
             this.Semester.Visible = false;
@@ -281,6 +312,7 @@
             // SchoolYear
             // 
             this.SchoolYear.HeaderText = "學年度";
+            this.SchoolYear.MinimumWidth = 6;
             this.SchoolYear.Name = "SchoolYear";
             this.SchoolYear.ReadOnly = true;
             this.SchoolYear.Visible = false;
@@ -290,9 +322,10 @@
             // 
             this.percentile.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.percentile.HeaderText = "百分比";
+            this.percentile.MinimumWidth = 6;
             this.percentile.Name = "percentile";
             this.percentile.ReadOnly = true;
-            this.percentile.Width = 72;
+            this.percentile.Width = 90;
             // 
             // btnExit
             // 
@@ -301,7 +334,7 @@
             this.btnExit.BackColor = System.Drawing.Color.Transparent;
             this.btnExit.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnExit.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.btnExit.Location = new System.Drawing.Point(1111, 646);
+            this.btnExit.Location = new System.Drawing.Point(1111, 676);
             this.btnExit.Name = "btnExit";
             this.btnExit.Size = new System.Drawing.Size(91, 28);
             this.btnExit.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -336,20 +369,21 @@
             this.percentile,
             this.SchoolYear,
             this.Semester});
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle2.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvScoreRank.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle26.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle26.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle26.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle26.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle26.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle26.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle26.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvScoreRank.DefaultCellStyle = dataGridViewCellStyle26;
             this.dgvScoreRank.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvScoreRank.HighlightSelectedColumnHeaders = false;
-            this.dgvScoreRank.Location = new System.Drawing.Point(12, 144);
+            this.dgvScoreRank.Location = new System.Drawing.Point(12, 112);
             this.dgvScoreRank.MultiSelect = false;
             this.dgvScoreRank.Name = "dgvScoreRank";
             this.dgvScoreRank.ReadOnly = true;
+            this.dgvScoreRank.RowHeadersWidth = 51;
             this.dgvScoreRank.RowTemplate.Height = 24;
             this.dgvScoreRank.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvScoreRank.Size = new System.Drawing.Size(1190, 437);
@@ -358,6 +392,7 @@
             // MatrixId
             // 
             this.MatrixId.HeaderText = "ID";
+            this.MatrixId.MinimumWidth = 6;
             this.MatrixId.Name = "MatrixId";
             this.MatrixId.ReadOnly = true;
             this.MatrixId.Visible = false;
@@ -370,7 +405,7 @@
             this.ScoreType.MinimumWidth = 85;
             this.ScoreType.Name = "ScoreType";
             this.ScoreType.ReadOnly = true;
-            this.ScoreType.Width = 85;
+            this.ScoreType.Width = 107;
             // 
             // ScoreCategory
             // 
@@ -379,7 +414,7 @@
             this.ScoreCategory.MinimumWidth = 85;
             this.ScoreCategory.Name = "ScoreCategory";
             this.ScoreCategory.ReadOnly = true;
-            this.ScoreCategory.Width = 85;
+            this.ScoreCategory.Width = 107;
             // 
             // ExamName
             // 
@@ -388,7 +423,7 @@
             this.ExamName.MinimumWidth = 59;
             this.ExamName.Name = "ExamName";
             this.ExamName.ReadOnly = true;
-            this.ExamName.Width = 59;
+            this.ExamName.Width = 73;
             // 
             // ItemName
             // 
@@ -397,7 +432,7 @@
             this.ItemName.MinimumWidth = 59;
             this.ItemName.Name = "ItemName";
             this.ItemName.ReadOnly = true;
-            this.ItemName.Width = 59;
+            this.ItemName.Width = 73;
             // 
             // RankType
             // 
@@ -406,7 +441,7 @@
             this.RankType.MinimumWidth = 59;
             this.RankType.Name = "RankType";
             this.RankType.ReadOnly = true;
-            this.RankType.Width = 59;
+            this.RankType.Width = 73;
             // 
             // RankName
             // 
@@ -415,7 +450,7 @@
             this.RankName.MinimumWidth = 85;
             this.RankName.Name = "RankName";
             this.RankName.ReadOnly = true;
-            this.RankName.Width = 85;
+            this.RankName.Width = 107;
             // 
             // ClassName
             // 
@@ -424,7 +459,7 @@
             this.ClassName.MinimumWidth = 85;
             this.ClassName.Name = "ClassName";
             this.ClassName.ReadOnly = true;
-            this.ClassName.Width = 85;
+            this.ClassName.Width = 107;
             // 
             // SeatNo
             // 
@@ -433,7 +468,7 @@
             this.SeatNo.MinimumWidth = 59;
             this.SeatNo.Name = "SeatNo";
             this.SeatNo.ReadOnly = true;
-            this.SeatNo.Width = 59;
+            this.SeatNo.Width = 73;
             // 
             // StudentNum
             // 
@@ -442,7 +477,7 @@
             this.StudentNum.MinimumWidth = 59;
             this.StudentNum.Name = "StudentNum";
             this.StudentNum.ReadOnly = true;
-            this.StudentNum.Width = 59;
+            this.StudentNum.Width = 73;
             // 
             // StudentName
             // 
@@ -451,7 +486,7 @@
             this.StudentName.MinimumWidth = 59;
             this.StudentName.Name = "StudentName";
             this.StudentName.ReadOnly = true;
-            this.StudentName.Width = 59;
+            this.StudentName.Width = 73;
             // 
             // StudentStatus
             // 
@@ -460,13 +495,13 @@
             this.StudentStatus.MinimumWidth = 59;
             this.StudentStatus.Name = "StudentStatus";
             this.StudentStatus.ReadOnly = true;
-            this.StudentStatus.Width = 85;
+            this.StudentStatus.Width = 107;
             // 
             // score
             // 
             this.score.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            dataGridViewCellStyle1.NullValue = null;
-            this.score.DefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle25.NullValue = null;
+            this.score.DefaultCellStyle = dataGridViewCellStyle25;
             this.score.HeaderText = "排名分數";
             this.score.MinimumWidth = 91;
             this.score.Name = "score";
@@ -479,7 +514,7 @@
             this.rank.MinimumWidth = 59;
             this.rank.Name = "rank";
             this.rank.ReadOnly = true;
-            this.rank.Width = 59;
+            this.rank.Width = 73;
             // 
             // pr
             // 
@@ -488,7 +523,7 @@
             this.pr.MinimumWidth = 49;
             this.pr.Name = "pr";
             this.pr.ReadOnly = true;
-            this.pr.Width = 49;
+            this.pr.Width = 60;
             // 
             // labelX8
             // 
@@ -502,7 +537,7 @@
             this.labelX8.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX8.Location = new System.Drawing.Point(585, 47);
             this.labelX8.Name = "labelX8";
-            this.labelX8.Size = new System.Drawing.Size(47, 21);
+            this.labelX8.Size = new System.Drawing.Size(58, 26);
             this.labelX8.TabIndex = 68;
             this.labelX8.Text = "母群：";
             // 
@@ -518,7 +553,7 @@
             this.labelX7.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX7.Location = new System.Drawing.Point(394, 47);
             this.labelX7.Name = "labelX7";
-            this.labelX7.Size = new System.Drawing.Size(47, 21);
+            this.labelX7.Size = new System.Drawing.Size(58, 26);
             this.labelX7.TabIndex = 67;
             this.labelX7.Text = "項目：";
             // 
@@ -534,7 +569,7 @@
             this.labelX6.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX6.Location = new System.Drawing.Point(203, 47);
             this.labelX6.Name = "labelX6";
-            this.labelX6.Size = new System.Drawing.Size(47, 21);
+            this.labelX6.Size = new System.Drawing.Size(58, 26);
             this.labelX6.TabIndex = 66;
             this.labelX6.Text = "試別：";
             // 
@@ -550,7 +585,7 @@
             this.labelX5.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX5.Location = new System.Drawing.Point(12, 47);
             this.labelX5.Name = "labelX5";
-            this.labelX5.Size = new System.Drawing.Size(47, 21);
+            this.labelX5.Size = new System.Drawing.Size(58, 26);
             this.labelX5.TabIndex = 65;
             this.labelX5.Text = "類別：";
             // 
@@ -566,7 +601,7 @@
             this.labelX3.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX3.Location = new System.Drawing.Point(394, 12);
             this.labelX3.Name = "labelX3";
-            this.labelX3.Size = new System.Drawing.Size(47, 21);
+            this.labelX3.Size = new System.Drawing.Size(58, 26);
             this.labelX3.TabIndex = 64;
             this.labelX3.Text = "類型：";
             // 
@@ -582,7 +617,7 @@
             this.labelX2.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX2.Location = new System.Drawing.Point(203, 12);
             this.labelX2.Name = "labelX2";
-            this.labelX2.Size = new System.Drawing.Size(47, 21);
+            this.labelX2.Size = new System.Drawing.Size(58, 26);
             this.labelX2.TabIndex = 63;
             this.labelX2.Text = "學期：";
             // 
@@ -597,7 +632,7 @@
             this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX1.Location = new System.Drawing.Point(12, 12);
             this.labelX1.Name = "labelX1";
-            this.labelX1.Size = new System.Drawing.Size(60, 21);
+            this.labelX1.Size = new System.Drawing.Size(75, 26);
             this.labelX1.TabIndex = 62;
             this.labelX1.Text = "學年度：";
             // 
@@ -608,7 +643,7 @@
             this.btnExportToExcel.BackColor = System.Drawing.Color.Transparent;
             this.btnExportToExcel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnExportToExcel.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.btnExportToExcel.Location = new System.Drawing.Point(12, 646);
+            this.btnExportToExcel.Location = new System.Drawing.Point(12, 676);
             this.btnExportToExcel.Name = "btnExportToExcel";
             this.btnExportToExcel.Size = new System.Drawing.Size(91, 28);
             this.btnExportToExcel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -616,27 +651,176 @@
             this.btnExportToExcel.Text = "匯出";
             this.btnExportToExcel.Click += new System.EventHandler(this.btnExportToExcel_Click);
             // 
+            // dgvMatrixInfo2
+            // 
+            this.dgvMatrixInfo2.AllowUserToAddRows = false;
+            this.dgvMatrixInfo2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.dgvMatrixInfo2.BackgroundColor = System.Drawing.Color.White;
+            dataGridViewCellStyle27.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle27.BackColor = System.Drawing.SystemColors.Control;
+            dataGridViewCellStyle27.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle27.ForeColor = System.Drawing.SystemColors.WindowText;
+            dataGridViewCellStyle27.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle27.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle27.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.dgvMatrixInfo2.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle27;
+            this.dgvMatrixInfo2.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvMatrixInfo2.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.Column1,
+            this.Column2,
+            this.Column3,
+            this.Column4,
+            this.dataGridViewTextBoxColumn1,
+            this.dataGridViewTextBoxColumn2,
+            this.dataGridViewTextBoxColumn3,
+            this.dataGridViewTextBoxColumn4,
+            this.dataGridViewTextBoxColumn5,
+            this.dataGridViewTextBoxColumn6});
+            dataGridViewCellStyle34.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle34.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle34.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle34.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle34.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle34.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle34.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvMatrixInfo2.DefaultCellStyle = dataGridViewCellStyle34;
+            this.dgvMatrixInfo2.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
+            this.dgvMatrixInfo2.HighlightSelectedColumnHeaders = false;
+            this.dgvMatrixInfo2.Location = new System.Drawing.Point(12, 614);
+            this.dgvMatrixInfo2.Name = "dgvMatrixInfo2";
+            this.dgvMatrixInfo2.ReadOnly = true;
+            this.dgvMatrixInfo2.RowHeadersVisible = false;
+            this.dgvMatrixInfo2.RowHeadersWidth = 51;
+            this.dgvMatrixInfo2.RowTemplate.Height = 24;
+            this.dgvMatrixInfo2.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
+            this.dgvMatrixInfo2.Size = new System.Drawing.Size(1190, 53);
+            this.dgvMatrixInfo2.TabIndex = 87;
+            // 
+            // Column1
+            // 
+            this.Column1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.Column1.HeaderText = "頂標";
+            this.Column1.MinimumWidth = 6;
+            this.Column1.Name = "Column1";
+            this.Column1.ReadOnly = true;
+            this.Column1.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // Column2
+            // 
+            this.Column2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.Column2.HeaderText = "高標";
+            this.Column2.MinimumWidth = 6;
+            this.Column2.Name = "Column2";
+            this.Column2.ReadOnly = true;
+            this.Column2.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // Column3
+            // 
+            this.Column3.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.Column3.HeaderText = "均標";
+            this.Column3.MinimumWidth = 6;
+            this.Column3.Name = "Column3";
+            this.Column3.ReadOnly = true;
+            this.Column3.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // Column4
+            // 
+            this.Column4.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.Column4.HeaderText = "低標";
+            this.Column4.MinimumWidth = 6;
+            this.Column4.Name = "Column4";
+            this.Column4.ReadOnly = true;
+            this.Column4.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // dataGridViewTextBoxColumn1
+            // 
+            this.dataGridViewTextBoxColumn1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            dataGridViewCellStyle28.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.dataGridViewTextBoxColumn1.DefaultCellStyle = dataGridViewCellStyle28;
+            this.dataGridViewTextBoxColumn1.HeaderText = "底標";
+            this.dataGridViewTextBoxColumn1.MinimumWidth = 6;
+            this.dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
+            this.dataGridViewTextBoxColumn1.ReadOnly = true;
+            this.dataGridViewTextBoxColumn1.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // dataGridViewTextBoxColumn2
+            // 
+            this.dataGridViewTextBoxColumn2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            dataGridViewCellStyle29.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            dataGridViewCellStyle29.BackColor = System.Drawing.Color.LightCyan;
+            this.dataGridViewTextBoxColumn2.DefaultCellStyle = dataGridViewCellStyle29;
+            this.dataGridViewTextBoxColumn2.HeaderText = "新頂標";
+            this.dataGridViewTextBoxColumn2.MinimumWidth = 6;
+            this.dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
+            this.dataGridViewTextBoxColumn2.ReadOnly = true;
+            this.dataGridViewTextBoxColumn2.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // dataGridViewTextBoxColumn3
+            // 
+            this.dataGridViewTextBoxColumn3.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            dataGridViewCellStyle30.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            dataGridViewCellStyle30.BackColor = System.Drawing.Color.LightCyan;
+            this.dataGridViewTextBoxColumn3.DefaultCellStyle = dataGridViewCellStyle30;
+            this.dataGridViewTextBoxColumn3.HeaderText = "新前標";
+            this.dataGridViewTextBoxColumn3.MinimumWidth = 6;
+            this.dataGridViewTextBoxColumn3.Name = "dataGridViewTextBoxColumn3";
+            this.dataGridViewTextBoxColumn3.ReadOnly = true;
+            this.dataGridViewTextBoxColumn3.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // dataGridViewTextBoxColumn4
+            // 
+            this.dataGridViewTextBoxColumn4.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            dataGridViewCellStyle31.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            dataGridViewCellStyle31.BackColor = System.Drawing.Color.LightCyan;
+            this.dataGridViewTextBoxColumn4.DefaultCellStyle = dataGridViewCellStyle31;
+            this.dataGridViewTextBoxColumn4.HeaderText = "新均標";
+            this.dataGridViewTextBoxColumn4.MinimumWidth = 6;
+            this.dataGridViewTextBoxColumn4.Name = "dataGridViewTextBoxColumn4";
+            this.dataGridViewTextBoxColumn4.ReadOnly = true;
+            this.dataGridViewTextBoxColumn4.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // dataGridViewTextBoxColumn5
+            // 
+            this.dataGridViewTextBoxColumn5.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            dataGridViewCellStyle32.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            dataGridViewCellStyle32.BackColor = System.Drawing.Color.LightCyan;
+            this.dataGridViewTextBoxColumn5.DefaultCellStyle = dataGridViewCellStyle32;
+            this.dataGridViewTextBoxColumn5.HeaderText = "新後標";
+            this.dataGridViewTextBoxColumn5.MinimumWidth = 6;
+            this.dataGridViewTextBoxColumn5.Name = "dataGridViewTextBoxColumn5";
+            this.dataGridViewTextBoxColumn5.ReadOnly = true;
+            this.dataGridViewTextBoxColumn5.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // dataGridViewTextBoxColumn6
+            // 
+            this.dataGridViewTextBoxColumn6.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            dataGridViewCellStyle33.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            dataGridViewCellStyle33.BackColor = System.Drawing.Color.LightCyan;
+            this.dataGridViewTextBoxColumn6.DefaultCellStyle = dataGridViewCellStyle33;
+            this.dataGridViewTextBoxColumn6.HeaderText = "新底標";
+            this.dataGridViewTextBoxColumn6.MinimumWidth = 6;
+            this.dataGridViewTextBoxColumn6.Name = "dataGridViewTextBoxColumn6";
+            this.dataGridViewTextBoxColumn6.ReadOnly = true;
+            this.dataGridViewTextBoxColumn6.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
             // dgvMatrixInfo
             // 
             this.dgvMatrixInfo.AllowUserToAddRows = false;
             this.dgvMatrixInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.dgvMatrixInfo.BackgroundColor = System.Drawing.Color.White;
-            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Control;
-            dataGridViewCellStyle3.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.WindowText;
-            dataGridViewCellStyle3.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-            dataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-            this.dgvMatrixInfo.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle35.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle35.BackColor = System.Drawing.SystemColors.Control;
+            dataGridViewCellStyle35.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle35.ForeColor = System.Drawing.SystemColors.WindowText;
+            dataGridViewCellStyle35.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle35.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle35.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.dgvMatrixInfo.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle35;
             this.dgvMatrixInfo.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvMatrixInfo.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.colMatrixCount,
-            this.colAvgTop25,
-            this.colAvgTop50,
-            this.colAvg,
-            this.colAvgBottom50,
             this.colAvgBottom25,
             this.colGTE100,
             this.col90,
@@ -649,162 +833,187 @@
             this.col20,
             this.col10,
             this.colLT10});
-            dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle5.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle5.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle5.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle5.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle5.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle5.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvMatrixInfo.DefaultCellStyle = dataGridViewCellStyle5;
+            dataGridViewCellStyle48.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle48.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle48.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle48.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle48.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle48.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle48.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvMatrixInfo.DefaultCellStyle = dataGridViewCellStyle48;
             this.dgvMatrixInfo.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvMatrixInfo.HighlightSelectedColumnHeaders = false;
-            this.dgvMatrixInfo.Location = new System.Drawing.Point(12, 587);
+            this.dgvMatrixInfo.Location = new System.Drawing.Point(12, 555);
             this.dgvMatrixInfo.Name = "dgvMatrixInfo";
             this.dgvMatrixInfo.ReadOnly = true;
             this.dgvMatrixInfo.RowHeadersVisible = false;
+            this.dgvMatrixInfo.RowHeadersWidth = 51;
             this.dgvMatrixInfo.RowTemplate.Height = 24;
             this.dgvMatrixInfo.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
             this.dgvMatrixInfo.Size = new System.Drawing.Size(1190, 53);
-            this.dgvMatrixInfo.TabIndex = 83;
+            this.dgvMatrixInfo.TabIndex = 86;
             // 
             // colMatrixCount
             // 
             this.colMatrixCount.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
-            this.colMatrixCount.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle36.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.colMatrixCount.DefaultCellStyle = dataGridViewCellStyle36;
             this.colMatrixCount.HeaderText = "總人數";
+            this.colMatrixCount.MinimumWidth = 6;
             this.colMatrixCount.Name = "colMatrixCount";
             this.colMatrixCount.ReadOnly = true;
-            // 
-            // colAvgTop25
-            // 
-            this.colAvgTop25.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colAvgTop25.HeaderText = "頂標";
-            this.colAvgTop25.Name = "colAvgTop25";
-            this.colAvgTop25.ReadOnly = true;
-            // 
-            // colAvgTop50
-            // 
-            this.colAvgTop50.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colAvgTop50.HeaderText = "高標";
-            this.colAvgTop50.Name = "colAvgTop50";
-            this.colAvgTop50.ReadOnly = true;
-            // 
-            // colAvg
-            // 
-            this.colAvg.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colAvg.HeaderText = "均標";
-            this.colAvg.Name = "colAvg";
-            this.colAvg.ReadOnly = true;
-            // 
-            // colAvgBottom50
-            // 
-            this.colAvgBottom50.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colAvgBottom50.HeaderText = "低標";
-            this.colAvgBottom50.Name = "colAvgBottom50";
-            this.colAvgBottom50.ReadOnly = true;
+            this.colMatrixCount.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // colAvgBottom25
             // 
             this.colAvgBottom25.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colAvgBottom25.HeaderText = "底標";
+            this.colAvgBottom25.HeaderText = "標準差";
+            this.colAvgBottom25.MinimumWidth = 6;
             this.colAvgBottom25.Name = "colAvgBottom25";
             this.colAvgBottom25.ReadOnly = true;
+            this.colAvgBottom25.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // colGTE100
             // 
             this.colGTE100.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colGTE100.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle37.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.colGTE100.DefaultCellStyle = dataGridViewCellStyle37;
             this.colGTE100.HeaderText = "100+";
+            this.colGTE100.MinimumWidth = 6;
             this.colGTE100.Name = "colGTE100";
             this.colGTE100.ReadOnly = true;
+            this.colGTE100.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col90
             // 
             this.col90.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col90.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle38.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col90.DefaultCellStyle = dataGridViewCellStyle38;
             this.col90.HeaderText = "90";
+            this.col90.MinimumWidth = 6;
             this.col90.Name = "col90";
             this.col90.ReadOnly = true;
+            this.col90.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col80
             // 
             this.col80.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col80.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle39.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col80.DefaultCellStyle = dataGridViewCellStyle39;
             this.col80.HeaderText = "80";
+            this.col80.MinimumWidth = 6;
             this.col80.Name = "col80";
             this.col80.ReadOnly = true;
+            this.col80.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col70
             // 
             this.col70.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col70.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle40.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col70.DefaultCellStyle = dataGridViewCellStyle40;
             this.col70.HeaderText = "70";
+            this.col70.MinimumWidth = 6;
             this.col70.Name = "col70";
             this.col70.ReadOnly = true;
+            this.col70.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col60
             // 
             this.col60.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col60.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle41.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col60.DefaultCellStyle = dataGridViewCellStyle41;
             this.col60.HeaderText = "60";
+            this.col60.MinimumWidth = 6;
             this.col60.Name = "col60";
             this.col60.ReadOnly = true;
+            this.col60.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col50
             // 
             this.col50.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col50.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle42.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col50.DefaultCellStyle = dataGridViewCellStyle42;
             this.col50.HeaderText = "50";
+            this.col50.MinimumWidth = 6;
             this.col50.Name = "col50";
             this.col50.ReadOnly = true;
+            this.col50.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col40
             // 
             this.col40.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col40.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle43.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col40.DefaultCellStyle = dataGridViewCellStyle43;
             this.col40.HeaderText = "40";
+            this.col40.MinimumWidth = 6;
             this.col40.Name = "col40";
             this.col40.ReadOnly = true;
+            this.col40.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col30
             // 
             this.col30.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col30.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle44.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col30.DefaultCellStyle = dataGridViewCellStyle44;
             this.col30.HeaderText = "30";
+            this.col30.MinimumWidth = 6;
             this.col30.Name = "col30";
             this.col30.ReadOnly = true;
+            this.col30.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col20
             // 
             this.col20.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col20.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle45.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col20.DefaultCellStyle = dataGridViewCellStyle45;
             this.col20.HeaderText = "20";
+            this.col20.MinimumWidth = 6;
             this.col20.Name = "col20";
             this.col20.ReadOnly = true;
+            this.col20.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // col10
             // 
             this.col10.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.col10.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle46.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.col10.DefaultCellStyle = dataGridViewCellStyle46;
             this.col10.HeaderText = "10";
+            this.col10.MinimumWidth = 6;
             this.col10.Name = "col10";
             this.col10.ReadOnly = true;
+            this.col10.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             // 
             // colLT10
             // 
             this.colLT10.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colLT10.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle47.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopCenter;
+            this.colLT10.DefaultCellStyle = dataGridViewCellStyle47;
             this.colLT10.HeaderText = "<10";
+            this.colLT10.MinimumWidth = 6;
             this.colLT10.Name = "colLT10";
             this.colLT10.ReadOnly = true;
+            this.colLT10.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // linkLabel1
+            // 
+            this.linkLabel1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.linkLabel1.AutoSize = true;
+            this.linkLabel1.BackColor = System.Drawing.Color.Transparent;
+            this.linkLabel1.Location = new System.Drawing.Point(109, 682);
+            this.linkLabel1.Name = "linkLabel1";
+            this.linkLabel1.Size = new System.Drawing.Size(78, 22);
+            this.linkLabel1.TabIndex = 105;
+            this.linkLabel1.TabStop = true;
+            this.linkLabel1.Text = "五標說明";
+            this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
             // 
             // RegularMatrixRankSelect
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1214, 686);
+            this.ClientSize = new System.Drawing.Size(1214, 716);
+            this.Controls.Add(this.linkLabel1);
+            this.Controls.Add(this.dgvMatrixInfo2);
             this.Controls.Add(this.dgvMatrixInfo);
             this.Controls.Add(this.lbMemo);
             this.Controls.Add(this.labelX11);
@@ -833,6 +1042,7 @@
             this.Text = "定期評量排名母群資料檢索";
             this.Load += new System.EventHandler(this.RegularMatrixRankSelect_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dgvScoreRank)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvMatrixInfo2)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvMatrixInfo)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -880,12 +1090,19 @@
         private DevComponents.DotNetBar.LabelX labelX2;
         private DevComponents.DotNetBar.LabelX labelX1;
         private DevComponents.DotNetBar.ButtonX btnExportToExcel;
+        private DevComponents.DotNetBar.Controls.DataGridViewX dgvMatrixInfo2;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column2;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column3;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column4;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn2;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn4;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn5;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn6;
         private DevComponents.DotNetBar.Controls.DataGridViewX dgvMatrixInfo;
         private System.Windows.Forms.DataGridViewTextBoxColumn colMatrixCount;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colAvgTop25;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colAvgTop50;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colAvg;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colAvgBottom50;
         private System.Windows.Forms.DataGridViewTextBoxColumn colAvgBottom25;
         private System.Windows.Forms.DataGridViewTextBoxColumn colGTE100;
         private System.Windows.Forms.DataGridViewTextBoxColumn col90;
@@ -898,5 +1115,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn col20;
         private System.Windows.Forms.DataGridViewTextBoxColumn col10;
         private System.Windows.Forms.DataGridViewTextBoxColumn colLT10;
+        private System.Windows.Forms.LinkLabel linkLabel1;
     }
 }

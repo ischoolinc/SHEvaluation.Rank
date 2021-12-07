@@ -21,6 +21,8 @@ namespace SHEvaluation.Rank
             //Application.SetCompatibleTextRenderingDefault(false);
             //Application.Run(new CalculateRegularAssessmentRank());
 
+            MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"].Size = RibbonBarButton.MenuButtonSize.Large;
+            MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"].Image = Properties.Resources.icon;
             {
                 var key = "529ABB39-A819-4E50-8BC9-9302B2E89D06";
                 RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "定期評量排名計算"));
