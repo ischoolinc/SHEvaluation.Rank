@@ -94,5 +94,60 @@ namespace SHEvaluation.Rank.DAO
             return value;
         }
 
+        public DataTable GetSkillDomainSubject(int entryYear)  
+        {
+            DataTable value = new DataTable();
+            try
+            {
+                QueryHelper qh = new QueryHelper();
+                string query = @" WITH student_data AS(
+ SELECT   
+	student.id AS student_id  
+	, student.name AS student_name  
+	, student_number  
+	, student.seat_no  
+	, class_name  
+	, class.grade_year AS grade_year  
+	, COALESCE(student.gdc_code,class.gdc_code)  AS gdc_code  
+	, class.display_order
+ FROM student   
+ INNER JOIN class  
+ ON student.ref_class_id = class.id  
+ WHERE   
+  student.status IN(1,2) AND class.grade_year IN(  3  )  
+  AND COALESCE(student.gdc_code, class.gdc_code)  IS NOT NULL  
+ )
+ SELECT   
+ --subject_name
+ --,course_code
+ 	DISTINCT(subject_name) AS 科目名稱
+ FROM 
+ 	$moe.subjectcode 
+ INNER JOIN 
+ 	student_data ON gdc_code=group_code
+ WHERE 
+ 	entry_year = '{0}' 
+ 	AND SUBSTR(course_code,20,2) IN ('A1',	'A2',	'A3',	'A4',	'A5',	'A6',	'B1',	'B2',	'B3',	'B4',	'C1',	'C2',	'C3',	'C4',	'C5',	'D1','D2','E2',	'E3',	'F1',	'F2',	'F3',	'H1','H2','H3','H4','H5','H6','I1',	'I2','J1','J2',	'K1',	'K2',	'K3',	'L1',	'L2',	'L3',	'L4',	'M1',	'M2',	'M3',	'M4',	'M5',	'M6',	'M7',	'N1',	'N2',	'N3',	'N4',	'N5',	'N6',	'N7',	'O1',	'O2',	'O3',	'O4',	'O5',	'O6',	'U1',	'U2',	'U3',	'U4',	'U5',	'U6',	'U7',	'U8',	'U9',	'UA',	'UB',	'UC',	'UD',	'UE',	'UF',	'G3',	'G1',	'G2')
+
+ 
+ ";
+                query =  string.Format(query,entryYear);
+                DataTable dt = qh.Select(query);
+                value = dt;
+                //foreach (DataRow dr in dt.Rows)
+                //    value.Rows.Add(dr);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return value;
+
+
+        }
+
+
+
     }
 }

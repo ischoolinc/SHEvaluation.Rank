@@ -15,15 +15,15 @@ using System.Diagnostics;
 
 namespace SHEvaluation.Rank
 {
-    public partial class CalculateTechnologyAssessmentRankSelect : BaseForm
+    public partial class CalculateTechnologyAssessmentRankSelect_111 : BaseForm
     {
         private bool _IsLoading = false;
         private bool _IsClosing = false;
-        private string _FilterStudentNumber = "", _FilterItemName = "", _FilterRankType = "";
+        private string _FilterStudentNumber = "", _FilterItemName = "", _FilterRankType = "", _FilterCategory="";
 
         List<string> ItemNameList = new List<string>();
         List<string> RankTypeList = new List<string>();
-
+        
 
         private void btnExportToExcel_Click(object sender, EventArgs e)
         {
@@ -104,12 +104,12 @@ namespace SHEvaluation.Rank
 
             _IsLoading = true;
             dgvScoreRank.Rows.Clear();
-
+            _FilterCategory = cboScoreCategory.Text;
             DataTable dt = new DataTable();
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
             Exception bkwException = null;
-
+           
 
             bkw.ProgressChanged += delegate (object obj, ProgressChangedEventArgs eventArgs)
             {
@@ -154,7 +154,7 @@ FROM
         LEFT OUTER JOIN 
             class ON class.id = student.ref_class_id
     WHERE 
-        rank_matrix.is_alive = true AND rank_matrix.item_type = '5學期/技職繁星比序'
+        rank_matrix.is_alive = true AND rank_matrix.item_type IN('5學期/"+_FilterCategory+@"')
     ORDER BY rank_matrix.rank_type
         , rank_matrix.rank_name
         , rank_detail.rank
@@ -180,6 +180,17 @@ FROM
                     throw new Exception("資料讀取失敗", bkwException);
                 }
 
+                if (dt.Rows.Count == 0)
+                {
+                    MotherForm.SetStatusBarMessage("無可檢視的資料。");
+                    MessageBox.Show("無可檢視的資料。");
+                    this.Close();
+                    return;
+                }
+
+
+
+
 
                 #region 填入最後2個ComboBox
                 //項目ComboBox
@@ -202,9 +213,9 @@ FROM
                     if (tmpNameList.Contains(item))
                         cboItemName.Items.Add(item);
                 }
-
-
                 cboItemName.SelectedIndex = 0;
+
+
 
                 //母群ComboBox
                 cboRankType.Items.Clear();
@@ -257,7 +268,7 @@ FROM
                 #endregion
 
                 MotherForm.SetStatusBarMessage("資料讀取完成");
-
+               
                 _IsLoading = false;
                 FillingDataGridView(null, null);
 
@@ -280,11 +291,16 @@ FROM
             _FilterItemName = cboItemName.Text;
             _FilterRankType = cboRankType.Text;
             _FilterStudentNumber = txtStudentNum.Text;
-
+            _FilterCategory = cboScoreCategory.Text;
             List<DataGridViewRow> newList = new List<DataGridViewRow>();
             foreach (DataGridViewRow gridViewRow in _RowList)
             {
                 var show = true;
+
+                if (_FilterCategory == ("" + gridViewRow.Cells[2].Value))
+                {
+                    show = true;
+                }
 
                 if (_FilterItemName != "" && _FilterItemName != "全部" && _FilterItemName != ("" + gridViewRow.Cells[3].Value))
                 {
@@ -308,7 +324,8 @@ FROM
 
                     if (_FilterItemName != cboItemName.Text
                         || _FilterRankType != cboRankType.Text
-                        || _FilterStudentNumber != txtStudentNum.Text)
+                        || _FilterStudentNumber != txtStudentNum.Text
+                        || _FilterCategory != cboScoreCategory.Text)
 
                     {
                         _IsLoading = false;
@@ -331,7 +348,7 @@ FROM
                 newList.Clear();
             }
 
-            lblRowCount.Text = "共 " + dgvScoreRank.Rows.Count + " 筆";
+            lblRowCount.Text = "共 " + dgvScoreRank.Rows.Count+ " 筆";
             _IsLoading = false;
             UserControlEnable(true);
         }
@@ -353,12 +370,14 @@ FROM
 
         private void CalculateTechnologyAssessmentRankSelect_Load(object sender, EventArgs e)
         {
-
+            //_FilterCategory = cboScoreCategory.Text;
             ItemNameList.Clear();
             RankTypeList.Clear();
             ItemNameList.Add("學業");
             ItemNameList.Add("專業及實習部必");
             ItemNameList.Add("專業及實習");
+            ItemNameList.Add("技能領域部必");
+            ItemNameList.Add("技能領域");
             ItemNameList.Add("國文部必");
             ItemNameList.Add("英文部必");
             ItemNameList.Add("數學部必");
@@ -371,7 +390,7 @@ FROM
             RankTypeList.Add("年排名");
             RankTypeList.Add("班排名");
             RankTypeList.Add("類別1排名");
-
+            LoadCboScoreCategory();
             LoadRowData(null, null);
 
 
@@ -382,10 +401,11 @@ FROM
             this.Close();
         }
 
+
         private List<DataGridViewRow> _RowList = new List<DataGridViewRow>();
 
 
-        public CalculateTechnologyAssessmentRankSelect()
+        public CalculateTechnologyAssessmentRankSelect_111()
         {
 
             InitializeComponent();
@@ -393,5 +413,48 @@ FROM
             pbLoading.BackColor = Color.White;
         }
 
+        public void LoadCboScoreCategory()
+        {
+            string sql = @"
+SELECT 
+    *
+FROM
+(
+    SELECT 
+		rank_matrix.id AS rank_matrix_id 
+        , SUBSTRING(rank_matrix.item_type, 1, position('/' in rank_matrix.item_type) - 1) AS score_type
+        , SUBSTRING(rank_matrix.item_type, position('/' in rank_matrix.item_type) + 1, LENGTH(rank_matrix.item_type)) AS score_category
+        , rank_matrix.item_name 
+        , rank_matrix.rank_type 
+    FROM rank_matrix 
+        LEFT OUTER JOIN 
+            rank_detail ON rank_detail.ref_matrix_id = rank_matrix.id 
+    WHERE 
+        rank_matrix.is_alive = true AND rank_matrix.item_type IN( '5學期/技職繁星比序','5學期/技職繁星比序(111年學年度適用)')
+    ORDER BY rank_matrix.rank_type
+        , rank_matrix.rank_name
+        , rank_detail.rank
+        , rank_matrix.create_time DESC
+) AS Rank_Table
+";
+            DataTable dt = new DataTable();
+            QueryHelper queryHelper = new QueryHelper();
+            dt = queryHelper.Select(sql);
+
+            if (dt.Rows.Count > 0)
+            {
+            //類別ComboBox
+            foreach (DataRow row in dt.Rows)
+            {
+                string value = "" + row[2];
+                if (!cboScoreCategory.Items.Contains(value))
+                {
+                    cboScoreCategory.Items.Add(value);
+                }
+            }
+            cboScoreCategory.SelectedIndex = 0;
+            }
+
+        }
     }
 }

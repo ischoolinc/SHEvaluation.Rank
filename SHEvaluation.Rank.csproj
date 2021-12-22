@@ -122,6 +122,12 @@
     <Compile Include="Manual.Designer.cs">
       <DependentUpon>Manual.cs</DependentUpon>
     </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSelect _111.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSelect _111.Designer.cs">
+      <DependentUpon>CalculateTechnologyAssessmentRankSelect _111.cs</DependentUpon>
+    </Compile>
     <Compile Include="CalculateTechnologyAssessmentRankSelect.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -134,17 +140,35 @@
     <Compile Include="CalculateTechnologyAssessmentRankSetDeptGroup.Designer.cs">
       <DependentUpon>CalculateTechnologyAssessmentRankSetDeptGroup.cs</DependentUpon>
     </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSetSubject_111.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSetSubject_111.Designer.cs">
+      <DependentUpon>CalculateTechnologyAssessmentRankSetSubject_111.cs</DependentUpon>
+    </Compile>
     <Compile Include="CalculateTechnologyAssessmentRankSetSubject.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="CalculateTechnologyAssessmentRankSetSubject.Designer.cs">
       <DependentUpon>CalculateTechnologyAssessmentRankSetSubject.cs</DependentUpon>
     </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankStep1_111.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankStep1_111.Designer.cs">
+      <DependentUpon>CalculateTechnologyAssessmentRankStep1_111.cs</DependentUpon>
+    </Compile>
     <Compile Include="CalculateTechnologyAssessmentRankStep1.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="CalculateTechnologyAssessmentRankStep1.Designer.cs">
       <DependentUpon>CalculateTechnologyAssessmentRankStep1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankStep2_111.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankStep2_111.Designer.cs">
+      <DependentUpon>CalculateTechnologyAssessmentRankStep2_111.cs</DependentUpon>
     </Compile>
     <Compile Include="CalculateTechnologyAssessmentRankStep2.cs">
       <SubType>Form</SubType>
@@ -181,6 +205,12 @@
     <Compile Include="SemesterMatrixRankSelect.Designer.cs">
       <DependentUpon>SemesterMatrixRankSelect.cs</DependentUpon>
     </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\SelectSkillDomainSubject.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\SelectSkillDomainSubject.Designer.cs">
+      <DependentUpon>SelectSkillDomainSubject.cs</DependentUpon>
+    </Compile>
     <Compile Include="UDT\udtRegistrationDept.cs" />
     <Compile Include="UDT\udtRegistrationSubject.cs" />
     <EmbeddedResource Include="CalculateRegularAssessmentRank.resx">
@@ -189,17 +219,32 @@
     <EmbeddedResource Include="CalculateSemesterAssessmentRank.resx">
       <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Manual.resx">
+      <DependentUpon>Manual.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSelect _111.resx">
+      <DependentUpon>CalculateTechnologyAssessmentRankSelect _111.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="CalculateTechnologyAssessmentRankSelect.resx">
       <DependentUpon>CalculateTechnologyAssessmentRankSelect.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="CalculateTechnologyAssessmentRankSetDeptGroup.resx">
       <DependentUpon>CalculateTechnologyAssessmentRankSetDeptGroup.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSetSubject_111.resx">
+      <DependentUpon>CalculateTechnologyAssessmentRankSetSubject_111.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="CalculateTechnologyAssessmentRankSetSubject.resx">
       <DependentUpon>CalculateTechnologyAssessmentRankSetSubject.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankStep1_111.resx">
+      <DependentUpon>CalculateTechnologyAssessmentRankStep1_111.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="CalculateTechnologyAssessmentRankStep1.resx">
       <DependentUpon>CalculateTechnologyAssessmentRankStep1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankStep2_111.resx">
+      <DependentUpon>CalculateTechnologyAssessmentRankStep2_111.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="CalculateTechnologyAssessmentRankStep2.resx">
       <DependentUpon>CalculateTechnologyAssessmentRankStep2.cs</DependentUpon>
@@ -225,6 +270,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="SemesterMatrixRankSelect.resx">
       <DependentUpon>SemesterMatrixRankSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\SelectSkillDomainSubject.resx">
+      <DependentUpon>SelectSkillDomainSubject.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
