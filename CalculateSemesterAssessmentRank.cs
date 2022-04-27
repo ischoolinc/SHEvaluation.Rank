@@ -23,7 +23,8 @@ namespace SHEvaluation.Rank
         List<StudentRecord> _StudentList = new List<StudentRecord>();
         List<StudentRecord> _StudentFilterList = new List<StudentRecord>();
         List<int> _GradeYearList = new List<int>();
-
+        List<string> _GradeSelectList = new List<string>();
+        XmlElement _ConfigElement = null;
         public CalculateSemesterAssessmentRank()
         {
             InitializeComponent();
@@ -35,6 +36,33 @@ namespace SHEvaluation.Rank
             _StudentList = K12.Data.Student.SelectAll().Where(x => (x.Status == StudentRecord.StudentStatus.一般)
                                                             && !string.IsNullOrEmpty(x.RefClassID)
                                                             && x.Class.GradeYear != null).ToList();
+            #endregion
+
+            #region 讀取設定檔
+            string configString = K12.Data.School.Configuration["固定排名_學期成績排名計算"]["設定檔"];
+            if (configString != "")
+            {
+                XmlDocument doc = new XmlDocument();
+                doc.LoadXml(configString);
+                _ConfigElement = doc.DocumentElement;
+
+                chbMakeUp.Checked = chbRetake.Checked = chbSYAdj.Checked = chbHandAdj.Checked = false;
+                foreach (XmlElement item in _ConfigElement.SelectNodes("擇優採計成績"))
+                {
+                    if (item.InnerText == "補考成績")
+                        chbMakeUp.Checked = true;
+
+                    if (item.InnerText == "重修成績")
+                        chbRetake.Checked = true;
+
+                    if (item.InnerText == "學年調整成績")
+                        chbSYAdj.Checked = true;
+
+                    if (item.InnerText == "手動調整成績")
+                        chbHandAdj.Checked = true;
+                }
+            }
+
             #endregion
         }
 
@@ -136,6 +164,19 @@ namespace SHEvaluation.Rank
                     _GradeYearList.Add(gradeYear);
                 }
             }
+
+            #region 整理擇優採計成績
+            _GradeSelectList = new List<string>();
+            _GradeSelectList.Add("原始成績");
+            if (chbHandAdj.Checked)
+                _GradeSelectList.Add("手動調整成績");
+            if (chbMakeUp.Checked)
+                _GradeSelectList.Add("補考成績");
+            if (chbRetake.Checked)
+                _GradeSelectList.Add("重修成績");
+            if (chbSYAdj.Checked)
+                _GradeSelectList.Add("學年調整成績");
+            #endregion
 
             #region 讀取學生清單
             btnPrevious.Enabled = false;
@@ -319,7 +360,21 @@ WHERE
             // 學生依年級分批使用
             Dictionary<string, List<string>> gradeStudentDict = new Dictionary<string, List<string>>();
 
+            #region 儲存設定
+            XmlDocument document = new XmlDocument();
+            XmlElement configEle = document.CreateElement("Setting");
 
+            foreach (var item in _GradeSelectList)
+            {
+                var ele = document.CreateElement("擇優採計成績");
+                ele.InnerText = item;
+                configEle.AppendChild(ele);
+            }
+
+            var cd = K12.Data.School.Configuration["固定排名_學期成績排名計算"];
+            cd["設定檔"] = configEle.OuterXml;
+            cd.Save();
+            #endregion
             //        #region 產生學生清單的SQL
             //        List<string> studentSqlList = new List<string>();
             //        foreach (DataGridViewRow row in dgvStudentList.Rows)
@@ -425,6 +480,15 @@ WITH student_list AS
                         var gradeYearEle = xdoc.CreateElement("年級");
                         gradeYearEle.InnerText = "" + gr.Trim('年', '級');
                         settingEle.AppendChild(gradeYearEle);
+
+
+                        foreach (string type in _GradeSelectList)
+                        {
+                            var gradeSelectEle = xdoc.CreateElement("擇優採計成績");
+                            gradeSelectEle.InnerText = type;
+                            settingEle.AppendChild(gradeSelectEle);
+                        }
+
 
                         calculationSetting = settingEle.OuterXml;
                         #endregion
@@ -1724,33 +1788,45 @@ WITH student_list AS
 SELECT count(*) FROM score_list
 ";
 
-						//SELECT
-						//	score_list.rank_school_year::INT
-						//	, score_list.rank_semester::INT
-						//	, score_list.rank_grade_year::INT
-						//	, score_list.item_type
-						//	, score_list.ref_exam_id
-						//	, score_list.item_name
-						//	, score_list.rank_type
-						//	, score_list.rank_name
-						//	, score_list.student_id
-						//FROM 
-						//	score_list
-						//	LEFT OUTER JOIN insert_matrix_data
-						//		ON insert_matrix_data.school_year = score_list.rank_school_year::INT
-						//		AND insert_matrix_data.semester = score_list.rank_semester::INT
-						//		AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
-						//		AND insert_matrix_data.item_type = score_list.item_type
-						//		AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
-						//		AND insert_matrix_data.item_name = score_list.item_name
-						//		AND insert_matrix_data.rank_type = score_list.rank_type
-						//		AND insert_matrix_data.rank_name = score_list.rank_name
-						//";
-						#endregion
+                        //SELECT
+                        //	score_list.rank_school_year::INT
+                        //	, score_list.rank_semester::INT
+                        //	, score_list.rank_grade_year::INT
+                        //	, score_list.item_type
+                        //	, score_list.ref_exam_id
+                        //	, score_list.item_name
+                        //	, score_list.rank_type
+                        //	, score_list.rank_name
+                        //	, score_list.student_id
+                        //FROM 
+                        //	score_list
+                        //	LEFT OUTER JOIN insert_matrix_data
+                        //		ON insert_matrix_data.school_year = score_list.rank_school_year::INT
+                        //		AND insert_matrix_data.semester = score_list.rank_semester::INT
+                        //		AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
+                        //		AND insert_matrix_data.item_type = score_list.item_type
+                        //		AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
+                        //		AND insert_matrix_data.item_name = score_list.item_name
+                        //		AND insert_matrix_data.rank_type = score_list.rank_type
+                        //		AND insert_matrix_data.rank_name = score_list.rank_name
+                        //";
+                        #endregion
 
-						//2021-12 Cynthia  
-						#region 計算排名的SQL 新增新五標、標準差
-						string insertRankSql = @"
+                        //2022-04 Cynthia 新增勾選「擇優採計成績」功能
+                        string schoolYearAdjScore = "";
+                        string handAdjScore = "";
+                        string makeUpScore = "";
+                        string RetakeScore = "";
+                        if (_GradeSelectList.Contains("學年調整成績"))
+                            schoolYearAdjScore = ", NULLIF(array_to_string(xpath('/root/Subject/@學年調整成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                        if (_GradeSelectList.Contains("手動調整成績"))
+							handAdjScore = ", NULLIF(array_to_string(xpath('/root/Subject/@擇優採計成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                        if (_GradeSelectList.Contains("補考成績"))
+							makeUpScore = ", NULLIF(array_to_string(xpath('/root/Subject/@補考成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                        if (_GradeSelectList.Contains("重修成績"))
+							RetakeScore = ", NULLIF(array_to_string(xpath('/root/Subject/@重修成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                        #region 計算排名的SQL 新增新五標、標準差
+                        string insertRankSql = @"
 " + studentListSql + @"
 " + calcConditionSQL + @"
 , subject_score AS
@@ -1770,11 +1846,13 @@ SELECT count(*) FROM score_list
 		, NULLIF(array_to_string(xpath('/root/Subject/@原始成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::DECIMAL As subject_origin_score
 		, GREATEST
 		(
-			NULLIF(array_to_string(xpath('/root/Subject/@原始成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-			, NULLIF(array_to_string(xpath('/root/Subject/@學年調整成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-			, NULLIF(array_to_string(xpath('/root/Subject/@擇優採計成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-			, NULLIF(array_to_string(xpath('/root/Subject/@補考成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-			, NULLIF(array_to_string(xpath('/root/Subject/@重修成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
+			NULLIF(array_to_string(xpath('/root/Subject/@原始成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL"
++ schoolYearAdjScore + handAdjScore + makeUpScore + RetakeScore
+                        //, NULLIF(array_to_string(xpath('/root/Subject/@學年調整成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
+                        //, NULLIF(array_to_string(xpath('/root/Subject/@擇優採計成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
+                        //, NULLIF(array_to_string(xpath('/root/Subject/@補考成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
+                        //, NULLIF(array_to_string(xpath('/root/Subject/@重修成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
+                        + @"
 		) AS subject_greatest_score
 	FROM 
 	(
@@ -3470,19 +3548,19 @@ SELECT count(*) FROM score_list
 ";
 
 
-						#endregion
-						//// debug 
-						//string fiPath = Application.StartupPath + @"\sems_sql1.sql";
-						//using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
-						//{
-						//    fi.WriteLine(insertRankSql);
-						//}
+                        #endregion
+                        //// debug 
+                        //string fiPath = Application.StartupPath + @"\sems_sql1.sql";
+                        //using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
+                        //{
+                        //    fi.WriteLine(insertRankSql);
+                        //}
 
-						try
-						{
+                        try
+                        {
 
-							//DataTable dt1 = queryHelper.Select(insertRankSql_Old);
-							DataTable dt1 = queryHelper.Select(insertRankSql);
+                            //DataTable dt1 = queryHelper.Select(insertRankSql_Old);
+                            DataTable dt1 = queryHelper.Select(insertRankSql);
                             //if (dt1.Rows.Count > 0)
                             //{
                             //    string fiPath = Application.StartupPath + @"\debug.txt";
