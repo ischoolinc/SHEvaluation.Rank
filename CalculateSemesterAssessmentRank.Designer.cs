@@ -113,9 +113,9 @@
             this.labelX6.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX6.Location = new System.Drawing.Point(26, 436);
             this.labelX6.Name = "labelX6";
-            this.labelX6.Size = new System.Drawing.Size(253, 23);
+            this.labelX6.Size = new System.Drawing.Size(671, 23);
             this.labelX6.TabIndex = 16;
-            this.labelX6.Text = "說明：班、科、年排名會自動計算。";
+            this.labelX6.Text = "說明：班、科、年排名會自動計算。分項成績擇優項目請參考成績計算規則。";
             // 
             // lbCalcSemester
             // 
@@ -283,7 +283,7 @@
             this.groupPanel26.StyleMouseOver.Class = "";
             this.groupPanel26.StyleMouseOver.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.groupPanel26.TabIndex = 8;
-            this.groupPanel26.Text = "擇優採計成績";
+            this.groupPanel26.Text = "學期科目成績擇優採計欄位";
             // 
             // chbSYAdj
             // 
