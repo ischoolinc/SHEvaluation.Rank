@@ -28,8 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.plBasicInfSelect = new DevComponents.DotNetBar.PanelEx();
+            this.labelX6 = new DevComponents.DotNetBar.LabelX();
             this.lbCalcSemester = new DevComponents.DotNetBar.LabelX();
             this.lbCalcSchoolYear = new DevComponents.DotNetBar.LabelX();
             this.btnNext = new DevComponents.DotNetBar.ButtonX();
@@ -70,7 +71,6 @@
             this.btnPrevious = new DevComponents.DotNetBar.ButtonX();
             this.pbLoading = new System.Windows.Forms.PictureBox();
             this.plStudentView = new DevComponents.DotNetBar.PanelEx();
-            this.labelX6 = new DevComponents.DotNetBar.LabelX();
             this.plBasicInfSelect.SuspendLayout();
             this.gpRankPeople.SuspendLayout();
             this.groupPanel26.SuspendLayout();
@@ -102,6 +102,20 @@
             this.plBasicInfSelect.Style.ForeColor.ColorSchemePart = DevComponents.DotNetBar.eColorSchemePart.PanelText;
             this.plBasicInfSelect.Style.GradientAngle = 90;
             this.plBasicInfSelect.TabIndex = 1;
+            // 
+            // labelX6
+            // 
+            this.labelX6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            // 
+            // 
+            // 
+            this.labelX6.BackgroundStyle.Class = "";
+            this.labelX6.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX6.Location = new System.Drawing.Point(26, 436);
+            this.labelX6.Name = "labelX6";
+            this.labelX6.Size = new System.Drawing.Size(253, 23);
+            this.labelX6.TabIndex = 16;
+            this.labelX6.Text = "說明：班、科、年排名會自動計算。";
             // 
             // lbCalcSemester
             // 
@@ -392,7 +406,7 @@
             this.cboStudentTag2.ItemHeight = 21;
             this.cboStudentTag2.Location = new System.Drawing.Point(111, 93);
             this.cboStudentTag2.Name = "cboStudentTag2";
-            this.cboStudentTag2.Size = new System.Drawing.Size(272, 27);
+            this.cboStudentTag2.Size = new System.Drawing.Size(279, 27);
             this.cboStudentTag2.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboStudentTag2.TabIndex = 6;
             this.cboStudentTag2.SelectedIndexChanged += new System.EventHandler(this.cboStudentTag2_SelectedIndexChanged);
@@ -424,7 +438,7 @@
             this.cboStudentTag1.ItemHeight = 21;
             this.cboStudentTag1.Location = new System.Drawing.Point(111, 52);
             this.cboStudentTag1.Name = "cboStudentTag1";
-            this.cboStudentTag1.Size = new System.Drawing.Size(272, 27);
+            this.cboStudentTag1.Size = new System.Drawing.Size(279, 27);
             this.cboStudentTag1.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboStudentTag1.TabIndex = 4;
             this.cboStudentTag1.SelectedIndexChanged += new System.EventHandler(this.cboStudentTag1_SelectedIndexChanged);
@@ -456,7 +470,7 @@
             this.cboStudentFilter.ItemHeight = 21;
             this.cboStudentFilter.Location = new System.Drawing.Point(141, 10);
             this.cboStudentFilter.Name = "cboStudentFilter";
-            this.cboStudentFilter.Size = new System.Drawing.Size(242, 27);
+            this.cboStudentFilter.Size = new System.Drawing.Size(249, 27);
             this.cboStudentFilter.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboStudentFilter.TabIndex = 2;
             this.cboStudentFilter.SelectedIndexChanged += new System.EventHandler(this.cboStudentFilter_SelectedIndexChanged);
@@ -645,14 +659,14 @@
             this.colClassRank,
             this.colRankType1,
             this.colRankType2});
-            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle3.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            dataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle3.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dgvStudentList.DefaultCellStyle = dataGridViewCellStyle1;
             this.dgvStudentList.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(215)))), ((int)(((byte)(229)))));
             this.dgvStudentList.HighlightSelectedColumnHeaders = false;
             this.dgvStudentList.Location = new System.Drawing.Point(3, 68);
@@ -804,20 +818,6 @@
             this.plStudentView.Style.ForeColor.ColorSchemePart = DevComponents.DotNetBar.eColorSchemePart.PanelText;
             this.plStudentView.Style.GradientAngle = 90;
             this.plStudentView.TabIndex = 16;
-            // 
-            // labelX6
-            // 
-            this.labelX6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            // 
-            // 
-            // 
-            this.labelX6.BackgroundStyle.Class = "";
-            this.labelX6.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX6.Location = new System.Drawing.Point(26, 436);
-            this.labelX6.Name = "labelX6";
-            this.labelX6.Size = new System.Drawing.Size(253, 23);
-            this.labelX6.TabIndex = 16;
-            this.labelX6.Text = "說明：班、科、年排名會自動計算。";
             // 
             // CalculateSemesterAssessmentRank
             // 
