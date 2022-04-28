@@ -86,6 +86,20 @@ namespace SHEvaluation.Rank
 
                 //Jean 
                string  queryTable = @"
+WITH picked_grade_data AS (
+SELECT
+	array_to_string(xpath('//擇優採計成績/text()', settingEle), '/') AS picked_grade
+	, id AS rank_batch_id
+FROM
+	(
+		SELECT
+		id
+			,rank_batch.setting
+			, unnest(xpath('//Setting', xmlparse(content setting))) as settingEle
+		FROM
+rank_batch
+	) AS batch_data
+)
 SELECT 
 	rank_matrix.id AS rank_matrix_id
     , rank_matrix.ref_batch_id
@@ -122,6 +136,7 @@ SELECT
     , rank_matrix.pr_50
     , rank_matrix.pr_25
     , rank_matrix.pr_12
+    , picked_grade_data.picked_grade
 FROM 
 	rank_matrix AS source
     INNER JOIN rank_matrix
@@ -135,6 +150,8 @@ FROM
 		AND rank_matrix.rank_name = source.rank_name
 	LEFT OUTER JOIN exam 
         ON exam.id=rank_matrix.ref_exam_id
+	LEFT JOIN picked_grade_data
+		ON picked_grade_data.rank_batch_id=rank_matrix.ref_batch_id
 WHERE
 	source.id = " + _RankMatrixID + @"::BIGINT
     AND rank_matrix.id IN (
@@ -171,8 +188,16 @@ ORDER BY
                     //    _DicMatrixInfoRow.Add(key, newRow);)
                     //}
 
+                    //if 類別等於科目成績時才要顯示
+                    string pickedGrade = row["picked_grade"].ToString();
+                    string scoreCategory= row["score_category"].ToString();
                     bool tryParseBool = false;
                     var key = "" + row["ref_batch_id"] + "（計算時間：" + Convert.ToDateTime(row["create_time"]).ToString("yyyy/MM/dd HH:mm") + "）" + (bool.TryParse("" + row["is_alive"], out tryParseBool) && tryParseBool ? "-目前採計" : "");
+
+                    if (scoreCategory == "科目成績")
+                        key = "" + row["ref_batch_id"] + "（計算時間：" + Convert.ToDateTime(row["create_time"]).ToString("yyyy/MM/dd HH:mm") + "）" + (bool.TryParse("" + row["is_alive"], out tryParseBool) && tryParseBool ? "-目前採計："+ pickedGrade : "");
+
+
                     var newIndex = cboBatchId.Items.Add(key);
 
                     var newRow = dgvMatrixInfo.Rows[dgvMatrixInfo.Rows.Add(
