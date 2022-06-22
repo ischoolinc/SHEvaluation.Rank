@@ -2344,7 +2344,8 @@ SELECT count(*) FROM score_list";
 						//";
 						#endregion
 
-						//2021-12 Cynthia  
+						//2021-12 Cynthia  新增新五標、標準差
+						//2022-06-22 Cynthia 將總科目、類別一科目、類別二科目獨立計算
 						#region 計算排名的SQL 新增新五標、標準差
 						string insertRankSql = @"
 WITH row AS (
@@ -2411,6 +2412,10 @@ WITH row AS (
 			ON sc_attend.ref_course_id = course.id
             AND course.subject IN (
                 SELECT subject FROM calc_subject
+				UNION
+				SELECT subject FROM calc_subject_tag1
+				UNION
+				SELECT subject FROM calc_subject_tag2 
             )
 		INNER JOIN student_row
 			ON sc_attend.ref_student_id = student_row.student_id
@@ -2431,6 +2436,11 @@ WITH row AS (
 		score_detail_row.*
 	FROM 
 		score_detail_row
+	WHERE 
+	    subject IN (
+            SELECT subject
+            FROM calc_subject
+        )
 ), subject_rank_row AS (--------計算科目排名
 	SELECT
 		student_id
@@ -2478,9 +2488,9 @@ WITH row AS (
     --2.3 科目成績 類別1排名
 ), exam_score_tag1 AS (-------結算定期評量總成績
 	SELECT	
-		*
+		score_detail_row.*
 	FROM 
-		exam_score
+		score_detail_row
 	WHERE 
 	    subject IN (
             SELECT subject
@@ -2520,9 +2530,9 @@ WITH row AS (
     --2.4 科目成績 類別2排名
 ), exam_score_tag2 AS (-------結算定期評量總成績
 	SELECT	
-		*
+		score_detail_row.*
 	FROM 
-		exam_score
+		score_detail_row
 	WHERE 
 	    subject IN (
             SELECT subject
@@ -2853,7 +2863,7 @@ WITH row AS (
 		, rank_tag2
 		, SUM( score::decimal ) AS score
 	FROM 
-		exam_score
+		exam_score_tag1
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
@@ -2914,7 +2924,7 @@ WITH row AS (
 		, rank_tag2
 		, SUM( score::decimal ) AS score
 	FROM 
-		exam_score
+		exam_score_tag2
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
@@ -3049,7 +3059,7 @@ WITH row AS (
 		, rank_tag2
 		, AVG( score::decimal ) AS score
 	FROM 
-		exam_score
+		exam_score_tag1
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
@@ -3110,7 +3120,7 @@ WITH row AS (
 		, rank_tag2
 		, AVG( score::decimal ) AS score
 	FROM 
-		exam_score
+		exam_score_tag2
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
@@ -3247,7 +3257,7 @@ WITH row AS (
 		, rank_tag2
 		, SUM( score::decimal * credit::decimal ) AS score
 	FROM 
-		exam_score
+		exam_score_tag1
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
@@ -3309,7 +3319,7 @@ WITH row AS (
 		, rank_tag2
 		, SUM( score::decimal * credit::decimal ) AS score
 	FROM 
-		exam_score
+		exam_score_tag2
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
@@ -3454,7 +3464,7 @@ WITH row AS (
             ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
             END AS score
 	FROM 
-		exam_score
+		exam_score_tag1
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
@@ -3520,7 +3530,7 @@ WITH row AS (
             ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
             END AS score
 	FROM 
-		exam_score
+		exam_score_tag2
 	WHERE
 		score IS NOT NULL
 		AND credit IS NOT NULL
