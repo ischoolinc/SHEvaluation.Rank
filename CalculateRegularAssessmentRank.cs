@@ -661,43 +661,138 @@ SELECT
                     QueryHelper queryHelper = new QueryHelper();
                     int pr = 20;
 
-                    // 依年級分批計算
-                    foreach (string gr in gradeStudentDict.Keys)
+					int batchID = 0;
+					string calculationSetting = "";
+					#region 產生計算設定的字串
+					XmlDocument doc = new XmlDocument();
+					var settingEle = doc.CreateElement("Setting");
+					settingEle.SetAttribute("學年度", "" + schoolYear);
+					settingEle.SetAttribute("學期", "" + semester);
+					settingEle.SetAttribute("考試名稱", "" + examName);
+					settingEle.SetAttribute("不排名學生類別", "" + studentFilter);
+					settingEle.SetAttribute("類別一", "" + tag1);
+					settingEle.SetAttribute("類別二", "" + tag2);
+
+					foreach (string str in selSubjetList)
+					{
+						var ele = doc.CreateElement("採計科目");
+						ele.InnerText = str;
+						settingEle.AppendChild(ele);
+					}
+					foreach (string str in selSubjetTag1List)
+					{
+						var ele = doc.CreateElement("類別一採計科目");
+						ele.InnerText = str;
+						settingEle.AppendChild(ele);
+					}
+					foreach (string str in selSubjetTag2List)
+					{
+						var ele = doc.CreateElement("類別二採計科目");
+						ele.InnerText = str;
+						settingEle.AppendChild(ele);
+					}
+
+					foreach (string gr in gradeStudentDict.Keys)
+					{
+						var gradeYearEle = doc.CreateElement("年級");
+						gradeYearEle.InnerText = "" + gr.Trim('年', '級');
+						settingEle.AppendChild(gradeYearEle);
+					}
+
+					calculationSetting = settingEle.OuterXml;
+					#endregion
+
+					#region 插入 rank_batch
+
+					//bkw.ReportProgress(10);
+
+					#region 0. 插入rank_batch SQL
+					string rank_batch_row = @"SELECT
+		 '" + ("" + schoolYear).Replace("'", "''") + @"'::TEXT AS rank_school_year
+		, '" + ("" + semester).Replace("'", "''") + @"'::TEXT AS rank_semester
+        , '" + ("" + examId).Replace("'", "''") + @"'::TEXT AS ref_exam_id
+		, '" + ("" + examName).Replace("'", "''") + @"'::TEXT AS rank_exam_name
+        , '" + calculationSetting.Replace("'", "''") + @"'::TEXT AS calculation_setting";
+
+
+					string insertRankBatchSql = @"
+WITH row AS (
+" + rank_batch_row + @")
+, insert_batch_data AS (
+	INSERT INTO rank_batch(
+		school_year
+		, semester
+		, calculation_description
+		, setting
+	)
+	SELECT
+		DISTINCT
+		row.rank_school_year::INT
+		, row.rank_semester::INT
+		, row.rank_school_year||' '||row.rank_semester||' 計算'||row.rank_exam_name||'排名' AS calculation_description
+		, row.calculation_setting
+	FROM
+		row
+
+	RETURNING *
+)
+SELECT * FROM insert_batch_data
+";
+					try
+					{
+
+						DataTable dtq = queryHelper.Select(insertRankBatchSql);
+						foreach (DataRow dr in dtq.Rows)
+						{
+							string strBatchID = dr["id"].ToString();
+							batchID = int.Parse(strBatchID);
+						}
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine(ex.Message);
+					}
+					#endregion
+					//bkw.ReportProgress(30);
+					#endregion
+
+					// 依年級分批計算
+					foreach (string gr in gradeStudentDict.Keys)
                     {
                         #region 產生計算設定的字串
-                        XmlDocument doc = new XmlDocument();
-                        var settingEle = doc.CreateElement("Setting");
-                        settingEle.SetAttribute("學年度", "" + schoolYear);
-                        settingEle.SetAttribute("學期", "" + semester);
-                        settingEle.SetAttribute("考試名稱", "" + examName);
-                        settingEle.SetAttribute("不排名學生類別", "" + studentFilter);
-                        settingEle.SetAttribute("類別一", "" + tag1);
-                        settingEle.SetAttribute("類別二", "" + tag2);                   
+                        //XmlDocument doc = new XmlDocument();
+                        //var settingEle = doc.CreateElement("Setting");
+                        //settingEle.SetAttribute("學年度", "" + schoolYear);
+                        //settingEle.SetAttribute("學期", "" + semester);
+                        //settingEle.SetAttribute("考試名稱", "" + examName);
+                        //settingEle.SetAttribute("不排名學生類別", "" + studentFilter);
+                        //settingEle.SetAttribute("類別一", "" + tag1);
+                        //settingEle.SetAttribute("類別二", "" + tag2);                   
 
-                        foreach(string str in selSubjetList)
-                        {
-                            var ele = doc.CreateElement("採計科目");
-                            ele.InnerText = str;
-                            settingEle.AppendChild(ele);
-                        }
-                        foreach (string str in selSubjetTag1List)
-                        {
-                            var ele = doc.CreateElement("類別一採計科目");
-                            ele.InnerText = str;
-                            settingEle.AppendChild(ele);
-                        }
-                        foreach (string str in selSubjetTag2List)
-                        {
-                            var ele = doc.CreateElement("類別二採計科目");
-                            ele.InnerText = str;
-                            settingEle.AppendChild(ele);
-                        }
+                        //foreach(string str in selSubjetList)
+                        //{
+                        //    var ele = doc.CreateElement("採計科目");
+                        //    ele.InnerText = str;
+                        //    settingEle.AppendChild(ele);
+                        //}
+                        //foreach (string str in selSubjetTag1List)
+                        //{
+                        //    var ele = doc.CreateElement("類別一採計科目");
+                        //    ele.InnerText = str;
+                        //    settingEle.AppendChild(ele);
+                        //}
+                        //foreach (string str in selSubjetTag2List)
+                        //{
+                        //    var ele = doc.CreateElement("類別二採計科目");
+                        //    ele.InnerText = str;
+                        //    settingEle.AppendChild(ele);
+                        //}
 
                         #endregion
 
-                        var gradeYearEle = doc.CreateElement("年級");
-                        gradeYearEle.InnerText = "" + gr.Trim('年', '級');
-                        settingEle.AppendChild(gradeYearEle);
+                        //var gradeYearEle = doc.CreateElement("年級");
+                        //gradeYearEle.InnerText = "" + gr.Trim('年', '級');
+                        //settingEle.AppendChild(gradeYearEle);
 
 
                         List<string> rowSqlList = new List<string>();
@@ -711,7 +806,8 @@ SELECT
 		, '" + ("" + semester).Replace("'", "''") + @"'::TEXT AS rank_semester
         , '" + ("" + examId).Replace("'", "''") + @"'::TEXT AS ref_exam_id
 		, '" + ("" + examName).Replace("'", "''") + @"'::TEXT AS rank_exam_name
-        , '" + settingEle.OuterXml.Replace("'", "''") + @"'::TEXT AS calculation_setting
+        , '" + calculationSetting.Replace("'", "''") + @"'::TEXT AS calculation_setting
+        , " + batchID + @" AS batch_id
 ");
 
 
@@ -3956,23 +4052,6 @@ WITH row AS (
 		AND rank_matrix.ref_exam_id = row.ref_exam_id::INT
 
 	RETURNING rank_matrix.*
-), insert_batch_data AS (
-	INSERT INTO rank_batch(
-		school_year
-		, semester
-		, calculation_description
-		, setting
-	)
-	SELECT
-		DISTINCT
-		row.rank_school_year::INT
-		, row.rank_semester::INT
-		, row.rank_school_year||' '||row.rank_semester||' 計算'||row.rank_exam_name||'排名' AS calculation_description
-		, row.calculation_setting
-	FROM
-		row
-
-	RETURNING *
 ), insert_matrix_data AS (
 	INSERT INTO rank_matrix(
 		ref_batch_id
@@ -4010,7 +4089,7 @@ WITH row AS (
 	    , std_dev_pop
 	)
 	SELECT DISTINCT
-		insert_batch_data.id AS ref_batch_id
+		row.batch_id AS ref_batch_id
 		, score_list.rank_school_year
 		, score_list.rank_semester
 		, score_list.rank_grade_year
@@ -4047,7 +4126,7 @@ WITH row AS (
 		score_list
 		LEFT OUTER JOIN update_data
 			ON update_data.id  < 0 --永遠為false，只是為了讓insert等待update執行完
-		CROSS JOIN insert_batch_data
+		CROSS JOIN row
 	RETURNING *
 ), insert_batch_student_data AS (
 	INSERT INTO rank_batch_student(
@@ -4060,7 +4139,7 @@ WITH row AS (
 		, matrix_tag2
 	)
 	SELECT
-		insert_batch_data.id AS ref_batch_id
+		row.batch_id AS ref_batch_id
 		, student_row.student_id
 		, student_row.rank_grade_year
 		, student_row.rank_grade_year||'年級' AS matrix_grade
@@ -4069,7 +4148,7 @@ WITH row AS (
 		, student_row.rank_tag2
 	FROM
 		student_row
-		CROSS JOIN insert_batch_data
+		CROSS JOIN row
 ), insert_detail_data AS (
 	INSERT INTO rank_detail(
 		ref_matrix_id
