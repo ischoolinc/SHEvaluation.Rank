@@ -2552,17 +2552,17 @@ WITH row AS (
 		, exam_id
 		, score
 		, RANK() OVER(PARTITION BY rank_grade_year,subject ORDER BY score DESC) AS grade_rank
-		, RANK() OVER(PARTITION BY rank_class_name ,subject ORDER BY score DESC) AS class_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ,subject ORDER BY score DESC) AS dept_rank
+		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY score DESC) AS class_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY score DESC) AS dept_rank
 		, RANK() OVER(PARTITION BY rank_grade_year,subject ORDER BY score ASC) AS grade_rank_reverse
-		, RANK() OVER(PARTITION BY rank_class_name ,subject ORDER BY score ASC) AS class_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name ,subject ORDER BY score ASC) AS dept_rank_reverse
+		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY score ASC) AS class_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY score ASC) AS dept_rank_reverse
 		, COUNT (student_id) OVER(PARTITION BY rank_grade_year,subject ) AS grade_count
 		, COUNT (student_id) OVER(PARTITION BY rank_class_name, subject) AS class_count
 		, COUNT (student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, subject) AS dept_count
 	    , ROW_NUMBER() OVER(PARTITION BY rank_grade_year,subject ORDER BY score ASC) AS grade_row_number
-	    , ROW_NUMBER() OVER(PARTITION BY rank_class_name ,subject ORDER BY score ASC) AS class_row_number
-	    , ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_dept_name ,subject ORDER BY score ASC) AS dept_row_number
+	    , ROW_NUMBER() OVER(PARTITION BY rank_class_name, subject ORDER BY score ASC) AS class_row_number
+	    , ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY score ASC) AS dept_row_number
 	FROM 
         exam_score
 	WHERE 
@@ -2608,7 +2608,7 @@ WITH row AS (
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY score DESC) AS tag1_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY score ASC) AS tag1_rank_reverse
 		, COUNT (student_id) OVER(PARTITION BY rank_grade_year, rank_tag1, subject) AS tag1_count
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag1 ,subject ORDER BY score ASC) AS tag1_row_number
+		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY score ASC) AS tag1_row_number
 	FROM 
         exam_score_tag1
 	WHERE 
@@ -2650,7 +2650,7 @@ WITH row AS (
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY score DESC) AS tag2_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY score ASC) AS tag2_rank_reverse
 		, COUNT (student_id) OVER(PARTITION BY rank_grade_year, rank_tag2, subject) AS tag2_count
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag2 ,subject ORDER BY score ASC) AS tag2_row_number
+		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY score ASC) AS tag2_row_number
 	FROM 
         exam_score_tag2
 	WHERE 
@@ -2675,6 +2675,7 @@ WITH row AS (
 		, rank_semester
 		, rank_grade_year
 		, rank_class_name
+		, rank_dept_name
 		, exam_id
 		, domain
 		, rank_tag1
@@ -2695,6 +2696,7 @@ WITH row AS (
         , rank_semester
         , rank_grade_year
         , rank_class_name
+		, rank_dept_name
         , exam_id
         , student_id
         , student_name
@@ -2711,14 +2713,21 @@ WITH row AS (
 		, rank_semester
 		, rank_grade_year
 		, rank_class_name
+		, rank_dept_name
 		, exam_id
 		, score
-		, RANK() OVER(PARTITION BY rank_grade_year ,domain ORDER BY score DESC) AS grade_rank
-		, RANK() OVER(PARTITION BY rank_class_name ,domain ORDER BY score DESC) AS class_rank
-		, RANK() OVER(PARTITION BY rank_grade_year ,domain ORDER BY score ASC) AS grade_rank_reverse
-		, RANK() OVER(PARTITION BY rank_class_name ,domain ORDER BY score ASC) AS class_rank_reverse
-		, COUNT (student_id) OVER(PARTITION BY rank_grade_year ,domain) AS grade_count
+		, RANK() OVER(PARTITION BY rank_grade_year, domain ORDER BY score DESC) AS grade_rank
+		, RANK() OVER(PARTITION BY rank_class_name, domain ORDER BY score DESC) AS class_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, domain ORDER BY score DESC) AS dept_rank
+		, RANK() OVER(PARTITION BY rank_grade_year, domain ORDER BY score ASC) AS grade_rank_reverse
+		, RANK() OVER(PARTITION BY rank_class_name, domain ORDER BY score ASC) AS class_rank_reverse
+		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, domain ORDER BY score ASC) AS dept_rank_reverse
+		, COUNT (student_id) OVER(PARTITION BY rank_grade_year, domain) AS grade_count
 		, COUNT (student_id) OVER(PARTITION BY rank_class_name, domain) AS class_count
+		, COUNT (student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, domain) AS dept_count
+	    , ROW_NUMBER() OVER(PARTITION BY rank_grade_year, domain ORDER BY score ASC) AS grade_row_number
+	    , ROW_NUMBER() OVER(PARTITION BY rank_class_name, domain ORDER BY score ASC) AS class_row_number
+	    , ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_dept_name, domain ORDER BY score ASC) AS dept_row_number
 	FROM 
 		domain_score
 	WHERE
@@ -2728,8 +2737,10 @@ WITH row AS (
 		s1.*
 		, FLOOR((grade_rank::DECIMAL-1)*100::DECIMAL/grade_count)+1 AS graderank_percentage
 		, FLOOR((class_rank::DECIMAL-1)*100::DECIMAL/class_count)+1 AS classrank_percentage
+		, FLOOR((dept_rank::DECIMAL-1)*100::DECIMAL/dept_count)+1 AS deptrank_percentage
         , FLOOR((grade_rank_reverse::DECIMAL-1)*100::DECIMAL/grade_count) AS graderank_pr
         , FLOOR((class_rank_reverse::DECIMAL-1)*100::DECIMAL/class_count) AS classrank_pr
+        , FLOOR((dept_rank_reverse::DECIMAL-1)*100::DECIMAL/dept_count) AS deptrank_pr
 	FROM 
 		domain_rank_row AS s1
 
@@ -2789,6 +2800,7 @@ WITH row AS (
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, domain ORDER BY score DESC) AS tag1_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, domain ORDER BY score ASC) AS tag1_rank_reverse
 		, COUNT (student_id) OVER(PARTITION BY rank_grade_year, rank_tag1, domain) AS tag1_count
+		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag1, domain ORDER BY score ASC) AS tag1_row_number
 	FROM 
 		domain_score_tag1
 	WHERE
@@ -2857,6 +2869,7 @@ WITH row AS (
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, domain ORDER BY score DESC) AS tag2_rank
 		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, domain ORDER BY score ASC) AS tag2_rank_reverse
 		, COUNT (student_id) OVER(PARTITION BY rank_grade_year, rank_tag2, domain) AS tag2_count
+		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag2, domain ORDER BY score ASC) AS tag2_row_number
 	FROM 
 		domain_score_tag2
 	WHERE
@@ -3731,8 +3744,8 @@ WITH row AS (
 		, rank_tag2
 	FROM
 		(
--- 		    SELECT * FROM domain_rank--1.1 領域成績 年排名
---          UNION ALL
+ 		    SELECT * FROM domain_rank--1.1 領域成績 年排名
+            UNION ALL
             SELECT * FROM subject_rank--2.1 科目成績 年排名
             UNION ALL
             SELECT * FROM calc_sum_rank--3.1 總計成績 總分 年排名
@@ -3803,8 +3816,8 @@ WITH row AS (
 		, rank_tag2
 	FROM
 		(
--- 		    SELECT * FROM domain_rank--1.2 領域成績 班排名
---          UNION ALL
+            SELECT * FROM domain_rank--1.2 領域成績 班排名
+            UNION ALL
             SELECT * FROM subject_rank--2.2 科目成績 班排名
             UNION ALL
             SELECT * FROM calc_sum_rank--3.2 總計成績 總分 班排名
@@ -3875,8 +3888,8 @@ WITH row AS (
 		, rank_tag2
 	FROM
 		(
--- 		    SELECT * FROM domain_rank--1.5 領域成績 科排名
---          UNION ALL
+            SELECT * FROM domain_rank--1.5 領域成績 科排名
+            UNION ALL
             SELECT * FROM subject_rank--2.5 科目成績 科排名
             UNION ALL
             SELECT * FROM calc_sum_rank--3.5 總計成績 總分 科排名
@@ -3947,8 +3960,8 @@ WITH row AS (
 		, rank_tag2
 	FROM
 		(
--- 		    SELECT * FROM domain_rank_tag1--1.3 領域成績 類別1排名
---          UNION ALL
+            SELECT * FROM domain_rank_tag1--1.3 領域成績 類別1排名
+            UNION ALL
             SELECT * FROM subject_rank_tag1--2.3 科目成績 類別1排名
             UNION ALL
             SELECT * FROM calc_sum_rank_tag1--3.3 總計成績 總分 類別1排名
@@ -4022,8 +4035,8 @@ WITH row AS (
 		, rank_tag2
 	FROM
 		(
--- 		    SELECT * FROM domain_rank_tag2--1.4 領域成績 類別2排名
---          UNION ALL
+            SELECT * FROM domain_rank_tag2--1.4 領域成績 類別2排名
+            UNION ALL
             SELECT * FROM subject_rank_tag2--2.4 科目成績 類別2排名
             UNION ALL
             SELECT * FROM calc_sum_rank_tag2--3.4 總計成績 總分 類別2排名
@@ -4205,7 +4218,7 @@ SELECT count(*) FROM score_list
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine(ex.Message);
+                            throw ex;
                         }
 
 
