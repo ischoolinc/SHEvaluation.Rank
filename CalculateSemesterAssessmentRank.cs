@@ -402,13 +402,13 @@ WHERE
                 #region 單筆學生資料的SQL
                 string studentSql = @"
 SELECT
-'" + row.Tag + @"'::BIGINT AS student_id
-, '" + "" + row.Cells[3].Value + @"'::TEXT AS student_name
-, '" + ("" + row.Cells[4].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
-, '" + "" + row.Cells[5].Value + @"'::TEXT AS rank_dept_name
-, '" + "" + row.Cells[6].Value + @"'::TEXT AS rank_class_name
-, '" + "" + row.Cells[7].Value + @"'::TEXT AS rank_tag1
-, '" + "" + row.Cells[8].Value + @"'::TEXT AS rank_tag2
+'" + ("" + row.Tag).Replace("'", "''") + @"'::BIGINT AS student_id
+, '" + ("" + row.Cells[3].Value).Replace("'", "''") + @"'::TEXT AS student_name
+, '" + ("" + row.Cells[4].Value).Trim('年', '級').Replace("'", "''") + @"'::INT AS rank_grade_year
+, '" + ("" + row.Cells[5].Value).Replace("'", "''") + @"'::TEXT AS rank_dept_name
+, '" + ("" + row.Cells[6].Value).Replace("'", "''") + @"'::TEXT AS rank_class_name
+, '" + ("" + row.Cells[7].Value).Replace("'", "''") + @"'::TEXT AS rank_tag1
+, '" + ("" + row.Cells[8].Value).Replace("'", "''") + @"'::TEXT AS rank_tag2
 ";
                 #endregion
 
@@ -451,49 +451,49 @@ SELECT
 
                     int pr = 20;
 
-					int batchID = 0;
+                    int batchID = 0;
 
-					#region 產生要儲存到rank_batch的setting的Xml
-					XmlDocument xdoc = new XmlDocument();
-					var settingEle = xdoc.CreateElement("Setting");
-					settingEle.SetAttribute("學年度", schoolYear);
-					settingEle.SetAttribute("學期", semester);
-					settingEle.SetAttribute("考試名稱", "學期成績");
-					settingEle.SetAttribute("不排名學生類別", studentFilter);
-					settingEle.SetAttribute("類別一", tag1);
-					settingEle.SetAttribute("類別二", tag2);
+                    #region 產生要儲存到rank_batch的setting的Xml
+                    XmlDocument xdoc = new XmlDocument();
+                    var settingEle = xdoc.CreateElement("Setting");
+                    settingEle.SetAttribute("學年度", schoolYear);
+                    settingEle.SetAttribute("學期", semester);
+                    settingEle.SetAttribute("考試名稱", "學期成績");
+                    settingEle.SetAttribute("不排名學生類別", studentFilter);
+                    settingEle.SetAttribute("類別一", tag1);
+                    settingEle.SetAttribute("類別二", tag2);
 
-					foreach (string gr in gradeStudentDict.Keys)
+                    foreach (string gr in gradeStudentDict.Keys)
                     {
-						var gradeYearEle = xdoc.CreateElement("年級");
-						gradeYearEle.InnerText = "" + gr.Trim('年', '級');
-						settingEle.AppendChild(gradeYearEle);
-					}
+                        var gradeYearEle = xdoc.CreateElement("年級");
+                        gradeYearEle.InnerText = "" + gr.Trim('年', '級');
+                        settingEle.AppendChild(gradeYearEle);
+                    }
 
-					foreach (string type in _GradeSelectList)
-					{
-						var gradeSelectEle = xdoc.CreateElement("擇優採計成績");
-						gradeSelectEle.InnerText = type;
-						settingEle.AppendChild(gradeSelectEle);
-					}
+                    foreach (string type in _GradeSelectList)
+                    {
+                        var gradeSelectEle = xdoc.CreateElement("擇優採計成績");
+                        gradeSelectEle.InnerText = type;
+                        settingEle.AppendChild(gradeSelectEle);
+                    }
 
 
-					calculationSetting = settingEle.OuterXml;
-					#endregion
+                    calculationSetting = settingEle.OuterXml;
+                    #endregion
 
-					#region 插入 rank_batch
+                    #region 插入 rank_batch
 
-					//bkw.ReportProgress(10);
+                    //bkw.ReportProgress(10);
 
-					#region 0. 插入rank_batch SQL
-					string rank_batch_row = @"SELECT
+                    #region 0. 插入rank_batch SQL
+                    string rank_batch_row = @"SELECT
 		 '" + ("" + schoolYear).Replace("'", "''") + @"'::TEXT AS rank_school_year
 		, '" + ("" + semester).Replace("'", "''") + @"'::TEXT AS rank_semester
 		, '學期成績'::TEXT AS rank_exam_name
         , '" + calculationSetting.Replace("'", "''") + @"'::TEXT AS calculation_setting";
 
 
-					string insertRankBatchSql = @"
+                    string insertRankBatchSql = @"
 WITH row AS (
 " + rank_batch_row + @")
 , insert_batch_data AS (
@@ -517,26 +517,26 @@ WITH row AS (
 )
 SELECT * FROM insert_batch_data
 ";
-					try
-					{
+                    try
+                    {
 
-						DataTable dtq = queryHelper.Select(insertRankBatchSql);
-						foreach (DataRow dr in dtq.Rows)
-						{
-							string strBatchID = dr["id"].ToString();
-							batchID = int.Parse(strBatchID);
-						}
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine(ex.Message);
-					}
-					#endregion
-					//bkw.ReportProgress(30);
-					#endregion
+                        DataTable dtq = queryHelper.Select(insertRankBatchSql);
+                        foreach (DataRow dr in dtq.Rows)
+                        {
+                            string strBatchID = dr["id"].ToString();
+                            batchID = int.Parse(strBatchID);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                    #endregion
+                    //bkw.ReportProgress(30);
+                    #endregion
 
-					// 依年級分批計算
-					foreach (string gr in gradeStudentDict.Keys)
+                    // 依年級分批計算
+                    foreach (string gr in gradeStudentDict.Keys)
                     {
 
                         #region 有學生資料的SQL
@@ -551,7 +551,7 @@ WITH student_list AS
 
 
                         #region 產生計算規則的SQL
-                       
+
 
                         List<string> calcConditionListSQL = new List<string>();
 
@@ -591,11 +591,11 @@ WITH student_list AS
                         if (_GradeSelectList.Contains("學年調整成績"))
                             schoolYearAdjScore = ", NULLIF(array_to_string(xpath('/root/Subject/@學年調整成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
                         if (_GradeSelectList.Contains("手動調整成績"))
-							handAdjScore = ", NULLIF(array_to_string(xpath('/root/Subject/@擇優採計成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                            handAdjScore = ", NULLIF(array_to_string(xpath('/root/Subject/@擇優採計成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
                         if (_GradeSelectList.Contains("補考成績"))
-							makeUpScore = ", NULLIF(array_to_string(xpath('/root/Subject/@補考成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                            makeUpScore = ", NULLIF(array_to_string(xpath('/root/Subject/@補考成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
                         if (_GradeSelectList.Contains("重修成績"))
-							RetakeScore = ", NULLIF(array_to_string(xpath('/root/Subject/@重修成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                            RetakeScore = ", NULLIF(array_to_string(xpath('/root/Subject/@重修成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
                         #region 計算排名的SQL 新增新五標、標準差
                         string insertRankSql = @"
 " + studentListSql + @"
