@@ -431,10 +431,12 @@ FROM
             rank_detail ON rank_detail.ref_matrix_id = rank_matrix.id 
     WHERE 
         rank_matrix.is_alive = true AND rank_matrix.item_type IN( '5學期/技職繁星比序','5學期/技職繁星比序(111年學年度適用)')
-    ORDER BY rank_matrix.rank_type
+    ORDER BY 
+        rank_matrix.create_time DESC
+        , rank_matrix.item_type
+        , rank_matrix.rank_type
         , rank_matrix.rank_name
         , rank_detail.rank
-        , rank_matrix.create_time DESC
 ) AS Rank_Table
 ";
             DataTable dt = new DataTable();
