@@ -139,6 +139,13 @@ WHERE
             foreach (DataRow row in dt.Rows)
             {
                 string value = "" + row[3];
+
+                // 因為學校資料庫中領域資料尚未補齊，所以先不顯示領域成績固定排名
+                if (value == "領域成績")
+                {
+                    continue;
+                }
+
                 if (!cboScoreCategory.Items.Contains(value))
                 {
                     cboScoreCategory.Items.Add(value);
