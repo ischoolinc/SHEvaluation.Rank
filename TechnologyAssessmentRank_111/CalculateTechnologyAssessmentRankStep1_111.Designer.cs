@@ -74,7 +74,7 @@
             this.labelX5.ForeColor = System.Drawing.Color.Black;
             this.labelX5.Location = new System.Drawing.Point(30, 345);
             this.labelX5.Name = "labelX5";
-            this.labelX5.Size = new System.Drawing.Size(125, 30);
+            this.labelX5.Size = new System.Drawing.Size(100, 24);
             this.labelX5.TabIndex = 11;
             this.labelX5.Text = "類別排名二：";
             // 
@@ -106,7 +106,7 @@
             this.labelX4.ForeColor = System.Drawing.Color.Black;
             this.labelX4.Location = new System.Drawing.Point(22, 70);
             this.labelX4.Name = "labelX4";
-            this.labelX4.Size = new System.Drawing.Size(125, 30);
+            this.labelX4.Size = new System.Drawing.Size(100, 24);
             this.labelX4.TabIndex = 9;
             this.labelX4.Text = "類別排名一：";
             // 
@@ -138,7 +138,7 @@
             this.labelX3.ForeColor = System.Drawing.Color.Black;
             this.labelX3.Location = new System.Drawing.Point(22, 28);
             this.labelX3.Name = "labelX3";
-            this.labelX3.Size = new System.Drawing.Size(163, 30);
+            this.labelX3.Size = new System.Drawing.Size(131, 24);
             this.labelX3.TabIndex = 7;
             this.labelX3.Text = "不排名學生類別：";
             // 
@@ -209,7 +209,7 @@
             this.labelX1.ForeColor = System.Drawing.Color.Black;
             this.labelX1.Location = new System.Drawing.Point(30, 114);
             this.labelX1.Name = "labelX1";
-            this.labelX1.Size = new System.Drawing.Size(105, 30);
+            this.labelX1.Size = new System.Drawing.Size(85, 24);
             this.labelX1.TabIndex = 13;
             this.labelX1.Text = "成績小數第";
             // 
@@ -227,7 +227,7 @@
             this.iptParseNum.MinValue = 0;
             this.iptParseNum.Name = "iptParseNum";
             this.iptParseNum.ShowUpDown = true;
-            this.iptParseNum.Size = new System.Drawing.Size(59, 29);
+            this.iptParseNum.Size = new System.Drawing.Size(59, 25);
             this.iptParseNum.TabIndex = 14;
             this.iptParseNum.ValueChanged += new System.EventHandler(this.iptParseNum_ValueChanged);
             // 
@@ -244,13 +244,13 @@
             this.labelX2.ForeColor = System.Drawing.Color.Black;
             this.labelX2.Location = new System.Drawing.Point(185, 114);
             this.labelX2.Name = "labelX2";
-            this.labelX2.Size = new System.Drawing.Size(86, 30);
+            this.labelX2.Size = new System.Drawing.Size(69, 24);
             this.labelX2.TabIndex = 15;
             this.labelX2.Text = "四捨五入";
             // 
             // CalculateTechnologyAssessmentRankStep1_111
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(518, 310);
             this.Controls.Add(this.labelX2);

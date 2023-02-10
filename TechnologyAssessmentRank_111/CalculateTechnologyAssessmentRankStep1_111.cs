@@ -274,7 +274,7 @@ student.id IN
         private void btnSetSubject_Click(object sender, EventArgs e)
         {
             btnSetSubject.Enabled = false;
-            CalculateTechnologyAssessmentRankSetSubject_111 ctrss = new CalculateTechnologyAssessmentRankSetSubject_111();
+            SortCalcSet ctrss = new SortCalcSet();
             ctrss.ShowDialog();
             btnSetSubject.Enabled = true;
         }
@@ -393,6 +393,6 @@ student.id IN
             parseNumber = iptParseNum.Value;
         }
 
-      
+        
     }
 }

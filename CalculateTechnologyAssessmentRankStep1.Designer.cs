@@ -160,7 +160,7 @@
             this.btnSetSubject.AutoSize = true;
             this.btnSetSubject.BackColor = System.Drawing.Color.Transparent;
             this.btnSetSubject.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSetSubject.Location = new System.Drawing.Point(173, 170);
+            this.btnSetSubject.Location = new System.Drawing.Point(154, 170);
             this.btnSetSubject.Name = "btnSetSubject";
             this.btnSetSubject.Size = new System.Drawing.Size(118, 25);
             this.btnSetSubject.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -208,7 +208,7 @@
             this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX1.ForeColor = System.Drawing.Color.Black;
-            this.labelX1.Location = new System.Drawing.Point(30, 114);
+            this.labelX1.Location = new System.Drawing.Point(22, 114);
             this.labelX1.Name = "labelX1";
             this.labelX1.Size = new System.Drawing.Size(85, 24);
             this.labelX1.TabIndex = 13;

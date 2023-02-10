@@ -8,12 +8,11 @@ namespace SHEvaluation.Rank.UDT
     [TableName("campus.technology_star.registration_subject")]
     public class udtRegistrationSubject : ActiveRecord
     {
-        /// <summary>
+         /// <summary>
         /// 科目名稱
         /// </summary>
         [Field(Field = "subject_name", Indexed = false)]
         public string SubjectName { get; set; }
-
         /// <summary>
         /// 一上科目
         /// </summary>

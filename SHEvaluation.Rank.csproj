@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>SHEvaluation.Rank</RootNamespace>
     <AssemblyName>SHEvaluation.Rank</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -19,7 +19,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\..\Ischool_AE\modules\SHEvaluation\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -90,6 +90,21 @@
       <HintPath>Library\K12.Presentation.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="SHCourseGroupCodeAdmin">
+      <HintPath>..\..\Ischool_AE\modules\SHEvaluation\SHCourseGroupCodeAdmin.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SmartSchool.Customization.Data">
+      <HintPath>..\..\Ischool_AE\modules\SHSchoolLoader\SmartSchool.Customization.Data.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SmartSchool.Customization.PlugIn">
+      <HintPath>..\..\Ischool_AE\modules\SHSchoolLoader\SmartSchool.Customization.PlugIn.dll</HintPath>
+    </Reference>
+    <Reference Include="SmartSchool.Evaluation.HS">
+      <HintPath>..\..\Ischool_AE\modules\SHEvaluation\SmartSchool.Evaluation.HS.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.DirectoryServices" />
@@ -116,11 +131,26 @@
     <Compile Include="CalculateSemesterAssessmentRank.Designer.cs">
       <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
     </Compile>
+    <Compile Include="ClassCoursePlan.cs" />
+    <Compile Include="DAO\GlobalValue.cs" />
     <Compile Include="Manual.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Manual.Designer.cs">
       <DependentUpon>Manual.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SortCalcSet.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SortCalcSet.Designer.cs">
+      <DependentUpon>SortCalcSet.cs</DependentUpon>
+    </Compile>
+    <Compile Include="subject.cs" />
+    <Compile Include="SubjectSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SubjectSelect.Designer.cs">
+      <DependentUpon>SubjectSelect.cs</DependentUpon>
     </Compile>
     <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSelect _111.cs">
       <SubType>Form</SubType>
@@ -211,7 +241,9 @@
     <Compile Include="TechnologyAssessmentRank_111\SelectSkillDomainSubject.Designer.cs">
       <DependentUpon>SelectSkillDomainSubject.cs</DependentUpon>
     </Compile>
+    <Compile Include="UDT\udtRegistrationCalc.cs" />
     <Compile Include="UDT\udtRegistrationDept.cs" />
+    <Compile Include="UDT\udtRegistrationSubjectNew.cs" />
     <Compile Include="UDT\udtRegistrationSubject.cs" />
     <EmbeddedResource Include="CalculateRegularAssessmentRank.resx">
       <DependentUpon>CalculateRegularAssessmentRank.cs</DependentUpon>
@@ -221,6 +253,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Manual.resx">
       <DependentUpon>Manual.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SortCalcSet.resx">
+      <DependentUpon>SortCalcSet.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SubjectSelect.resx">
+      <DependentUpon>SubjectSelect.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSelect _111.resx">
       <DependentUpon>CalculateTechnologyAssessmentRankSelect _111.cs</DependentUpon>
