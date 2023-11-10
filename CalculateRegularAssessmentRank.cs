@@ -527,8 +527,12 @@ SELECT
             foreach (StudentRecord stud in _NoFilterStudentList)
             {
                 int gr = 0;
+                string className = "";
                 if (stud.Class != null && stud.Class.GradeYear.HasValue)
+                {
                     gr = stud.Class.GradeYear.Value;
+                    className = stud.Class.Name;
+                }
 
                 string studentSql = string.Format(@"
 				SELECT 
@@ -536,10 +540,10 @@ SELECT
 					'{1}' :: TEXT AS student_name,
 					{2} :: INT AS rank_grade_year,
 					'' :: TEXT AS rank_dept_name,
-					'' :: TEXT AS rank_class_name,
+					'{3}' :: TEXT AS rank_class_name,
 					'' :: TEXT AS rank_tag1,
 					'' :: TEXT AS rank_tag2
-				", stud.ID, stud.Name, gr);
+				", stud.ID, stud.Name, gr, className);
 
                 if (!StudentNoRankDict.ContainsKey(gr))
                     StudentNoRankDict.Add(gr, new List<string>());
@@ -4304,7 +4308,7 @@ WITH row AS (
 		, score_list.score AS score	
 	FROM
 		score_list
-		LEFT OUTER JOIN rank_matrix
+		INNER JOIN rank_matrix
 			ON rank_matrix.school_year = score_list.rank_school_year
 			AND rank_matrix.semester = score_list.rank_semester
 			AND rank_matrix.grade_year = score_list.rank_grade_year
