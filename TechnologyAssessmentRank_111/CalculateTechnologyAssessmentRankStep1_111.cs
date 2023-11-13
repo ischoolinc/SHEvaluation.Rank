@@ -143,15 +143,23 @@ namespace SHEvaluation.Rank
                 }
                 ctrr2.SetRegistrationDept(tmpDeptDict);
 
-                // 設定科目 key: SubjectName
-                Dictionary<string, udtRegistrationSubject> tmpSubjDict = new Dictionary<string, udtRegistrationSubject>();
+                // 設定科目 key: SubjectName                
+                List<udtRegistrationSubjectNew> SubjectList = new List<udtRegistrationSubjectNew>();
+                SubjectList = accessHelper.Select<udtRegistrationSubjectNew>();
 
-                List<udtRegistrationSubject> udtSubjList = accessHelper.Select<udtRegistrationSubject>();
+                Dictionary<string, List<udtRegistrationSubjectNew>> tmpSubjDict = new Dictionary<string, List<udtRegistrationSubjectNew>>();
+                
 
-                foreach (udtRegistrationSubject data in udtSubjList)
+                foreach (udtRegistrationSubjectNew data in SubjectList)
                 {
-                    if (!tmpSubjDict.ContainsKey(data.SubjectName))
-                        tmpSubjDict.Add(data.SubjectName, data);
+                    if (!tmpSubjDict.ContainsKey(data.RegGroupName))
+                    {
+                        tmpSubjDict.Add(data.RegGroupName, new List<udtRegistrationSubjectNew>());
+                        tmpSubjDict[data.RegGroupName].Add(data);                    
+                    }
+                    else
+                        tmpSubjDict[data.RegGroupName].Add(data); 
+
                 }
                 ctrr2.SetRegistrationSubject(tmpSubjDict);
 
@@ -266,7 +274,8 @@ student.id IN
         private void btnSetDeptGroup_Click(object sender, EventArgs e)
         {
             btnSetDeptGroup.Enabled = false;
-            CalculateTechnologyAssessmentRankSetDeptGroup ctrdg = new CalculateTechnologyAssessmentRankSetDeptGroup();
+            SHEvaluation.Rank.TechnologyAssessmentRank_111.CalculateTechnologyAssessmentRankDeptGroupSet__111 ctrdg = new SHEvaluation.Rank.TechnologyAssessmentRank_111.CalculateTechnologyAssessmentRankDeptGroupSet__111();
+
             ctrdg.ShowDialog();
             btnSetDeptGroup.Enabled = true;
         }
@@ -393,6 +402,16 @@ student.id IN
             parseNumber = iptParseNum.Value;
         }
 
-        
+        //private void button1_Click(object sender, EventArgs e)
+        //{
+        //    List<udtRegistrationCalc> GroupCalc = new List<udtRegistrationCalc>();
+        //    AccessHelper accessHelper = new AccessHelper();
+        //    GroupCalc = accessHelper.Select<udtRegistrationCalc>();
+        //    foreach (udtRegistrationCalc Calc in GroupCalc)
+        //    {
+        //        Calc.Deleted = true;
+        //        Calc.Save();
+        //    }
+        //}
     }
 }

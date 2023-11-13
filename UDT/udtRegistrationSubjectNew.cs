@@ -24,6 +24,11 @@ namespace SHEvaluation.Rank.UDT
         /// </summary>
         [Field(Field = "subject_name", Indexed = false)]
         public string SubjectName { get; set; }
+        /// <summary>
+        /// 科目級別
+        /// </summary>
+        [Field(Field = "Level", Indexed = false)]
+        public string Level { get; set; }
 
         /// <summary>
         /// 年級

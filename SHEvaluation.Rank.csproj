@@ -139,17 +139,35 @@
     <Compile Include="Manual.Designer.cs">
       <DependentUpon>Manual.cs</DependentUpon>
     </Compile>
-    <Compile Include="SortCalcSet.cs">
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankDeptGroupSet _111.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="SortCalcSet.Designer.cs">
+    <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankDeptGroupSet _111.Designer.cs">
+      <DependentUpon>CalculateTechnologyAssessmentRankDeptGroupSet _111.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\DeptGroupSet.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\DeptGroupSet.Designer.cs">
+      <DependentUpon>DeptGroupSet.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\RegGroup%28作廢%29.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\RegGroup%28作廢%29.Designer.cs">
+      <DependentUpon>RegGroup%28作廢%29.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\SortCalcSet.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TechnologyAssessmentRank_111\SortCalcSet.Designer.cs">
       <DependentUpon>SortCalcSet.cs</DependentUpon>
     </Compile>
     <Compile Include="subject.cs" />
-    <Compile Include="SubjectSelect.cs">
+    <Compile Include="TechnologyAssessmentRank_111\SubjectSelect.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="SubjectSelect.Designer.cs">
+    <Compile Include="TechnologyAssessmentRank_111\SubjectSelect.Designer.cs">
       <DependentUpon>SubjectSelect.cs</DependentUpon>
     </Compile>
     <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSelect _111.cs">
@@ -254,10 +272,19 @@
     <EmbeddedResource Include="Manual.resx">
       <DependentUpon>Manual.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="SortCalcSet.resx">
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankDeptGroupSet _111.resx">
+      <DependentUpon>CalculateTechnologyAssessmentRankDeptGroupSet _111.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\DeptGroupSet.resx">
+      <DependentUpon>DeptGroupSet.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\RegGroup%28作廢%29.resx">
+      <DependentUpon>RegGroup%28作廢%29.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\SortCalcSet.resx">
       <DependentUpon>SortCalcSet.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="SubjectSelect.resx">
+    <EmbeddedResource Include="TechnologyAssessmentRank_111\SubjectSelect.resx">
       <DependentUpon>SubjectSelect.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankSelect _111.resx">
@@ -342,6 +369,7 @@
     <Content Include="Library\FISCA.UDT.xml" />
     <Content Include="Library\K12.Data.dll" />
     <Content Include="Library\K12.Presentation.dll" />
+    <None Include="Resources\Image.jpg" />
     <None Include="Resources\icon.png" />
     <None Include="Resources\loading.gif" />
   </ItemGroup>

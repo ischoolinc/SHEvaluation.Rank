@@ -86,9 +86,9 @@
             this.cboStudentTag1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentTag1.FormattingEnabled = true;
             this.cboStudentTag1.ItemHeight = 21;
-            this.cboStudentTag1.Location = new System.Drawing.Point(120, 68);
+            this.cboStudentTag1.Location = new System.Drawing.Point(152, 68);
             this.cboStudentTag1.Name = "cboStudentTag1";
-            this.cboStudentTag1.Size = new System.Drawing.Size(242, 27);
+            this.cboStudentTag1.Size = new System.Drawing.Size(240, 27);
             this.cboStudentTag1.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboStudentTag1.TabIndex = 1;
             this.cboStudentTag1.SelectedIndexChanged += new System.EventHandler(this.cboStudentTag1_SelectedIndexChanged);
@@ -207,7 +207,7 @@
             this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX1.ForeColor = System.Drawing.Color.Black;
-            this.labelX1.Location = new System.Drawing.Point(30, 114);
+            this.labelX1.Location = new System.Drawing.Point(65, 113);
             this.labelX1.Name = "labelX1";
             this.labelX1.Size = new System.Drawing.Size(85, 24);
             this.labelX1.TabIndex = 13;
@@ -223,7 +223,7 @@
             this.iptParseNum.BackgroundStyle.Class = "DateTimeInputBackground";
             this.iptParseNum.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.iptParseNum.ButtonFreeText.Shortcut = DevComponents.DotNetBar.eShortcut.F2;
-            this.iptParseNum.Location = new System.Drawing.Point(120, 114);
+            this.iptParseNum.Location = new System.Drawing.Point(155, 113);
             this.iptParseNum.MinValue = 0;
             this.iptParseNum.Name = "iptParseNum";
             this.iptParseNum.ShowUpDown = true;
@@ -242,7 +242,7 @@
             this.labelX2.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX2.ForeColor = System.Drawing.Color.Black;
-            this.labelX2.Location = new System.Drawing.Point(185, 114);
+            this.labelX2.Location = new System.Drawing.Point(220, 113);
             this.labelX2.Name = "labelX2";
             this.labelX2.Size = new System.Drawing.Size(69, 24);
             this.labelX2.TabIndex = 15;
@@ -268,7 +268,7 @@
             this.Controls.Add(this.labelX3);
             this.DoubleBuffered = true;
             this.Name = "CalculateTechnologyAssessmentRankStep1_111";
-            this.Text = "技職繁星多學期成績固定排名設定(111學年度適用)";
+            this.Text = "技職繁星成績排名計算(111學年度適用)";
             this.Load += new System.EventHandler(this.CalculateTechnologyAssessmentRankStep1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.iptParseNum)).EndInit();
             this.ResumeLayout(false);

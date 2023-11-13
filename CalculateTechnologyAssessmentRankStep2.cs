@@ -196,7 +196,7 @@ namespace SHEvaluation.Rank
                 row.Cells[colStudentNum.Index].Value = student.studentNumber;
                 row.Cells[colStudentName.Index].Value = student.studentName;
                 row.Cells[colSchoolRank.Index].Value = student.RankGradeYear;
-
+                //將學生依科別歸類報名群組
                 if (deptDict.ContainsKey(student.studentID))
                 {
 
@@ -297,8 +297,8 @@ namespace SHEvaluation.Rank
         private void btnCacluate_Click(object sender, EventArgs e)
         {
             btnCacluate.Enabled = false;
-            btnPrevious.Enabled = false;
-
+            btnPrevious.Enabled = false; 
+            
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
             Exception bkwException = null;
@@ -2777,7 +2777,7 @@ SELECT * from score_list limit 1
 
                 #endregion
 
-     
+
                 bkw.ReportProgress(50);
 
                 QueryHelper queryHelper = new QueryHelper();

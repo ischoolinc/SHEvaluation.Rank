@@ -34,6 +34,26 @@ namespace SHEvaluation.Rank
             this.labelX3 = new DevComponents.DotNetBar.LabelX();
             this.lstGeneralSubj = new DevComponents.DotNetBar.Controls.ListViewEx();
             this.groupPanel1 = new DevComponents.DotNetBar.Controls.GroupPanel();
+            this.btnMathSel = new DevComponents.DotNetBar.ButtonX();
+            this.btnChineseSel = new DevComponents.DotNetBar.ButtonX();
+            this.btnEnglishSel = new DevComponents.DotNetBar.ButtonX();
+            this.btnSkillSel = new DevComponents.DotNetBar.ButtonX();
+            this.btnSpecialSel = new DevComponents.DotNetBar.ButtonX();
+            this.btnGeneralSel = new DevComponents.DotNetBar.ButtonX();
+            this.lblMath = new DevComponents.DotNetBar.LabelX();
+            this.labelX31 = new DevComponents.DotNetBar.LabelX();
+            this.lblChinese = new DevComponents.DotNetBar.LabelX();
+            this.labelX29 = new DevComponents.DotNetBar.LabelX();
+            this.lblEnglish = new DevComponents.DotNetBar.LabelX();
+            this.labelX27 = new DevComponents.DotNetBar.LabelX();
+            this.lblSkill = new DevComponents.DotNetBar.LabelX();
+            this.labelX25 = new DevComponents.DotNetBar.LabelX();
+            this.lblSpecial = new DevComponents.DotNetBar.LabelX();
+            this.labelX23 = new DevComponents.DotNetBar.LabelX();
+            this.lblGeneral = new DevComponents.DotNetBar.LabelX();
+            this.Lahel1 = new DevComponents.DotNetBar.LabelX();
+            this.cboGeneralContain = new DevComponents.DotNetBar.Controls.ComboBoxEx();
+            this.labelX2 = new DevComponents.DotNetBar.LabelX();
             this.labelX19 = new DevComponents.DotNetBar.LabelX();
             this.labelX20 = new DevComponents.DotNetBar.LabelX();
             this.labelX21 = new DevComponents.DotNetBar.LabelX();
@@ -52,18 +72,6 @@ namespace SHEvaluation.Rank
             this.labelX11 = new DevComponents.DotNetBar.LabelX();
             this.cboGeneralCalc = new DevComponents.DotNetBar.Controls.ComboBoxEx();
             this.labelX10 = new DevComponents.DotNetBar.LabelX();
-            this.btnMathDel = new DevComponents.DotNetBar.ButtonX();
-            this.btnChineseDel = new DevComponents.DotNetBar.ButtonX();
-            this.btnEnglishDel = new DevComponents.DotNetBar.ButtonX();
-            this.btnSkillDel = new DevComponents.DotNetBar.ButtonX();
-            this.btnSpecialDel = new DevComponents.DotNetBar.ButtonX();
-            this.btnGeneralDel = new DevComponents.DotNetBar.ButtonX();
-            this.btnMathSel = new DevComponents.DotNetBar.ButtonX();
-            this.btnChineseSel = new DevComponents.DotNetBar.ButtonX();
-            this.btnEnglishSel = new DevComponents.DotNetBar.ButtonX();
-            this.btnSkillSel = new DevComponents.DotNetBar.ButtonX();
-            this.btnSpecialSel = new DevComponents.DotNetBar.ButtonX();
-            this.btnGeneralSel = new DevComponents.DotNetBar.ButtonX();
             this.labelX8 = new DevComponents.DotNetBar.LabelX();
             this.lstMathSubj = new DevComponents.DotNetBar.Controls.ListViewEx();
             this.labelX9 = new DevComponents.DotNetBar.LabelX();
@@ -101,7 +109,7 @@ namespace SHEvaluation.Rank
             // 
             this.lblGroupDept.BackgroundStyle.Class = "";
             this.lblGroupDept.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lblGroupDept.Location = new System.Drawing.Point(226, 12);
+            this.lblGroupDept.Location = new System.Drawing.Point(236, 12);
             this.lblGroupDept.Name = "lblGroupDept";
             this.lblGroupDept.SingleLineColor = System.Drawing.SystemColors.ButtonShadow;
             this.lblGroupDept.Size = new System.Drawing.Size(739, 23);
@@ -117,7 +125,7 @@ namespace SHEvaluation.Rank
             this.labelX3.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX3.Location = new System.Drawing.Point(158, 12);
             this.labelX3.Name = "labelX3";
-            this.labelX3.Size = new System.Drawing.Size(72, 23);
+            this.labelX3.Size = new System.Drawing.Size(65, 23);
             this.labelX3.TabIndex = 4;
             this.labelX3.Text = "包含科別";
             // 
@@ -128,11 +136,11 @@ namespace SHEvaluation.Rank
             // 
             this.lstGeneralSubj.Border.Class = "ListViewBorder";
             this.lstGeneralSubj.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lstGeneralSubj.CheckBoxes = true;
             this.lstGeneralSubj.HideSelection = false;
             this.lstGeneralSubj.Location = new System.Drawing.Point(3, 40);
             this.lstGeneralSubj.Name = "lstGeneralSubj";
             this.lstGeneralSubj.Size = new System.Drawing.Size(921, 104);
+            this.lstGeneralSubj.Sorting = System.Windows.Forms.SortOrder.Ascending;
             this.lstGeneralSubj.TabIndex = 5;
             this.lstGeneralSubj.UseCompatibleStateImageBehavior = false;
             this.lstGeneralSubj.View = System.Windows.Forms.View.List;
@@ -142,6 +150,26 @@ namespace SHEvaluation.Rank
             this.groupPanel1.BackColor = System.Drawing.Color.Transparent;
             this.groupPanel1.CanvasColor = System.Drawing.SystemColors.Control;
             this.groupPanel1.ColorSchemeStyle = DevComponents.DotNetBar.eDotNetBarStyle.Office2007;
+            this.groupPanel1.Controls.Add(this.btnMathSel);
+            this.groupPanel1.Controls.Add(this.btnChineseSel);
+            this.groupPanel1.Controls.Add(this.btnEnglishSel);
+            this.groupPanel1.Controls.Add(this.btnSkillSel);
+            this.groupPanel1.Controls.Add(this.btnSpecialSel);
+            this.groupPanel1.Controls.Add(this.btnGeneralSel);
+            this.groupPanel1.Controls.Add(this.lblMath);
+            this.groupPanel1.Controls.Add(this.labelX31);
+            this.groupPanel1.Controls.Add(this.lblChinese);
+            this.groupPanel1.Controls.Add(this.labelX29);
+            this.groupPanel1.Controls.Add(this.lblEnglish);
+            this.groupPanel1.Controls.Add(this.labelX27);
+            this.groupPanel1.Controls.Add(this.lblSkill);
+            this.groupPanel1.Controls.Add(this.labelX25);
+            this.groupPanel1.Controls.Add(this.lblSpecial);
+            this.groupPanel1.Controls.Add(this.labelX23);
+            this.groupPanel1.Controls.Add(this.lblGeneral);
+            this.groupPanel1.Controls.Add(this.Lahel1);
+            this.groupPanel1.Controls.Add(this.cboGeneralContain);
+            this.groupPanel1.Controls.Add(this.labelX2);
             this.groupPanel1.Controls.Add(this.labelX19);
             this.groupPanel1.Controls.Add(this.labelX20);
             this.groupPanel1.Controls.Add(this.labelX21);
@@ -160,18 +188,6 @@ namespace SHEvaluation.Rank
             this.groupPanel1.Controls.Add(this.labelX11);
             this.groupPanel1.Controls.Add(this.cboGeneralCalc);
             this.groupPanel1.Controls.Add(this.labelX10);
-            this.groupPanel1.Controls.Add(this.btnMathDel);
-            this.groupPanel1.Controls.Add(this.btnChineseDel);
-            this.groupPanel1.Controls.Add(this.btnEnglishDel);
-            this.groupPanel1.Controls.Add(this.btnSkillDel);
-            this.groupPanel1.Controls.Add(this.btnSpecialDel);
-            this.groupPanel1.Controls.Add(this.btnGeneralDel);
-            this.groupPanel1.Controls.Add(this.btnMathSel);
-            this.groupPanel1.Controls.Add(this.btnChineseSel);
-            this.groupPanel1.Controls.Add(this.btnEnglishSel);
-            this.groupPanel1.Controls.Add(this.btnSkillSel);
-            this.groupPanel1.Controls.Add(this.btnSpecialSel);
-            this.groupPanel1.Controls.Add(this.btnGeneralSel);
             this.groupPanel1.Controls.Add(this.labelX8);
             this.groupPanel1.Controls.Add(this.lstMathSubj);
             this.groupPanel1.Controls.Add(this.labelX9);
@@ -186,7 +202,7 @@ namespace SHEvaluation.Rank
             this.groupPanel1.Controls.Add(this.lstGeneralSubj);
             this.groupPanel1.Location = new System.Drawing.Point(149, 41);
             this.groupPanel1.Name = "groupPanel1";
-            this.groupPanel1.Size = new System.Drawing.Size(935, 764);
+            this.groupPanel1.Size = new System.Drawing.Size(935, 763);
             // 
             // 
             // 
@@ -220,6 +236,260 @@ namespace SHEvaluation.Rank
             this.groupPanel1.StyleMouseOver.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.groupPanel1.TabIndex = 6;
             this.groupPanel1.Text = "比序科目設定";
+            // 
+            // btnMathSel
+            // 
+            this.btnMathSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnMathSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnMathSel.Location = new System.Drawing.Point(344, 635);
+            this.btnMathSel.Name = "btnMathSel";
+            this.btnMathSel.Size = new System.Drawing.Size(123, 25);
+            this.btnMathSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnMathSel.TabIndex = 7;
+            this.btnMathSel.Text = "管理科目";
+            this.btnMathSel.Click += new System.EventHandler(this.btnMathSel_Click);
+            // 
+            // btnChineseSel
+            // 
+            this.btnChineseSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnChineseSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnChineseSel.Location = new System.Drawing.Point(344, 518);
+            this.btnChineseSel.Name = "btnChineseSel";
+            this.btnChineseSel.Size = new System.Drawing.Size(123, 25);
+            this.btnChineseSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnChineseSel.TabIndex = 7;
+            this.btnChineseSel.Text = "管理科目";
+            this.btnChineseSel.Click += new System.EventHandler(this.btnChineseSel_Click);
+            // 
+            // btnEnglishSel
+            // 
+            this.btnEnglishSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnEnglishSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnEnglishSel.Location = new System.Drawing.Point(344, 401);
+            this.btnEnglishSel.Name = "btnEnglishSel";
+            this.btnEnglishSel.Size = new System.Drawing.Size(123, 25);
+            this.btnEnglishSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnEnglishSel.TabIndex = 7;
+            this.btnEnglishSel.Text = "管理科目";
+            this.btnEnglishSel.Click += new System.EventHandler(this.btnEnglishSel_Click);
+            // 
+            // btnSkillSel
+            // 
+            this.btnSkillSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnSkillSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnSkillSel.Location = new System.Drawing.Point(344, 275);
+            this.btnSkillSel.Name = "btnSkillSel";
+            this.btnSkillSel.Size = new System.Drawing.Size(123, 25);
+            this.btnSkillSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnSkillSel.TabIndex = 7;
+            this.btnSkillSel.Text = "管理科目";
+            this.btnSkillSel.Click += new System.EventHandler(this.btnSkillSel_Click);
+            // 
+            // btnSpecialSel
+            // 
+            this.btnSpecialSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnSpecialSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnSpecialSel.Location = new System.Drawing.Point(342, 154);
+            this.btnSpecialSel.Name = "btnSpecialSel";
+            this.btnSpecialSel.Size = new System.Drawing.Size(123, 25);
+            this.btnSpecialSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnSpecialSel.TabIndex = 7;
+            this.btnSpecialSel.Text = "管理科目";
+            this.btnSpecialSel.Click += new System.EventHandler(this.btnSpecialSel_Click);
+            // 
+            // btnGeneralSel
+            // 
+            this.btnGeneralSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this.btnGeneralSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this.btnGeneralSel.Location = new System.Drawing.Point(344, 9);
+            this.btnGeneralSel.Name = "btnGeneralSel";
+            this.btnGeneralSel.Size = new System.Drawing.Size(123, 25);
+            this.btnGeneralSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.btnGeneralSel.TabIndex = 7;
+            this.btnGeneralSel.Text = "管理科目";
+            this.btnGeneralSel.Click += new System.EventHandler(this.btnGeneralSel_Click);
+            // 
+            // lblMath
+            // 
+            // 
+            // 
+            // 
+            this.lblMath.BackgroundStyle.Class = "";
+            this.lblMath.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblMath.Location = new System.Drawing.Point(261, 631);
+            this.lblMath.Name = "lblMath";
+            this.lblMath.Size = new System.Drawing.Size(28, 32);
+            this.lblMath.TabIndex = 36;
+            this.lblMath.Text = "0";
+            // 
+            // labelX31
+            // 
+            // 
+            // 
+            // 
+            this.labelX31.BackgroundStyle.Class = "";
+            this.labelX31.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX31.Location = new System.Drawing.Point(224, 637);
+            this.labelX31.Name = "labelX31";
+            this.labelX31.Size = new System.Drawing.Size(90, 23);
+            this.labelX31.TabIndex = 35;
+            this.labelX31.Text = "共有             科";
+            // 
+            // lblChinese
+            // 
+            // 
+            // 
+            // 
+            this.lblChinese.BackgroundStyle.Class = "";
+            this.lblChinese.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblChinese.Location = new System.Drawing.Point(260, 514);
+            this.lblChinese.Name = "lblChinese";
+            this.lblChinese.Size = new System.Drawing.Size(28, 32);
+            this.lblChinese.TabIndex = 34;
+            this.lblChinese.Text = "0";
+            // 
+            // labelX29
+            // 
+            // 
+            // 
+            // 
+            this.labelX29.BackgroundStyle.Class = "";
+            this.labelX29.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX29.Location = new System.Drawing.Point(224, 520);
+            this.labelX29.Name = "labelX29";
+            this.labelX29.Size = new System.Drawing.Size(90, 23);
+            this.labelX29.TabIndex = 33;
+            this.labelX29.Text = "共有             科";
+            // 
+            // lblEnglish
+            // 
+            // 
+            // 
+            // 
+            this.lblEnglish.BackgroundStyle.Class = "";
+            this.lblEnglish.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblEnglish.Location = new System.Drawing.Point(260, 401);
+            this.lblEnglish.Name = "lblEnglish";
+            this.lblEnglish.Size = new System.Drawing.Size(28, 32);
+            this.lblEnglish.TabIndex = 32;
+            this.lblEnglish.Text = "0";
+            // 
+            // labelX27
+            // 
+            // 
+            // 
+            // 
+            this.labelX27.BackgroundStyle.Class = "";
+            this.labelX27.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX27.Location = new System.Drawing.Point(224, 405);
+            this.labelX27.Name = "labelX27";
+            this.labelX27.Size = new System.Drawing.Size(90, 23);
+            this.labelX27.TabIndex = 31;
+            this.labelX27.Text = "共有             科";
+            // 
+            // lblSkill
+            // 
+            // 
+            // 
+            // 
+            this.lblSkill.BackgroundStyle.Class = "";
+            this.lblSkill.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblSkill.Location = new System.Drawing.Point(260, 273);
+            this.lblSkill.Name = "lblSkill";
+            this.lblSkill.Size = new System.Drawing.Size(28, 32);
+            this.lblSkill.TabIndex = 30;
+            this.lblSkill.Text = "0";
+            // 
+            // labelX25
+            // 
+            // 
+            // 
+            // 
+            this.labelX25.BackgroundStyle.Class = "";
+            this.labelX25.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX25.Location = new System.Drawing.Point(224, 277);
+            this.labelX25.Name = "labelX25";
+            this.labelX25.Size = new System.Drawing.Size(90, 23);
+            this.labelX25.TabIndex = 29;
+            this.labelX25.Text = "共有             科";
+            // 
+            // lblSpecial
+            // 
+            // 
+            // 
+            // 
+            this.lblSpecial.BackgroundStyle.Class = "";
+            this.lblSpecial.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblSpecial.Location = new System.Drawing.Point(260, 153);
+            this.lblSpecial.Name = "lblSpecial";
+            this.lblSpecial.Size = new System.Drawing.Size(28, 32);
+            this.lblSpecial.TabIndex = 28;
+            this.lblSpecial.Text = "0";
+            // 
+            // labelX23
+            // 
+            // 
+            // 
+            // 
+            this.labelX23.BackgroundStyle.Class = "";
+            this.labelX23.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX23.Location = new System.Drawing.Point(224, 157);
+            this.labelX23.Name = "labelX23";
+            this.labelX23.Size = new System.Drawing.Size(90, 23);
+            this.labelX23.TabIndex = 27;
+            this.labelX23.Text = "共有             科";
+            // 
+            // lblGeneral
+            // 
+            // 
+            // 
+            // 
+            this.lblGeneral.BackgroundStyle.Class = "";
+            this.lblGeneral.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.lblGeneral.Location = new System.Drawing.Point(260, 7);
+            this.lblGeneral.Name = "lblGeneral";
+            this.lblGeneral.Size = new System.Drawing.Size(28, 32);
+            this.lblGeneral.TabIndex = 26;
+            this.lblGeneral.Text = "0";
+            // 
+            // Lahel1
+            // 
+            // 
+            // 
+            // 
+            this.Lahel1.BackgroundStyle.Class = "";
+            this.Lahel1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.Lahel1.Location = new System.Drawing.Point(224, 11);
+            this.Lahel1.Name = "Lahel1";
+            this.Lahel1.Size = new System.Drawing.Size(90, 23);
+            this.Lahel1.TabIndex = 20;
+            this.Lahel1.Text = "共有             科";
+            // 
+            // cboGeneralContain
+            // 
+            this.cboGeneralContain.DisplayMember = "Text";
+            this.cboGeneralContain.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
+            this.cboGeneralContain.FormattingEnabled = true;
+            this.cboGeneralContain.ItemHeight = 19;
+            this.cboGeneralContain.Location = new System.Drawing.Point(554, 9);
+            this.cboGeneralContain.Name = "cboGeneralContain";
+            this.cboGeneralContain.Size = new System.Drawing.Size(131, 25);
+            this.cboGeneralContain.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.cboGeneralContain.TabIndex = 18;
+            this.cboGeneralContain.SelectedIndexChanged += new System.EventHandler(this.cboGeneralContain_SelectedIndexChanged);
+            // 
+            // labelX2
+            // 
+            // 
+            // 
+            // 
+            this.labelX2.BackgroundStyle.Class = "";
+            this.labelX2.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
+            this.labelX2.Location = new System.Drawing.Point(491, 11);
+            this.labelX2.Name = "labelX2";
+            this.labelX2.Size = new System.Drawing.Size(67, 23);
+            this.labelX2.TabIndex = 19;
+            this.labelX2.Text = "計算內容";
             // 
             // labelX19
             // 
@@ -310,6 +580,7 @@ namespace SHEvaluation.Rank
             this.cboMathCalc.Size = new System.Drawing.Size(146, 25);
             this.cboMathCalc.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboMathCalc.TabIndex = 14;
+            this.cboMathCalc.SelectedIndexChanged += new System.EventHandler(this.cboMathCalc_SelectedIndexChanged);
             // 
             // cboChineseCalc
             // 
@@ -322,6 +593,7 @@ namespace SHEvaluation.Rank
             this.cboChineseCalc.Size = new System.Drawing.Size(146, 25);
             this.cboChineseCalc.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboChineseCalc.TabIndex = 13;
+            this.cboChineseCalc.SelectedIndexChanged += new System.EventHandler(this.cboChineseCalc_SelectedIndexChanged);
             // 
             // cboEnglishCalc
             // 
@@ -334,6 +606,7 @@ namespace SHEvaluation.Rank
             this.cboEnglishCalc.Size = new System.Drawing.Size(146, 25);
             this.cboEnglishCalc.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboEnglishCalc.TabIndex = 12;
+            this.cboEnglishCalc.SelectedIndexChanged += new System.EventHandler(this.cboEnglishCalc_SelectedIndexChanged);
             // 
             // cboSkillCalc
             // 
@@ -346,6 +619,7 @@ namespace SHEvaluation.Rank
             this.cboSkillCalc.Size = new System.Drawing.Size(146, 25);
             this.cboSkillCalc.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboSkillCalc.TabIndex = 11;
+            this.cboSkillCalc.SelectedIndexChanged += new System.EventHandler(this.cboSkillCalc_SelectedIndexChanged);
             // 
             // cboSpecialCalc
             // 
@@ -358,6 +632,8 @@ namespace SHEvaluation.Rank
             this.cboSpecialCalc.Size = new System.Drawing.Size(136, 25);
             this.cboSpecialCalc.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboSpecialCalc.TabIndex = 10;
+            this.cboSpecialCalc.SelectedIndexChanged += new System.EventHandler(this.cboSpecialCalc_SelectedIndexChanged);
+            this.cboSpecialCalc.SelectedValueChanged += new System.EventHandler(this.cboSpecialCalc_SelectedIndexChanged);
             // 
             // labelX13
             // 
@@ -444,155 +720,11 @@ namespace SHEvaluation.Rank
             // 
             this.labelX10.BackgroundStyle.Class = "";
             this.labelX10.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX10.Location = new System.Drawing.Point(691, 13);
+            this.labelX10.Location = new System.Drawing.Point(691, 11);
             this.labelX10.Name = "labelX10";
             this.labelX10.Size = new System.Drawing.Size(90, 23);
             this.labelX10.TabIndex = 9;
             this.labelX10.Text = "成績計算方式";
-            // 
-            // btnMathDel
-            // 
-            this.btnMathDel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnMathDel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnMathDel.Location = new System.Drawing.Point(401, 638);
-            this.btnMathDel.Name = "btnMathDel";
-            this.btnMathDel.Size = new System.Drawing.Size(75, 25);
-            this.btnMathDel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnMathDel.TabIndex = 7;
-            this.btnMathDel.Text = "刪除";
-            this.btnMathDel.Click += new System.EventHandler(this.btnMathDel_Click);
-            // 
-            // btnChineseDel
-            // 
-            this.btnChineseDel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnChineseDel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnChineseDel.Location = new System.Drawing.Point(401, 518);
-            this.btnChineseDel.Name = "btnChineseDel";
-            this.btnChineseDel.Size = new System.Drawing.Size(75, 25);
-            this.btnChineseDel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnChineseDel.TabIndex = 7;
-            this.btnChineseDel.Text = "刪除";
-            this.btnChineseDel.Click += new System.EventHandler(this.btnChineseDel_Click);
-            // 
-            // btnEnglishDel
-            // 
-            this.btnEnglishDel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnEnglishDel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnEnglishDel.Location = new System.Drawing.Point(401, 402);
-            this.btnEnglishDel.Name = "btnEnglishDel";
-            this.btnEnglishDel.Size = new System.Drawing.Size(75, 25);
-            this.btnEnglishDel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnEnglishDel.TabIndex = 7;
-            this.btnEnglishDel.Text = "刪除";
-            this.btnEnglishDel.Click += new System.EventHandler(this.btnEnglishDel_Click);
-            // 
-            // btnSkillDel
-            // 
-            this.btnSkillDel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnSkillDel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSkillDel.Location = new System.Drawing.Point(401, 275);
-            this.btnSkillDel.Name = "btnSkillDel";
-            this.btnSkillDel.Size = new System.Drawing.Size(75, 25);
-            this.btnSkillDel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnSkillDel.TabIndex = 7;
-            this.btnSkillDel.Text = "刪除";
-            this.btnSkillDel.Click += new System.EventHandler(this.btnSkillDel_Click);
-            // 
-            // btnSpecialDel
-            // 
-            this.btnSpecialDel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnSpecialDel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSpecialDel.Location = new System.Drawing.Point(401, 155);
-            this.btnSpecialDel.Name = "btnSpecialDel";
-            this.btnSpecialDel.Size = new System.Drawing.Size(75, 25);
-            this.btnSpecialDel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnSpecialDel.TabIndex = 7;
-            this.btnSpecialDel.Text = "刪除";
-            this.btnSpecialDel.Click += new System.EventHandler(this.btnSpecialDel_Click);
-            // 
-            // btnGeneralDel
-            // 
-            this.btnGeneralDel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnGeneralDel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnGeneralDel.Location = new System.Drawing.Point(401, 9);
-            this.btnGeneralDel.Name = "btnGeneralDel";
-            this.btnGeneralDel.Size = new System.Drawing.Size(75, 25);
-            this.btnGeneralDel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnGeneralDel.TabIndex = 7;
-            this.btnGeneralDel.Text = "刪除";
-            this.btnGeneralDel.Click += new System.EventHandler(this.btnGeneralDel_Click);
-            // 
-            // btnMathSel
-            // 
-            this.btnMathSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnMathSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnMathSel.Location = new System.Drawing.Point(320, 638);
-            this.btnMathSel.Name = "btnMathSel";
-            this.btnMathSel.Size = new System.Drawing.Size(75, 25);
-            this.btnMathSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnMathSel.TabIndex = 7;
-            this.btnMathSel.Text = "挑選";
-            this.btnMathSel.Click += new System.EventHandler(this.btnMathSel_Click);
-            // 
-            // btnChineseSel
-            // 
-            this.btnChineseSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnChineseSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnChineseSel.Location = new System.Drawing.Point(320, 518);
-            this.btnChineseSel.Name = "btnChineseSel";
-            this.btnChineseSel.Size = new System.Drawing.Size(75, 25);
-            this.btnChineseSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnChineseSel.TabIndex = 7;
-            this.btnChineseSel.Text = "挑選";
-            this.btnChineseSel.Click += new System.EventHandler(this.btnChineseSel_Click);
-            // 
-            // btnEnglishSel
-            // 
-            this.btnEnglishSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnEnglishSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnEnglishSel.Location = new System.Drawing.Point(320, 402);
-            this.btnEnglishSel.Name = "btnEnglishSel";
-            this.btnEnglishSel.Size = new System.Drawing.Size(75, 25);
-            this.btnEnglishSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnEnglishSel.TabIndex = 7;
-            this.btnEnglishSel.Text = "挑選";
-            this.btnEnglishSel.Click += new System.EventHandler(this.btnEnglishSel_Click);
-            // 
-            // btnSkillSel
-            // 
-            this.btnSkillSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnSkillSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSkillSel.Location = new System.Drawing.Point(320, 275);
-            this.btnSkillSel.Name = "btnSkillSel";
-            this.btnSkillSel.Size = new System.Drawing.Size(75, 25);
-            this.btnSkillSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnSkillSel.TabIndex = 7;
-            this.btnSkillSel.Text = "挑選";
-            this.btnSkillSel.Click += new System.EventHandler(this.btnSkillSel_Click);
-            // 
-            // btnSpecialSel
-            // 
-            this.btnSpecialSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnSpecialSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnSpecialSel.Location = new System.Drawing.Point(320, 155);
-            this.btnSpecialSel.Name = "btnSpecialSel";
-            this.btnSpecialSel.Size = new System.Drawing.Size(75, 25);
-            this.btnSpecialSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnSpecialSel.TabIndex = 7;
-            this.btnSpecialSel.Text = "挑選";
-            this.btnSpecialSel.Click += new System.EventHandler(this.btnSpecialSel_Click);
-            // 
-            // btnGeneralSel
-            // 
-            this.btnGeneralSel.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
-            this.btnGeneralSel.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.btnGeneralSel.Location = new System.Drawing.Point(320, 9);
-            this.btnGeneralSel.Name = "btnGeneralSel";
-            this.btnGeneralSel.Size = new System.Drawing.Size(75, 25);
-            this.btnGeneralSel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
-            this.btnGeneralSel.TabIndex = 7;
-            this.btnGeneralSel.Text = "挑選";
-            this.btnGeneralSel.Click += new System.EventHandler(this.btnGeneralSel_Click);
             // 
             // labelX8
             // 
@@ -618,6 +750,7 @@ namespace SHEvaluation.Rank
             this.lstMathSubj.Location = new System.Drawing.Point(3, 663);
             this.lstMathSubj.Name = "lstMathSubj";
             this.lstMathSubj.Size = new System.Drawing.Size(921, 69);
+            this.lstMathSubj.Sorting = System.Windows.Forms.SortOrder.Ascending;
             this.lstMathSubj.TabIndex = 5;
             this.lstMathSubj.UseCompatibleStateImageBehavior = false;
             this.lstMathSubj.View = System.Windows.Forms.View.List;
@@ -668,11 +801,11 @@ namespace SHEvaluation.Rank
             // 
             this.lstEnglishSubj.Border.Class = "ListViewBorder";
             this.lstEnglishSubj.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lstEnglishSubj.CheckBoxes = true;
             this.lstEnglishSubj.HideSelection = false;
             this.lstEnglishSubj.Location = new System.Drawing.Point(0, 433);
             this.lstEnglishSubj.Name = "lstEnglishSubj";
             this.lstEnglishSubj.Size = new System.Drawing.Size(921, 79);
+            this.lstEnglishSubj.Sorting = System.Windows.Forms.SortOrder.Ascending;
             this.lstEnglishSubj.TabIndex = 5;
             this.lstEnglishSubj.UseCompatibleStateImageBehavior = false;
             this.lstEnglishSubj.View = System.Windows.Forms.View.List;
@@ -684,11 +817,11 @@ namespace SHEvaluation.Rank
             // 
             this.lstSkillSubj.Border.Class = "ListViewBorder";
             this.lstSkillSubj.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lstSkillSubj.CheckBoxes = true;
             this.lstSkillSubj.HideSelection = false;
             this.lstSkillSubj.Location = new System.Drawing.Point(1, 306);
             this.lstSkillSubj.Name = "lstSkillSubj";
             this.lstSkillSubj.Size = new System.Drawing.Size(921, 88);
+            this.lstSkillSubj.Sorting = System.Windows.Forms.SortOrder.Ascending;
             this.lstSkillSubj.TabIndex = 5;
             this.lstSkillSubj.UseCompatibleStateImageBehavior = false;
             this.lstSkillSubj.View = System.Windows.Forms.View.List;
@@ -700,11 +833,11 @@ namespace SHEvaluation.Rank
             // 
             this.lstChineseSubj.Border.Class = "ListViewBorder";
             this.lstChineseSubj.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lstChineseSubj.CheckBoxes = true;
             this.lstChineseSubj.HideSelection = false;
             this.lstChineseSubj.Location = new System.Drawing.Point(3, 547);
             this.lstChineseSubj.Name = "lstChineseSubj";
             this.lstChineseSubj.Size = new System.Drawing.Size(921, 84);
+            this.lstChineseSubj.Sorting = System.Windows.Forms.SortOrder.Ascending;
             this.lstChineseSubj.TabIndex = 5;
             this.lstChineseSubj.UseCompatibleStateImageBehavior = false;
             this.lstChineseSubj.View = System.Windows.Forms.View.List;
@@ -729,11 +862,11 @@ namespace SHEvaluation.Rank
             // 
             this.lstSpecialSubj.Border.Class = "ListViewBorder";
             this.lstSpecialSubj.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.lstSpecialSubj.CheckBoxes = true;
             this.lstSpecialSubj.HideSelection = false;
             this.lstSpecialSubj.Location = new System.Drawing.Point(3, 185);
             this.lstSpecialSubj.Name = "lstSpecialSubj";
             this.lstSpecialSubj.Size = new System.Drawing.Size(921, 82);
+            this.lstSpecialSubj.Sorting = System.Windows.Forms.SortOrder.Ascending;
             this.lstSpecialSubj.TabIndex = 5;
             this.lstSpecialSubj.UseCompatibleStateImageBehavior = false;
             this.lstSpecialSubj.View = System.Windows.Forms.View.List;
@@ -747,7 +880,7 @@ namespace SHEvaluation.Rank
             this.labelX4.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX4.Location = new System.Drawing.Point(84, 11);
             this.labelX4.Name = "labelX4";
-            this.labelX4.Size = new System.Drawing.Size(173, 23);
+            this.labelX4.Size = new System.Drawing.Size(144, 23);
             this.labelX4.TabIndex = 6;
             this.labelX4.Text = "列入計算學業成績科目";
             // 
@@ -765,13 +898,17 @@ namespace SHEvaluation.Rank
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1098, 807);
+            this.AutoScroll = true;
+            this.AutoScrollMinSize = new System.Drawing.Size(1124, 858);
+            this.AutoSize = true;
+            this.ClientSize = new System.Drawing.Size(1131, 842);
+            this.Controls.Add(this.lblGroupDept);
             this.Controls.Add(this.listDeptGroup);
             this.Controls.Add(this.groupPanel1);
             this.Controls.Add(this.labelX3);
-            this.Controls.Add(this.lblGroupDept);
             this.Controls.Add(this.labelX1);
             this.DoubleBuffered = true;
+            this.MaximumSize = new System.Drawing.Size(1130, 864);
             this.Name = "SortCalcSet";
             this.Text = "科目比序設定";
             this.Load += new System.EventHandler(this.SortCalcSet_Load);
@@ -793,12 +930,6 @@ namespace SHEvaluation.Rank
         private DevComponents.DotNetBar.Controls.ComboBoxEx cboSpecialCalc;
         private DevComponents.DotNetBar.Controls.ComboBoxEx cboGeneralCalc;
         private DevComponents.DotNetBar.LabelX labelX10;
-        private DevComponents.DotNetBar.ButtonX btnMathDel;
-        private DevComponents.DotNetBar.ButtonX btnChineseDel;
-        private DevComponents.DotNetBar.ButtonX btnEnglishDel;
-        private DevComponents.DotNetBar.ButtonX btnSkillDel;
-        private DevComponents.DotNetBar.ButtonX btnSpecialDel;
-        private DevComponents.DotNetBar.ButtonX btnGeneralDel;
         private DevComponents.DotNetBar.ButtonX btnMathSel;
         private DevComponents.DotNetBar.ButtonX btnChineseSel;
         private DevComponents.DotNetBar.ButtonX btnEnglishSel;
@@ -828,5 +959,19 @@ namespace SHEvaluation.Rank
         private DevComponents.DotNetBar.LabelX labelX12;
         private DevComponents.DotNetBar.LabelX labelX11;
         private System.Windows.Forms.ListBox listDeptGroup;
+        private DevComponents.DotNetBar.Controls.ComboBoxEx cboGeneralContain;
+        private DevComponents.DotNetBar.LabelX labelX2;
+        private DevComponents.DotNetBar.LabelX Lahel1;
+        private DevComponents.DotNetBar.LabelX lblGeneral;
+        private DevComponents.DotNetBar.LabelX lblMath;
+        private DevComponents.DotNetBar.LabelX labelX31;
+        private DevComponents.DotNetBar.LabelX lblChinese;
+        private DevComponents.DotNetBar.LabelX labelX29;
+        private DevComponents.DotNetBar.LabelX lblEnglish;
+        private DevComponents.DotNetBar.LabelX labelX27;
+        private DevComponents.DotNetBar.LabelX lblSkill;
+        private DevComponents.DotNetBar.LabelX labelX25;
+        private DevComponents.DotNetBar.LabelX lblSpecial;
+        private DevComponents.DotNetBar.LabelX labelX23;
     }
 }

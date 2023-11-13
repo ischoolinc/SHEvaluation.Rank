@@ -14,6 +14,7 @@ using SHEvaluation.Rank.UDT;
 
 namespace SHEvaluation.Rank
 {
+                         
     public partial class CalculateTechnologyAssessmentRankSetDeptGroup : BaseForm
     {
         QueryData qd = new QueryData();
