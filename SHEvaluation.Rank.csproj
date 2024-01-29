@@ -19,7 +19,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\Ischool_AE\modules\SHEvaluation\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -100,6 +100,7 @@
     </Reference>
     <Reference Include="SmartSchool.Customization.PlugIn">
       <HintPath>..\..\Ischool_AE\modules\SHSchoolLoader\SmartSchool.Customization.PlugIn.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="SmartSchool.Evaluation.HS">
       <HintPath>..\..\Ischool_AE\modules\SHEvaluation\SmartSchool.Evaluation.HS.dll</HintPath>
@@ -369,6 +370,13 @@
     <Content Include="Library\FISCA.UDT.xml" />
     <Content Include="Library\K12.Data.dll" />
     <Content Include="Library\K12.Presentation.dll" />
+    <Content Include="Library\SHCourseGroupCodeAdmin.dll" />
+    <Content Include="Library\SHCourseGroupCodeAdmin.pdb" />
+    <Content Include="Library\SmartSchool.Customization.Data.dll" />
+    <Content Include="Library\SmartSchool.Customization.Data.pdb" />
+    <Content Include="Library\SmartSchool.Customization.PlugIn.dll" />
+    <Content Include="Library\SmartSchool.Evaluation.HS.dll" />
+    <Content Include="Library\SmartSchool.Evaluation.HS.pdb" />
     <None Include="Resources\Image.jpg" />
     <None Include="Resources\icon.png" />
     <None Include="Resources\loading.gif" />

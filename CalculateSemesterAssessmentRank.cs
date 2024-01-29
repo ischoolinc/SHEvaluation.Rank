@@ -782,7 +782,7 @@ WITH student_list AS
 	INNER JOIN calc_condition
 		ON sems_entry_score_ext.school_year = calc_condition.rank_school_year::INT
 		AND sems_entry_score_ext.semester = calc_condition.rank_semester::INT
-		AND sems_entry_score_ext.grade_year = calc_condition.rank_grade_year::INT
+		AND student_list.rank_grade_year = calc_condition.rank_grade_year::INT
 )
 , entry_rank_list AS
 (
