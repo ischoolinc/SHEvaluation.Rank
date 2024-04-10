@@ -1051,9 +1051,9 @@ WITH row AS (
 		, rank_tag1
 		, rank_tag2
 		, CASE 
-            WHEN SUM(credit) IS NULL THEN NULL::DECIMAL
-            WHEN SUM(credit) = 0 THEN 0::DECIMAL
-            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
+            WHEN SUM(credit::DECIMAL) IS NULL THEN NULL::DECIMAL
+            WHEN SUM(credit::DECIMAL) = 0 THEN 0::DECIMAL
+            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit::DECIMAL)
             END AS score
 	FROM  
 		exam_score
@@ -1130,9 +1130,9 @@ WITH row AS (
 		, rank_tag1
 		, rank_tag2
 		, CASE 
-            WHEN SUM(credit) IS NULL THEN NULL::DECIMAL
-            WHEN SUM(credit) = 0 THEN 0::DECIMAL
-            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
+            WHEN SUM(credit::DECIMAL) IS NULL THEN NULL::DECIMAL
+            WHEN SUM(credit::DECIMAL) = 0 THEN 0::DECIMAL
+            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit::DECIMAL)
             END AS score
 	FROM  
 		exam_score
@@ -1199,9 +1199,9 @@ WITH row AS (
 		, rank_tag1
 		, rank_tag2
 		, CASE 
-            WHEN SUM(credit) IS NULL THEN NULL::DECIMAL
-            WHEN SUM(credit) = 0 THEN 0::DECIMAL
-            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
+            WHEN SUM(credit::DECIMAL) IS NULL THEN NULL::DECIMAL
+            WHEN SUM(credit::DECIMAL) = 0 THEN 0::DECIMAL
+            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit::DECIMAL)
             END AS score
 	FROM  
 		exam_score
@@ -1862,9 +1862,9 @@ WITH row AS (
 		, rank_tag1
 		, rank_tag2
 		, CASE 
-            WHEN SUM(credit) IS NULL THEN NULL::DECIMAL
-            WHEN SUM(credit) = 0 THEN 0::DECIMAL
-            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
+            WHEN SUM(credit::DECIMAL) IS NULL THEN NULL::DECIMAL
+            WHEN SUM(credit::DECIMAL) = 0 THEN 0::DECIMAL
+            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit::DECIMAL)
             END AS score
 	FROM 
 		exam_score
@@ -1938,9 +1938,9 @@ WITH row AS (
 		, rank_tag1
 		, rank_tag2
 		, CASE 
-            WHEN SUM(credit) IS NULL THEN NULL::DECIMAL
-            WHEN SUM(credit) = 0 THEN 0::DECIMAL
-            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
+            WHEN SUM(credit::DECIMAL) IS NULL THEN NULL::DECIMAL
+            WHEN SUM(credit::DECIMAL) = 0 THEN 0::DECIMAL
+            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit::DECIMAL)
             END AS score
 	FROM 
 		exam_score_tag1
@@ -2004,9 +2004,9 @@ WITH row AS (
 		, rank_tag1
 		, rank_tag2
 		, CASE 
-            WHEN SUM(credit) IS NULL THEN NULL::DECIMAL
-            WHEN SUM(credit) = 0 THEN 0::DECIMAL
-            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit)
+            WHEN SUM(credit::DECIMAL) IS NULL THEN NULL::DECIMAL
+            WHEN SUM(credit::DECIMAL) = 0 THEN 0::DECIMAL
+            ELSE SUM(score::DECIMAL * credit::DECIMAL) / SUM(credit::DECIMAL)
             END AS score
 	FROM 
 		exam_score_tag2
