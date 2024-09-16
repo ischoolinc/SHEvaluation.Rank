@@ -101,11 +101,23 @@ namespace SHEvaluation.Rank.TechnologyAssessmentRank_111
                         }
                     }
                     //刪除計算方式
-                    strSQL = "DELETE FROM  $campus.technology_star.registration_calc WHERE reg_group_name='" + lstDeptView.Items[i].SubItems[1].Text + "'";
-                    uh.Execute(strSQL);
-                    //刪除計算科目設定
-                    strSQL = "DELETE FROM $campus.technology_star.registration_subjectnew WHERE reg_group_name='" + lstDeptView.Items[i].SubItems[1].Text+"'";
-                    uh.Execute(strSQL);
+                    if (lstDeptView.Items[i].SubItems[1].Text != "")
+                    {
+                        try
+                        {
+                            strSQL = "DELETE FROM  $campus.technology_star.registration_calc WHERE reg_group_name='" + lstDeptView.Items[i].SubItems[1].Text + "'";
+                            uh.Execute(strSQL);
+                            //刪除計算科目設定
+                            strSQL = "DELETE FROM $campus.technology_star.registration_subjectnew WHERE reg_group_name='" + lstDeptView.Items[i].SubItems[1].Text + "'";
+                            uh.Execute(strSQL);
+                        }
+                        catch
+                        {
+
+                        }
+                        }
+                        
+
                     
                 }
             RefReshData();

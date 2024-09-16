@@ -823,32 +823,20 @@ WITH row AS (
     UNION ALL
 ", gradeStudentDict[gr]) + @"
 ), calc_subject AS ( --採計科目
-    SELECT
-        array_to_string(xpath('./text()', eleSubject), '')::TEXT as subject
-    FROM (
         SELECT
-            unnest(xpath('/Setting/採計科目', xmlparse(content calculation_setting))) AS eleSubject
-        FROM
-            row
-    ) as ele
+         unnest(xpath('/Setting/採計科目/text()', xmlparse(content calculation_setting)))::TEXT AS subject
+    FROM
+        row
 ), calc_subject_tag1 AS ( --類別一採計科目
     SELECT
-        array_to_string(xpath('./text()', eleSubject), '')::TEXT as subject
-    FROM (
-        SELECT
-            unnest(xpath('/Setting/類別一採計科目', xmlparse(content calculation_setting))) AS eleSubject
-        FROM
-            row
-    ) as ele
+        unnest(xpath('/Setting/類別一採計科目/text()', xmlparse(content calculation_setting)))::TEXT AS subject
+    FROM
+        row	
 ), calc_subject_tag2 AS ( --類別二採計科目
-    SELECT
-        array_to_string(xpath('./text()', eleSubject), '')::TEXT as subject
-    FROM (
-        SELECT
-            unnest(xpath('/Setting/類別二採計科目', xmlparse(content calculation_setting))) AS eleSubject
-        FROM
-            row
-    ) as ele
+     SELECT
+        unnest(xpath('/Setting/類別二採計科目/text()', xmlparse(content calculation_setting)))::TEXT AS subject
+    FROM
+        row			
 ), score_detail_row AS (--取得學生的定期評量成績
 	SELECT
 		student_row.student_id

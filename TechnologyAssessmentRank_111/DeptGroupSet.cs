@@ -13,9 +13,10 @@ using SHEvaluation.Rank.DAO;
 using FISCA.UDT;
 namespace SHEvaluation.Rank.TechnologyAssessmentRank_111
 {
+    
     public partial class DeptGroupSet : BaseForm
     {
-        
+        public Dictionary<string, string> dicDeptGroup = new Dictionary<string, string>() ;
         public DeptGroupSet(string GroupName)
         {
             InitializeComponent();
@@ -36,6 +37,14 @@ namespace SHEvaluation.Rank.TechnologyAssessmentRank_111
                 txtGroupName.Enabled = true;
                 lblKind.Text = "新增群組科別設定";
             }
+            AccessHelper accessHelper = new AccessHelper();
+            List<udtRegistrationDept> RegistrationDeptList = accessHelper.Select<udtRegistrationDept>();
+            ListViewItem lv = new ListViewItem();
+            foreach (udtRegistrationDept group in RegistrationDeptList)
+            {
+                if (!dicDeptGroup.ContainsKey(group.DeptName) )
+                    dicDeptGroup.Add(group.DeptName, group.RegGroupName);
+            }            
         }
 
         private void LoadData()
@@ -96,8 +105,13 @@ namespace SHEvaluation.Rank.TechnologyAssessmentRank_111
                     {
                         lv = new ListViewItem();
                         lv.Text = lstDeptView.Items[i].Text;
-                        
-                        lstGroupDept.Items.Add(lv);
+                        if (dicDeptGroup.ContainsKey(lstDeptView.Items[i].Text))
+                            if (dicDeptGroup[lstDeptView.Items[i].Text] == txtGroupName.Text)
+                                lstGroupDept.Items.Add(lv);
+                            else
+                                MessageBox.Show(lstDeptView.Items[i].Text + "已設定群組，請先移出再加入");
+                        else
+                            lstGroupDept.Items.Add(lv);
                     }
                     find = false;
                 }
@@ -213,13 +227,18 @@ namespace SHEvaluation.Rank.TechnologyAssessmentRank_111
             foreach (string deptstr in lstDept)
             {
                 if (!haslstDept.Contains(deptstr))
-                    { 
-                    udtRegistrationDept deptrec = new udtRegistrationDept();
-                    deptrec.DeptName = deptstr;
-                    deptrec.RegGroupCode = txtGroupID.Text;
-                    deptrec.RegGroupName = txtGroupName.Text;
-                    deptrec.RegDeptName = deptstr;
-                    deptrec.Save();
+                    {
+                    if (dicDeptGroup.ContainsKey(deptstr))
+                        MessageBox.Show(deptstr + "已設定群組，請先移出再加入");
+                    else
+                        {
+                            udtRegistrationDept deptrec = new udtRegistrationDept();
+                            deptrec.DeptName = deptstr;
+                            deptrec.RegGroupCode = txtGroupID.Text;
+                            deptrec.RegGroupName = txtGroupName.Text;
+                            deptrec.RegDeptName = deptstr;
+                            deptrec.Save();
+                        }
                    }                
             }
             this.Close();
