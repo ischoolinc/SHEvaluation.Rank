@@ -855,7 +855,7 @@ WITH row AS (
         , student_row.rank_dept_name
 		, student_row.rank_tag1
 		, student_row.rank_tag2
-		, sce_take.score
+		, CASE WHEN sce_take.score = -1 THEN 0 ELSE sce_take.score END AS score
 	FROM  
         sce_take
 		LEFT JOIN sc_attend 
@@ -880,7 +880,7 @@ WITH row AS (
 			AND exam.exam_name= row.rank_exam_name
 	WHERE 
         sce_take.score IS NOT NULL
-        AND sce_take.score <> -1
+        AND sce_take.score <> -2
 
     --2.1 科目成績 年排名
     --2.2 科目成績 班排名
