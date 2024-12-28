@@ -79,10 +79,10 @@ namespace SHEvaluation.Rank
             }
             {
                 var key = "CA11374B-7F8C-4288-836A-0DDE65DB56B0";
-                RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "技職繁星成績排名計算(111學年度起)"));
-                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算(111學年度起)"].Enable = FISCA.Permission.UserAcl.Current[key].Executable;
+                RoleAclSource.Instance["教務作業"]["功能按鈕"].Add(new RibbonFeature(key, "技職繁星成績排名計算(111學年度適用)"));
+                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算(111學年度適用)"].Enable = FISCA.Permission.UserAcl.Current[key].Executable;
 
-                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算(111學年度起)"].Click += delegate
+                MotherForm.RibbonBarItems["教務作業", "批次作業/檢視"]["成績排名"]["技職繁星成績排名計算(111學年度適用)"].Click += delegate
                 {
                     CalculateTechnologyAssessmentRankStep1_111 ctrs111 = new CalculateTechnologyAssessmentRankStep1_111();
                     ctrs111.ShowDialog();
