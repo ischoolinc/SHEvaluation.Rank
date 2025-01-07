@@ -2174,14 +2174,16 @@ SELECT * from score_list limit 1
                 {
                     btnCacluate.Enabled = true;
                     btnPrevious.Enabled = true;
-                    throw new Exception("計算排名失敗", bkwException);
+                    throw new Exception("計算排名失敗", bkwException);                    
                 }
 
                 MessageBox.Show("計算完成");
+                FISCA.Presentation.MotherForm.SetStatusBarMessage("");
                 //MotherForm.SetStatusBarMessage("排名計算完成");
                 //pbLoading.Visible = false;
                 btnCacluate.Enabled = true;
                 btnPrevious.Enabled = true;
+                this.DialogResult = DialogResult.OK;
             };
 
             bkw.RunWorkerAsync();

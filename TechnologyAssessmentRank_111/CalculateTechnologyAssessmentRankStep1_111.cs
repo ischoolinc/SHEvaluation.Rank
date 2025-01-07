@@ -113,6 +113,10 @@ namespace SHEvaluation.Rank
                 this.StartPosition = FormStartPosition.CenterScreen;
                 this.UserControlEnale(true);
             }
+            else if(ctrr2.ShowDialog() == DialogResult.OK) {
+                this.Close();
+            }
+                
         }
 
         private void _bgWorkerStep1Next_DoWork(object sender, DoWorkEventArgs e)
