@@ -316,6 +316,7 @@ namespace SHEvaluation.Rank
                 List<string> studentSqlList = new List<string>();
                 foreach (DataGridViewRow row in dgvStudentList.Rows)
                 {
+              
                     #region 單筆學生資料的SQL
                     string studentSql = @"
     SELECT
@@ -395,7 +396,8 @@ namespace SHEvaluation.Rank
                         RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("");
 
                     }
-                    //把單筆學生資料的SQL加入到List
+
+                    //把單筆學生資料的SQL加入到List                    
                     studentSqlList.Add(studentSql);
                 }
                 //填入群組計算方式
@@ -746,7 +748,7 @@ SELECT " + sid + @" ::BIGINT AS student_id
 	FROM 
         (SELECT sems_entry_score.*
 	,array_to_string(xpath('//SemesterEntryScore/Entry[@分項=''學業(原始)'']/@成績', xmlparse(content score_info)), '')::TEXT AS score
-	  FROM  sems_entry_score ) AS sems_entry_score_ext	   
+	  FROM  sems_entry_score WHERE entry_group = 1 ) AS sems_entry_score_ext	   
 	INNER JOIN student_list
 		ON sems_entry_score_ext.ref_student_id = student_list.student_id	
   	INNER JOIN student_sems
@@ -2137,12 +2139,12 @@ SELECT * from score_list limit 1
                sbScoreListSQL.ToString() + insertUpdateSQL;
 
 
-                //debug
-                string fiPath = Application.StartupPath + @"\sql1.sql";
-                using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
-                {
-                    fi.WriteLine(insertRankSql);
-                }
+                ////debug
+                //string fiPath = Application.StartupPath + @"\sql1.sql";
+                //using (System.IO.StreamWriter fi = new System.IO.StreamWriter(fiPath))
+                //{
+                //    fi.WriteLine(insertRankSql);
+                //}
 
                 #endregion
 
@@ -2151,9 +2153,8 @@ SELECT * from score_list limit 1
 
                     QueryHelper queryHelper = new QueryHelper();
                 try
-                {
-                    
-                    queryHelper.Select(insertRankSql);
+                {                    
+                     queryHelper.Select(insertRankSql);
                 }
                 catch
                 {
