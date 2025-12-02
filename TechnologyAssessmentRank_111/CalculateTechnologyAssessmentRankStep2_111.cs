@@ -21,6 +21,27 @@ namespace SHEvaluation.Rank
 {
     public partial class CalculateTechnologyAssessmentRankStep2_111 : BaseForm
     {
+        // DTO 類別：用於在 UI thread 和 BackgroundWorker 之間傳遞學生資料
+        private class RankStudentDto
+        {
+            public string StudentID { get; set; }
+            public string StudentName { get; set; }
+            public string RankGradeYearText { get; set; }
+            public string DeptName { get; set; }
+            public string ClassName { get; set; }
+            public string Tag1 { get; set; }
+            public string Tag2 { get; set; }
+            public string RegGroupName { get; set; }
+            public string RegGroupCode { get; set; }
+        }
+
+        // SQL 字串轉義方法：處理單引號避免 SQL 語法錯誤
+        private string SqlLiteral(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "''";
+            return "'" + value.Replace("'", "''") + "'";
+        }
 
         // 全部被選學生
         List<StudentRecord> StudentAllList = new List<StudentRecord>();
@@ -265,11 +286,42 @@ namespace SHEvaluation.Rank
         {
             btnCacluate.Enabled = false;
             btnPrevious.Enabled = false;
+            
+            // Todo 1-1 & 3-1: 在 UI thread 先將 dgvStudentList 的資料複製為 DTO list
+            var rankStudents = new List<RankStudentDto>();
+            foreach (DataGridViewRow row in dgvStudentList.Rows)
+            {
+                if (row.IsNewRow) continue;
+
+                var dto = new RankStudentDto
+                {
+                    StudentID = "" + row.Tag,
+                    StudentName = "" + row.Cells[colStudentName.Index].Value,
+                    RankGradeYearText = "" + row.Cells[colSchoolRank.Index].Value,
+                    DeptName = "" + row.Cells[colDeptName.Index].Value,
+                    ClassName = "" + row.Cells[colClassRank.Index].Value,
+                    Tag1 = "" + row.Cells[colRankType1.Index].Value,
+                    Tag2 = "" + row.Cells[colRankType2.Index].Value,
+                    RegGroupName = "" + row.Cells[colRegGroup.Index].Value,
+                    RegGroupCode = "" + row.Cells[colRegGroupCode.Index].Value
+                };
+
+                rankStudents.Add(dto);
+            }
+
+            // Todo 3-1: 檢查是否有學生可計算
+            if (rankStudents.Count == 0)
+            {
+                MsgBox.Show("沒有可供計算的學生。");
+                btnCacluate.Enabled = true;
+                btnPrevious.Enabled = true;
+                return;
+            }
+
             Dictionary<string, Dictionary<string, List<string>>> RegGroupSubjMapDic =new Dictionary<string, Dictionary<string, List<string>>>();
             Dictionary<string, Dictionary<string, List<string>>> RegGroupCalcMapDic = new Dictionary<string, Dictionary<string, List<string>>>();
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
-            Exception bkwException = null;
             pbLoading.Visible = true;
             
             bkw.ProgressChanged += delegate (object obj, ProgressChangedEventArgs eventArgs)
@@ -309,96 +361,117 @@ namespace SHEvaluation.Rank
             }
             
 
-            bkw.DoWork += delegate
+            bkw.DoWork += delegate (object bwSender, DoWorkEventArgs bwE)
             {
-                bkw.ReportProgress(1);
-                #region 產生學生清單的SQL
-                List<string> studentSqlList = new List<string>();
-                foreach (DataGridViewRow row in dgvStudentList.Rows)
+                // Todo 1-2 & 3-2: 從 bwE.Argument 取得 DTO list，並檢查是否有學生
+                var workerStudents = bwE.Argument as List<RankStudentDto>;
+                if (workerStudents == null || workerStudents.Count == 0)
                 {
-              
-                    #region 單筆學生資料的SQL
-                    string studentSql = @"
-    SELECT
-        '" + row.Tag + @"'::BIGINT AS student_id
-        , '" + "" + row.Cells[colStudentName.Index].Value + @"'::TEXT AS student_name
-        , '" + ("" + row.Cells[colSchoolRank.Index].Value).Trim('年', '級') + @"'::INT AS rank_grade_year
-        , '" + "" + row.Cells[colDeptName.Index].Value + @"'::TEXT AS rank_dept_name
-        , '" + "" + row.Cells[colClassRank.Index].Value + @"'::TEXT AS rank_class_name
-        , '" + "" + row.Cells[colRankType1.Index].Value + @"'::TEXT AS rank_tag1
-        , '" + "" + row.Cells[colRankType2.Index].Value + @"'::TEXT AS rank_tag2
-        , '" + "" + row.Cells[colRegGroup.Index].Value + @"'::TEXT AS rank_group_name
-        , '" + "" + row.Cells[colRegGroupCode.Index].Value + @"'::TEXT AS rank_group_code
-    ";
-                    #endregion
-                    //將各群組學生加入科目對照表
-                    if (!RegGroupSubjMapDic.ContainsKey("" + row.Cells[colRegGroup.Index].Value))
+                    bwE.Result = new InvalidOperationException("沒有可供計算的學生");
+                    return;
+                }
+
+                try
+                {
+                    bkw.ReportProgress(1);
+                    #region 產生學生清單的SQL
+                    // 產生 student_list 用的 VALUES 列表
+                    List<string> studentValueRows = new List<string>();
+                    foreach (RankStudentDto dto in workerStudents)
                     {
-                        RegGroupSubjMapDic.Add("" + row.Cells[colRegGroup.Index].Value, new Dictionary<string, List<string>>());
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value].Add("學業", new List<string>());
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["學業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["學業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["學業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["學業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["學業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value].Add("專業", new List<string>());
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["專業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["專業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["專業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["專業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["專業"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value].Add("技能", new List<string>());
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["技能"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["技能"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["技能"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["技能"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["技能"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value].Add("英文", new List<string>());
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["英文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["英文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["英文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["英文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["英文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value].Add("國文", new List<string>());
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["國文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["國文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["國文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["國文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["國文"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value].Add("數學", new List<string>());
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("'沒有設定科目'");
-                        RegGroupSubjMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("'沒有設定科目'");
+                  
+                        #region 單筆學生資料的SQL
+                        string studentId = dto.StudentID;
+                        string studentName = dto.StudentName;
+                        string rankGradeYear = dto.RankGradeYearText.Trim('年', '級');
+                        string deptName = dto.DeptName;
+                        string className = dto.ClassName;
+                        string tag1 = dto.Tag1;
+                        string tag2 = dto.Tag2;
+                        string regGroupName = dto.RegGroupName;
+                        string regGroupCode = dto.RegGroupCode;
+
+                        // 一列 VALUES：() 裡面每個欄位都有型別 cast
+                        string row = @"
+(" + studentId + @"::BIGINT
+, " + SqlLiteral(studentName) + @"::TEXT
+, " + rankGradeYear + @"::INT
+, " + SqlLiteral(deptName) + @"::TEXT
+, " + SqlLiteral(className) + @"::TEXT
+, " + SqlLiteral(tag1) + @"::TEXT
+, " + SqlLiteral(tag2) + @"::TEXT
+, " + SqlLiteral(regGroupName) + @"::TEXT
+, " + SqlLiteral(regGroupCode) + @"::TEXT
+)";
+                        #endregion
+                        //將各群組學生加入科目對照表
+                        if (!RegGroupSubjMapDic.ContainsKey(regGroupName))
+                    {
+                        RegGroupSubjMapDic.Add(regGroupName, new Dictionary<string, List<string>>());
+                        RegGroupSubjMapDic[regGroupName].Add("學業", new List<string>());
+                        RegGroupSubjMapDic[regGroupName]["學業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["學業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["學業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["學業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["學業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName].Add("專業", new List<string>());
+                        RegGroupSubjMapDic[regGroupName]["專業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["專業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["專業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["專業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["專業"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName].Add("技能", new List<string>());
+                        RegGroupSubjMapDic[regGroupName]["技能"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["技能"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["技能"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["技能"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["技能"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName].Add("英文", new List<string>());
+                        RegGroupSubjMapDic[regGroupName]["英文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["英文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["英文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["英文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["英文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName].Add("國文", new List<string>());
+                        RegGroupSubjMapDic[regGroupName]["國文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["國文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["國文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["國文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["國文"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName].Add("數學", new List<string>());
+                        RegGroupSubjMapDic[regGroupName]["數學"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["數學"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["數學"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["數學"].Add("'沒有設定科目'");
+                        RegGroupSubjMapDic[regGroupName]["數學"].Add("'沒有設定科目'");
                     }
                     //將各群組學生加入成綪計算方式對照表
-                    if (!RegGroupCalcMapDic.ContainsKey("" + row.Cells[colRegGroup.Index].Value))
+                    if (!RegGroupCalcMapDic.ContainsKey(regGroupName))
                     {
-                        RegGroupCalcMapDic.Add("" + row.Cells[colRegGroup.Index].Value, new Dictionary<string, List<string>>());
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value].Add("學業", new List<string>());
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["學業"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["學業"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value].Add("專業", new List<string>());
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["專業"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["專業"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value].Add("技能", new List<string>());
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["技能"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["技能"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value].Add("英文", new List<string>());
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["英文"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["英文"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value].Add("國文", new List<string>());
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["國文"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["國文"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value].Add("數學", new List<string>());
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("");
-                        RegGroupCalcMapDic["" + row.Cells[colRegGroup.Index].Value]["數學"].Add("");
+                        RegGroupCalcMapDic.Add(regGroupName, new Dictionary<string, List<string>>());
+                        RegGroupCalcMapDic[regGroupName].Add("學業", new List<string>());
+                        RegGroupCalcMapDic[regGroupName]["學業"].Add("");
+                        RegGroupCalcMapDic[regGroupName]["學業"].Add("");
+                        RegGroupCalcMapDic[regGroupName].Add("專業", new List<string>());
+                        RegGroupCalcMapDic[regGroupName]["專業"].Add("");
+                        RegGroupCalcMapDic[regGroupName]["專業"].Add("");
+                        RegGroupCalcMapDic[regGroupName].Add("技能", new List<string>());
+                        RegGroupCalcMapDic[regGroupName]["技能"].Add("");
+                        RegGroupCalcMapDic[regGroupName]["技能"].Add("");
+                        RegGroupCalcMapDic[regGroupName].Add("英文", new List<string>());
+                        RegGroupCalcMapDic[regGroupName]["英文"].Add("");
+                        RegGroupCalcMapDic[regGroupName]["英文"].Add("");
+                        RegGroupCalcMapDic[regGroupName].Add("國文", new List<string>());
+                        RegGroupCalcMapDic[regGroupName]["國文"].Add("");
+                        RegGroupCalcMapDic[regGroupName]["國文"].Add("");
+                        RegGroupCalcMapDic[regGroupName].Add("數學", new List<string>());
+                        RegGroupCalcMapDic[regGroupName]["數學"].Add("");
+                        RegGroupCalcMapDic[regGroupName]["數學"].Add("");
 
                     }
 
-                    //把單筆學生資料的SQL加入到List                    
-                    studentSqlList.Add(studentSql);
+                    //把單筆學生資料的 VALUES row 加入到List                    
+                    studentValueRows.Add(row);
                 }
                 //填入群組計算方式
                 List<udtRegistrationCalc> GroupCalc = new List<udtRegistrationCalc>();
@@ -607,15 +680,61 @@ namespace SHEvaluation.Rank
                         SubjectC[4] = "'沒有設定科目',";
                    }
                 }
-                        //把剛剛組好的學生資料的SQL的List拆開
+                        //把剛剛組好的學生資料的 VALUES 組成 CTE
                         #region 所有學生資料的SQL
-                        string studentListSql = @"
-WITH student_list AS
+                        string studentListSql;
+                        if (studentValueRows.Count == 0)
+                        {
+                            // 若沒有任何學生，就讓 student_list 產生一個空結果 CTE
+                            studentListSql = @"
+WITH student_list(
+    student_id,
+    student_name,
+    rank_grade_year,
+    rank_dept_name,
+    rank_class_name,
+    rank_tag1,
+    rank_tag2,
+    rank_group_name,
+    rank_group_code
+) AS
 (
-    " + string.Join(@"
-    UNION ALL", studentSqlList) + @"
+    SELECT
+        NULL::BIGINT AS student_id,
+        NULL::TEXT AS student_name,
+        NULL::INT AS rank_grade_year,
+        NULL::TEXT AS rank_dept_name,
+        NULL::TEXT AS rank_class_name,
+        NULL::TEXT AS rank_tag1,
+        NULL::TEXT AS rank_tag2,
+        NULL::TEXT AS rank_group_name,
+        NULL::TEXT AS rank_group_code
+    WHERE 1 = 0
 )
 ";
+                        }
+                        else
+                        {
+                            // 用 VALUES 組成 student_list CTE，並指定欄位名稱
+                            studentListSql = @"
+WITH student_list(
+    student_id,
+    student_name,
+    rank_grade_year,
+    rank_dept_name,
+    rank_class_name,
+    rank_tag1,
+    rank_tag2,
+    rank_group_name,
+    rank_group_code
+) AS
+(
+    VALUES
+    " + string.Join(@",
+    ", studentValueRows) + @"
+)
+";
+                        }
                 #endregion
                 #endregion
 
@@ -645,7 +764,8 @@ WITH student_list AS
                 #endregion
 
                 #region 產生學生學期成績對照表
-                List<string> StudSemsSQLList = new List<string>();
+                // 產生 student_sems 用的 VALUES 列表
+                List<string> studSemsValueRows = new List<string>();
 
                 foreach (string sid in RankStudentIDList)
                 {
@@ -653,29 +773,58 @@ WITH student_list AS
                     {
                         foreach (GradeYearSemesterInfo gs in StudGradeYearSemsDict[sid])
                         {
-                            // 取五學期 3 年級第2學期不取
+                            // 取五學期，3 年級第 2 學期不取
                             if (gs.GradeYear == 3 && gs.Semester == 2)
                                 continue;
                             
                             // todo 處理重讀--Cyn
 
-                            string qry = @"
-SELECT " + sid + @" ::BIGINT AS student_id
-, " + gs.GradeYear + @" ::INT AS sems_grade_year
-, " + gs.Semester + @" ::INT AS sems_semester 
-, " + gs.SchoolYear + @" ::INT AS sems_school_year";
-
-                            StudSemsSQLList.Add(qry);
+                            string row = @"
+(" + sid + @"::BIGINT
+, " + gs.GradeYear + @"::INT
+, " + gs.Semester + @"::INT
+, " + gs.SchoolYear + @"::INT
+)";
+                            studSemsValueRows.Add(row);
                         }
                     }
                 }
 
-                string StudSemsSQL = @"
-, student_sems AS
+                string StudSemsSQL;
+                if (studSemsValueRows.Count == 0)
+                {
+                    // 若沒有任何學期資料，就讓 student_sems 產生一個空結果 CTE
+                    StudSemsSQL = @"
+, student_sems(
+    student_id,
+    sems_grade_year,
+    sems_semester,
+    sems_school_year
+) AS
 (
-    " + string.Join(@"
-    UNION ALL", StudSemsSQLList) + @"
+    SELECT
+        NULL::BIGINT AS student_id,
+        NULL::INT AS sems_grade_year,
+        NULL::INT AS sems_semester,
+        NULL::INT AS sems_school_year
+    WHERE 1 = 0
 )";
+                }
+                else
+                {
+                    StudSemsSQL = @"
+, student_sems(
+    student_id,
+    sems_grade_year,
+    sems_semester,
+    sems_school_year
+) AS
+(
+    VALUES
+    " + string.Join(@",
+    ", studSemsValueRows) + @"
+)";
+                }
 
                 string insertRankSql = @"
 " + studentListSql + @"
@@ -687,19 +836,19 @@ SELECT " + sid + @" ::BIGINT AS student_id
 , subject_score_data AS
 (
 	SELECT
-		 student_list.student_id
-        , sems_subj_score_ext.school_year
-        , sems_subj_score_ext.semester
-        , sems_subj_score_ext,grade_year
-		, student_list.student_name
-		, student_list.rank_grade_year
-		, student_list.rank_dept_name
-		, student_list.rank_class_name
-		, student_list.rank_tag1
-		, student_list.rank_tag2
-		, student_list.rank_group_name
-        , student_list.rank_group_code
-		, array_to_string(xpath('/root/Subject/@科目', xmlparse(content  concat('<root>', subj_score_ele , '</root>'))), '')::TEXT As subject
+		 sl.student_id
+        , s.school_year
+        , s.semester
+        , s.grade_year
+		, sl.student_name
+		, sl.rank_grade_year
+		, sl.rank_dept_name
+		, sl.rank_class_name
+		, sl.rank_tag1
+		, sl.rank_tag2
+		, sl.rank_group_name
+        , sl.rank_group_code
+		, array_to_string(xpath('/root/Subject/@科目', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), '')::TEXT As subject
 		, NULLIF(array_to_string(xpath('/root/Subject/@原始成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::DECIMAL As subject_origin_score
 		, NULLIF(array_to_string(xpath('/root/Subject/@開課學分數', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::DECIMAL As subject_credit
 		, NULLIF(array_to_string(xpath('/root/Subject/@開課分項類別', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As subject_entry
@@ -707,55 +856,64 @@ SELECT " + sid + @" ::BIGINT AS student_id
         , NULLIF(array_to_string(xpath('/root/Subject/@修課校部訂', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As subject_requiredby
          , NULLIF(array_to_string(xpath('/root/Subject/@不計學分', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As ns1
          , NULLIF(array_to_string(xpath('/root/Subject/@不需評分', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::TEXT As ns2
-	FROM 
-	(
-		SELECT 
-			sems_subj_score.*
-			, unnest(xpath('/root/SemesterSubjectScoreInfo/Subject', xmlparse(content concat('<root>', score_info , '</root>') ))) AS subj_score_ele
-		FROM 
-			sems_subj_score
-	) AS sems_subj_score_ext
-	INNER JOIN student_list
-		ON sems_subj_score_ext.ref_student_id = student_list.student_id
-	INNER JOIN student_sems
-		ON sems_subj_score_ext.school_year = student_sems.sems_school_year::INT
-		AND sems_subj_score_ext.ref_student_id = student_sems.student_id::INT
-        AND sems_subj_score_ext.semester = student_sems.sems_semester::INT
-		AND sems_subj_score_ext.grade_year = student_sems.sems_grade_year::INT   
+	FROM
+		sems_subj_score s
+		INNER JOIN student_list sl
+			ON s.ref_student_id = sl.student_id
+		INNER JOIN student_sems ss
+			ON s.ref_student_id = ss.student_id::INT
+		   AND s.school_year = ss.sems_school_year::INT
+		   AND s.semester = ss.sems_semester::INT
+		   AND s.grade_year = ss.sems_grade_year::INT
+		CROSS JOIN LATERAL
+			unnest(
+				xpath(
+					'/root/SemesterSubjectScoreInfo/Subject',
+					xmlparse(content concat('<root>', s.score_info , '</root>'))
+				)
+			) AS subj_score_ele
 )
 ,sems_entry_Score_data AS
-(SELECT
-		 student_list.student_id
-        , sems_entry_score_ext.school_year
-        , sems_entry_score_ext.semester
-        ,sems_entry_score_ext,grade_year
-		, student_list.student_name
-		, student_list.rank_grade_year
-		, student_list.rank_dept_name
-		, student_list.rank_class_name
-		, student_list.rank_tag1
-		, student_list.rank_tag2
-		, student_list.rank_group_name
-        , student_list.rank_group_code
+(
+	SELECT
+		 sl.student_id
+        , s.school_year
+        , s.semester
+        , s.grade_year
+		, sl.student_name
+		, sl.rank_grade_year
+		, sl.rank_dept_name
+		, sl.rank_class_name
+		, sl.rank_tag1
+		, sl.rank_tag2
+		, sl.rank_group_name
+        , sl.rank_group_code
 		, '依學業原始'::TEXT As subject
-		,nullif(score,'')::DECIMAL AS subject_origin_score
-		,'1'::DECIMAL As subject_credit
-		,''::TEXT As subject_entry
-        ,''::TEXT As subject_required
-        ,''::TEXT As subject_requiredby
-        ,''::TEXT As ns1
-        ,''::TEXT As ns2
-	FROM 
-        (SELECT sems_entry_score.*
-	,array_to_string(xpath('//SemesterEntryScore/Entry[@分項=''學業(原始)'']/@成績', xmlparse(content score_info)), '')::TEXT AS score
-	  FROM  sems_entry_score WHERE entry_group = 1 ) AS sems_entry_score_ext	   
-	INNER JOIN student_list
-		ON sems_entry_score_ext.ref_student_id = student_list.student_id	
-  	INNER JOIN student_sems
-		ON sems_entry_score_ext.school_year = student_sems.sems_school_year::INT
-		AND sems_entry_score_ext.ref_student_id = student_sems.student_id::INT
-        AND sems_entry_score_ext.semester = student_sems.sems_semester::INT
-		AND sems_entry_score_ext.grade_year = student_sems.sems_grade_year::INT      
+		, NULLIF(x.score_text,'')::DECIMAL AS subject_origin_score
+		, '1'::DECIMAL As subject_credit
+		, '學業(原始)'::TEXT As subject_entry
+        , NULL::TEXT As subject_required
+        , NULL::TEXT As subject_requiredby
+        , '否'::TEXT As ns1
+        , '否'::TEXT As ns2
+	FROM
+		sems_entry_score s
+		INNER JOIN student_list sl
+			ON s.ref_student_id = sl.student_id
+		INNER JOIN student_sems ss
+			ON s.ref_student_id = ss.student_id::INT
+		   AND s.school_year = ss.sems_school_year::INT
+		   AND s.semester = ss.sems_semester::INT
+		   AND s.grade_year = ss.sems_grade_year::INT
+		CROSS JOIN LATERAL
+		(
+			SELECT array_to_string(
+					   xpath('//SemesterEntryScore/Entry[@分項=''學業(原始)'']/@成績',
+							 xmlparse(content s.score_info)), ''
+				   )::TEXT AS score_text
+		) AS x
+	WHERE
+		s.entry_group = 1
 )
 ,subject_score AS
 (
@@ -763,123 +921,153 @@ SELECT " + sid + @" ::BIGINT AS student_id
     UNION ALL
     SELECT * FROM sems_entry_score_data
 )
-"; // 過濾不需評分與不計學分 
-
-    // 多學期學業加權平均
-    StringBuilder sbSubjectEntrySore = new StringBuilder();
-    string semstr = "";
-    List<String> SubjectSql = new List<string>();    
-//依考試群組分群計算成績
-    foreach (string REGGroupName in RegGroupSubjMapDic.Keys)
-        {
-            if (RegGroupCalcMapDic[REGGroupName]["學業"][0] == "加權平均")
-                semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score " + @"
-    ,SUM(subject_credit) AS sum_credit ";
-            else
-                semstr = ",SUM(subject_origin_score) AS sum_score " + @"
-    ,Count(subject_credit) AS sum_credit "; 
-      foreach (GradeYearSemesterInfo gs in calSemesterList)
-        {
-            string ss = "a";
-            if (gs.Semester == 2)
-                ss = "b";
-            int subjectNum = (gs.GradeYear - 1) * 2 + gs.Semester - 1;
-             SubjectSql.Add("subject_entry_score_avg_" + REGGroupName + gs.GradeYear + ss);
-            string str = @",subject_entry_score_avg_" + REGGroupName + gs.GradeYear + ss + @" AS (
-	SELECT
-		student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name 
-        ,student_list.rank_group_code " + semstr + @"
-	FROM 
-		subject_score
-	INNER JOIN student_list
-		ON subject_score.student_id = student_list.student_id
-	WHERE 
-		subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND" + @"
-        student_list.rank_group_name = '" + REGGroupName + @"' AND subject IN (" + RegGroupSubjMapDic[REGGroupName]["學業"][subjectNum] + @") " + @"
-    GROUP BY 
-	student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code
-
+,subject_entry_score_base AS
+(
+    SELECT
+        s.student_id,
+        sl.student_name,
+        sl.rank_grade_year,
+        sl.rank_dept_name,
+        sl.rank_class_name,
+        sl.rank_tag1,
+        sl.rank_tag2,
+        sl.rank_group_name,
+        sl.rank_group_code,
+        s.school_year,
+        s.semester,
+        s.grade_year,
+        s.subject,
+        s.subject_origin_score,
+        s.subject_credit
+    FROM subject_score s
+    INNER JOIN student_list sl
+        ON s.student_id = sl.student_id
 )
-";
-                        sbSubjectEntrySore.AppendLine(str);
-                        }
-                    }
+"; // 過濾不需評分與不計學分，並建立 base CTE 一次掃描 subject_score 
+
+    // 多學期學業加權平均 - 使用 bucket_key 重構（效能優化：減少 subject_score 掃描次數）
+    StringBuilder sbSubjectEntryBucket = new StringBuilder();
+    StringBuilder sbSubjectEntryCaseWhen = new StringBuilder();
+    string semstr = "";
+    bool useWeightedAvg = false;
+    
+    // 建立 bucket_key 的 CASE WHEN 語句
+    sbSubjectEntryCaseWhen.AppendLine("        CASE");
+    foreach (string REGGroupName in RegGroupSubjMapDic.Keys)
+    {
+        if (RegGroupCalcMapDic[REGGroupName]["學業"][0] == "加權平均")
+            useWeightedAvg = true;
+        else
+            useWeightedAvg = false;
+            
+        foreach (GradeYearSemesterInfo gs in calSemesterList)
+        {
+            int subjectNum = (gs.GradeYear - 1) * 2 + gs.Semester - 1;
+            string subjectList = RegGroupSubjMapDic[REGGroupName]["學業"][subjectNum];
+            
+            sbSubjectEntryCaseWhen.AppendLine("            WHEN b.rank_group_name = " + SqlLiteral(REGGroupName) + 
+                " AND b.grade_year = " + gs.GradeYear + 
+                " AND b.semester = " + gs.Semester + 
+                " AND b.subject IN (" + subjectList + ")");
+            sbSubjectEntryCaseWhen.AppendLine("                THEN " + SqlLiteral("學業_" + REGGroupName + "_" + gs.GradeYear + (gs.Semester == 1 ? "a" : "b")));
+        }
+    }
+    sbSubjectEntryCaseWhen.AppendLine("            ELSE NULL");
+    sbSubjectEntryCaseWhen.AppendLine("        END AS bucket_key");
+    
+    // 建立 bucket CTE
+    sbSubjectEntryBucket.AppendLine(@",subject_entry_score_bucket AS
+(
+    SELECT
+        b.*,");
+    sbSubjectEntryBucket.Append(sbSubjectEntryCaseWhen.ToString());
+    sbSubjectEntryBucket.AppendLine(@"
+    FROM subject_entry_score_base b
+)");
+    
+    // 判斷是否使用加權平均（取第一個群組的設定作為代表，因為通常所有群組使用相同計算方式）
+    if (RegGroupSubjMapDic.Count > 0)
+    {
+        string firstGroup = RegGroupSubjMapDic.Keys.First();
+        if (RegGroupCalcMapDic[firstGroup]["學業"][0] == "加權平均")
+            semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+        else
+            semstr = ",SUM(subject_origin_score) AS sum_score, COUNT(subject_credit) AS sum_credit";
+    }
+    else
+    {
+        semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+    }
+    
+    // 舊的 sbSubjectEntrySore 不再使用，改為使用 bucket CTE
+    StringBuilder sbSubjectEntrySore = new StringBuilder();
+    sbSubjectEntrySore.Append(sbSubjectEntryBucket.ToString());
                        
                 string Strsubject_entry_score_avg_list = @"
 ,subject_entry_score_avg_list AS
 (
-
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    SELECT
+        student_id,
+        student_name,
+        rank_grade_year,
+        rank_dept_name,
+        rank_class_name,
+        rank_tag1,
+        rank_tag2,
+        rank_group_name,
+        rank_group_code,
+        round(sum_score_s/sum_credit_s, parse_number) AS avg_score
     FROM
     (
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,SUM(sum_score) AS sum_score_s
-        ,SUM(sum_credit) AS sum_credit_s
-        ,(select parse_number from parse_number)::INT AS parse_number
-        FROM ( ";
-foreach (string TableName in SubjectSql)
-                {
-                    Strsubject_entry_score_avg_list = Strsubject_entry_score_avg_list + @"
-                    SELECT
-                        student_id
-                        ,student_name
-                        ,rank_grade_year
-                        ,rank_dept_name
-                        ,rank_class_name
-                        ,rank_tag1
-                        ,rank_tag2
-                        ,rank_group_name
-                        ,rank_group_code
-                        ,sum_score
-                        ,sum_credit
-                        FROM  " + TableName + " UNION ALL " ;
-                }                
-                Strsubject_entry_score_avg_list = Strsubject_entry_score_avg_list.Substring(0, Strsubject_entry_score_avg_list.Length-10) + @"
-) as subject_entry_score_avg5
-group BY
-         student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
+        SELECT
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code,
+            SUM(sum_score) AS sum_score_s,
+            SUM(sum_credit) AS sum_credit_s,
+            (SELECT parse_number FROM parse_number)::INT AS parse_number
+        FROM
+        (
+            SELECT
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code" + semstr + @"
+            FROM subject_entry_score_bucket
+            WHERE bucket_key IS NOT NULL
+            GROUP BY
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code,
+                bucket_key
+        ) AS subject_entry_score_avg5
+        GROUP BY
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code
     ) AS subject_entry_score_avg_round
 )
 ,subject_entry_score_rank_list AS
@@ -941,119 +1129,122 @@ group BY
 
 ";
 
-                    // 多學期專業及實習加權平均
-                StringBuilder sbSubjectProSore = new StringBuilder();
-                SubjectSql.Clear();
-                //依考試群組分群計算成績
+                    // 多學期專業及實習加權平均 - 使用 bucket_key 重構（效能優化）
+                StringBuilder sbSubjectProBucket = new StringBuilder();
+                StringBuilder sbSubjectProCaseWhen = new StringBuilder();
+                string semstrPro = "";
+                
+                // 建立 bucket_key 的 CASE WHEN 語句
+                sbSubjectProCaseWhen.AppendLine("        CASE");
                 foreach (string REGGroupName in RegGroupSubjMapDic.Keys)
                 {
-                    if (RegGroupCalcMapDic[REGGroupName]["專業"][0] == "加權平均")
-                        semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score " + @"
-    ,SUM(subject_credit) AS sum_credit ";
-                    else
-                        semstr = ",SUM(subject_origin_score) AS sum_score " + @"
-    ,Count(subject_credit) AS sum_credit ";
                     foreach (GradeYearSemesterInfo gs in calSemesterList)
                     {
-                        string ss = "a";
-                        if (gs.Semester == 2)
-                            ss = "b";
                         int subjectNum = (gs.GradeYear - 1) * 2 + gs.Semester - 1;
-                        SubjectSql.Add("subject_score_pro_avg_" + REGGroupName + gs.GradeYear + ss);
-                        string str = @",subject_score_pro_avg_" + REGGroupName + gs.GradeYear + ss + @" AS (
-               
-	SELECT
-		student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code " + semstr + @"
-	FROM 
-		subject_score
-	INNER JOIN student_list
-		ON subject_score.student_id = student_list.student_id
-	WHERE 
-        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND" + @"
-        student_list.rank_group_name = '" + REGGroupName + @"' AND subject IN (" + RegGroupSubjMapDic[REGGroupName]["專業"][subjectNum] + @") " + @"		
-	GROUP BY 
-	student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code
-)
-";
-                        sbSubjectProSore.AppendLine(str);
+                        string subjectList = RegGroupSubjMapDic[REGGroupName]["專業"][subjectNum];
+                        
+                        sbSubjectProCaseWhen.AppendLine("            WHEN b.rank_group_name = " + SqlLiteral(REGGroupName) + 
+                            " AND b.grade_year = " + gs.GradeYear + 
+                            " AND b.semester = " + gs.Semester + 
+                            " AND b.subject IN (" + subjectList + ")");
+                        sbSubjectProCaseWhen.AppendLine("                THEN " + SqlLiteral("專業_" + REGGroupName + "_" + gs.GradeYear + (gs.Semester == 1 ? "a" : "b")));
                     }
                 }
+                sbSubjectProCaseWhen.AppendLine("            ELSE NULL");
+                sbSubjectProCaseWhen.AppendLine("        END AS bucket_key");
+                
+                // 建立 bucket CTE
+                sbSubjectProBucket.AppendLine(@",subject_score_pro_bucket AS
+(
+    SELECT
+        b.*,");
+                sbSubjectProBucket.Append(sbSubjectProCaseWhen.ToString());
+                sbSubjectProBucket.AppendLine(@"
+    FROM subject_entry_score_base b
+)");
+                
+                // 判斷是否使用加權平均
+                if (RegGroupSubjMapDic.Count > 0)
+                {
+                    string firstGroup = RegGroupSubjMapDic.Keys.First();
+                    if (RegGroupCalcMapDic[firstGroup]["專業"][0] == "加權平均")
+                        semstrPro = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                    else
+                        semstrPro = ",SUM(subject_origin_score) AS sum_score, COUNT(subject_credit) AS sum_credit";
+                }
+                else
+                {
+                    semstrPro = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                }
+                
+                StringBuilder sbSubjectProSore = new StringBuilder();
+                sbSubjectProSore.Append(sbSubjectProBucket.ToString());
+                    
                     string Strsubject_score_pro_avg_list = @"
 ,subject_score_pro_avg_list AS
 (
-
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-       ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    SELECT
+        student_id,
+        student_name,
+        rank_grade_year,
+        rank_dept_name,
+        rank_class_name,
+        rank_tag1,
+        rank_tag2,
+        rank_group_name,
+        rank_group_code,
+        round(sum_score_s/sum_credit_s, parse_number) AS avg_score
     FROM
     (
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,SUM(sum_score) AS sum_score_s
-        ,SUM(sum_credit) AS sum_credit_s
-        ,(select parse_number from parse_number)::INT AS parse_number
-        FROM  ( ";
-                foreach (string TableName in SubjectSql)
-                {
-                    Strsubject_score_pro_avg_list = Strsubject_score_pro_avg_list + @"
-                    SELECT
-                        student_id
-                        , student_name
-                        , rank_grade_year
-                        , rank_dept_name
-                        , rank_class_name
-                        , rank_tag1
-                        , rank_tag2
-                        , rank_group_name
-                        , rank_group_code
-                        , sum_score
-                        , sum_credit
-                        FROM  " + TableName + " UNION ALL " ;
-                }
-                Strsubject_score_pro_avg_list = Strsubject_score_pro_avg_list.Substring(0, Strsubject_score_pro_avg_list.Length - 10) + @"
-            ) as subject_score_pro_avg5
-group BY
-student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
+        SELECT
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code,
+            SUM(sum_score) AS sum_score_s,
+            SUM(sum_credit) AS sum_credit_s,
+            (SELECT parse_number FROM parse_number)::INT AS parse_number
+        FROM
+        (
+            SELECT
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code" + semstrPro + @"
+            FROM subject_score_pro_bucket
+            WHERE bucket_key IS NOT NULL
+            GROUP BY
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code,
+                bucket_key
+        ) AS subject_score_pro_avg5
+        GROUP BY
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code
     ) AS subject_score_pro_avg_round
 )
 ,subject_score_pro_rank_list AS
@@ -1113,119 +1304,122 @@ student_id
         subject_score_pro_rank_list
 )
 ";
-                // 多學期技能
-                StringBuilder sbSubjectSoreSkill = new StringBuilder();
-                SubjectSql.Clear();
-                //依考試群組分群計算成績
+                // 多學期技能領域 - 使用 bucket_key 重構（效能優化）
+                StringBuilder sbSubjectSkillBucket = new StringBuilder();
+                StringBuilder sbSubjectSkillCaseWhen = new StringBuilder();
+                string semstrSkill = "";
+                
+                // 建立 bucket_key 的 CASE WHEN 語句
+                sbSubjectSkillCaseWhen.AppendLine("        CASE");
                 foreach (string REGGroupName in RegGroupSubjMapDic.Keys)
                 {
-                    if (RegGroupCalcMapDic[REGGroupName]["技能"][0] == "加權平均")
-                        semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score " + @"
-    ,SUM(subject_credit) AS sum_credit ";
-                    else
-                        semstr = ",SUM(subject_origin_score) AS sum_score " + @"
-    ,Count(subject_credit) AS sum_credit ";
                     foreach (GradeYearSemesterInfo gs in calSemesterList)
                     {
-                        string ss = "a";
-                        if (gs.Semester == 2)
-                            ss = "b";
                         int subjectNum = (gs.GradeYear - 1) * 2 + gs.Semester - 1;
-                        SubjectSql.Add("subject_score_SkillDomain_" + REGGroupName + gs.GradeYear + ss);
-                        string str = @",subject_score_SkillDomain_" + REGGroupName + gs.GradeYear + ss + @" AS (
-               
-	SELECT
-		student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code " + semstr + @"
-	FROM 
-		subject_score
-	INNER JOIN student_list
-		ON subject_score.student_id = student_list.student_id
-	WHERE 
-        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND" + @"
-        student_list.rank_group_name = '" + REGGroupName + @"' AND subject IN (" + RegGroupSubjMapDic[REGGroupName]["技能"][subjectNum] + @") " + @"		
-	GROUP BY
-	    student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code
-)
-";
-                        sbSubjectSoreSkill.AppendLine(str);
+                        string subjectList = RegGroupSubjMapDic[REGGroupName]["技能"][subjectNum];
+                        
+                        sbSubjectSkillCaseWhen.AppendLine("            WHEN b.rank_group_name = " + SqlLiteral(REGGroupName) + 
+                            " AND b.grade_year = " + gs.GradeYear + 
+                            " AND b.semester = " + gs.Semester + 
+                            " AND b.subject IN (" + subjectList + ")");
+                        sbSubjectSkillCaseWhen.AppendLine("                THEN " + SqlLiteral("技能_" + REGGroupName + "_" + gs.GradeYear + (gs.Semester == 1 ? "a" : "b")));
                     }
                 }
+                sbSubjectSkillCaseWhen.AppendLine("            ELSE NULL");
+                sbSubjectSkillCaseWhen.AppendLine("        END AS bucket_key");
+                
+                // 建立 bucket CTE
+                sbSubjectSkillBucket.AppendLine(@",subject_score_SkillDomain_bucket AS
+(
+    SELECT
+        b.*,");
+                sbSubjectSkillBucket.Append(sbSubjectSkillCaseWhen.ToString());
+                sbSubjectSkillBucket.AppendLine(@"
+    FROM subject_entry_score_base b
+)");
+                
+                // 判斷是否使用加權平均
+                if (RegGroupSubjMapDic.Count > 0)
+                {
+                    string firstGroup = RegGroupSubjMapDic.Keys.First();
+                    if (RegGroupCalcMapDic[firstGroup]["技能"][0] == "加權平均")
+                        semstrSkill = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                    else
+                        semstrSkill = ",SUM(subject_origin_score) AS sum_score, COUNT(subject_credit) AS sum_credit";
+                }
+                else
+                {
+                    semstrSkill = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                }
+                
+                StringBuilder sbSubjectSoreSkill = new StringBuilder();
+                sbSubjectSoreSkill.Append(sbSubjectSkillBucket.ToString());
+                    
                     string Strsubject_score_SkillDomain_avg_list = @"
 ,subject_score_SkillDomain_avg_list AS
 (
-
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    SELECT
+        student_id,
+        student_name,
+        rank_grade_year,
+        rank_dept_name,
+        rank_class_name,
+        rank_tag1,
+        rank_tag2,
+        rank_group_name,
+        rank_group_code,
+        round(sum_score_s/sum_credit_s, parse_number) AS avg_score
     FROM
     (
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,SUM(sum_score) AS sum_score_s
-        ,SUM(sum_credit) AS sum_credit_s
-        ,(select parse_number from parse_number)::INT AS parse_number
-       FROM  ( ";
-                foreach (string TableName in SubjectSql)
-                {
-                    Strsubject_score_SkillDomain_avg_list = Strsubject_score_SkillDomain_avg_list + @"
-                    SELECT
-                        student_id
-                        , student_name
-                        , rank_grade_year
-                        , rank_dept_name
-                        , rank_class_name
-                        , rank_tag1
-                        , rank_tag2
-                        , rank_group_name
-                        , rank_group_code
-                        , sum_score
-                        , sum_credit
-                        FROM  " + TableName + " UNION ALL ";
-                }
-                Strsubject_score_SkillDomain_avg_list = Strsubject_score_SkillDomain_avg_list.Substring(0, Strsubject_score_SkillDomain_avg_list.Length - 10) + @"
-           ) as subject_SkillDomain_avg_avg5
-group BY
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name  
-        ,rank_group_code
+        SELECT
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code,
+            SUM(sum_score) AS sum_score_s,
+            SUM(sum_credit) AS sum_credit_s,
+            (SELECT parse_number FROM parse_number)::INT AS parse_number
+        FROM
+        (
+            SELECT
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code" + semstrSkill + @"
+            FROM subject_score_SkillDomain_bucket
+            WHERE bucket_key IS NOT NULL
+            GROUP BY
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code,
+                bucket_key
+        ) AS subject_SkillDomain_avg_avg5
+        GROUP BY
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code
     ) AS subject_score_SkillDomain_avg_round
 )
 ,subject_score_SkillDomain_rank_list AS
@@ -1287,123 +1481,122 @@ group BY
 ";
 
                 // 處理國英數動態對照算成績
-                // 多學期國文平均
-                //依考試群組分群計算成績
-                StringBuilder sbSubjectChineseScore = new StringBuilder();
-                SubjectSql.Clear();
+                // 多學期國文平均 - 使用 bucket_key 重構（效能優化）
+                StringBuilder sbSubjectChineseBucket = new StringBuilder();
+                StringBuilder sbSubjectChineseCaseWhen = new StringBuilder();
+                string semstrChinese = "";
+                
+                // 建立 bucket_key 的 CASE WHEN 語句
+                sbSubjectChineseCaseWhen.AppendLine("        CASE");
                 foreach (string REGGroupName in RegGroupSubjMapDic.Keys)
                 {
-                    if (RegGroupCalcMapDic[REGGroupName]["國文"][0] == "加權平均")
-                        semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score " + @"
-    ,SUM(subject_credit) AS sum_credit ";
-                    else
-                        semstr = ",SUM(subject_origin_score) AS sum_score " + @"
-    ,Count(subject_credit) AS sum_credit ";
                     foreach (GradeYearSemesterInfo gs in calSemesterList)
                     {
-                        string ss = "a";
-                        if (gs.Semester == 2)
-                            ss = "b";
                         int subjectNum = (gs.GradeYear - 1) * 2 + gs.Semester - 1;
-                        SubjectSql.Add("subject_score_chinese_avg_" + REGGroupName + gs.GradeYear + ss);
-                        string str = @",subject_score_chinese_avg_" + REGGroupName + gs.GradeYear + ss + @" AS (
-               
-	SELECT
-		student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code " + semstr + @"
-	FROM 
-		subject_score
-	INNER JOIN student_list
-		ON subject_score.student_id = student_list.student_id
-	WHERE 
-        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND" + @"
-        student_list.rank_group_name = '" + REGGroupName + @"' AND subject IN (" + RegGroupSubjMapDic[REGGroupName]["國文"][subjectNum] + @") " + @"		
-
-    GROUP BY 
-    student_list.student_id
-        ,student_list.student_name
-        ,student_list.rank_grade_year
-        ,student_list.rank_dept_name
-        ,student_list.rank_class_name
-        ,student_list.rank_tag1
-        ,student_list.rank_tag2
-        ,student_list.rank_group_name
-        ,student_list.rank_group_code
-)
-";
-                            sbSubjectChineseScore.AppendLine(str);
-
-                        }
+                        string subjectList = RegGroupSubjMapDic[REGGroupName]["國文"][subjectNum];
+                        
+                        sbSubjectChineseCaseWhen.AppendLine("            WHEN b.rank_group_name = " + SqlLiteral(REGGroupName) + 
+                            " AND b.grade_year = " + gs.GradeYear + 
+                            " AND b.semester = " + gs.Semester + 
+                            " AND b.subject IN (" + subjectList + ")");
+                        sbSubjectChineseCaseWhen.AppendLine("                THEN " + SqlLiteral("國文_" + REGGroupName + "_" + gs.GradeYear + (gs.Semester == 1 ? "a" : "b")));
                     }
+                }
+                sbSubjectChineseCaseWhen.AppendLine("            ELSE NULL");
+                sbSubjectChineseCaseWhen.AppendLine("        END AS bucket_key");
+                
+                // 建立 bucket CTE
+                sbSubjectChineseBucket.AppendLine(@",subject_score_chinese_bucket AS
+(
+    SELECT
+        b.*,");
+                sbSubjectChineseBucket.Append(sbSubjectChineseCaseWhen.ToString());
+                sbSubjectChineseBucket.AppendLine(@"
+    FROM subject_entry_score_base b
+)");
+                
+                // 判斷是否使用加權平均
+                if (RegGroupSubjMapDic.Count > 0)
+                {
+                    string firstGroup = RegGroupSubjMapDic.Keys.First();
+                    if (RegGroupCalcMapDic[firstGroup]["國文"][0] == "加權平均")
+                        semstrChinese = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                    else
+                        semstrChinese = ",SUM(subject_origin_score) AS sum_score, COUNT(subject_credit) AS sum_credit";
+                }
+                else
+                {
+                    semstrChinese = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                }
+                
+                StringBuilder sbSubjectChineseScore = new StringBuilder();
+                sbSubjectChineseScore.Append(sbSubjectChineseBucket.ToString());
 
                     string Strsubject_score_chinese_avg_list = @"
 ,subject_score_chinese_avg_list AS
 (
-
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    SELECT
+        student_id,
+        student_name,
+        rank_grade_year,
+        rank_dept_name,
+        rank_class_name,
+        rank_tag1,
+        rank_tag2,
+        rank_group_name,
+        rank_group_code,
+        round(sum_score_s/sum_credit_s, parse_number) AS avg_score
     FROM
     (
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,SUM(sum_score) AS sum_score_s
-        ,SUM(sum_credit) AS sum_credit_s
-        ,(select parse_number from parse_number)::INT AS parse_number
-        FROM   ( ";
-                foreach (string TableName in SubjectSql)
-                {
-                    Strsubject_score_chinese_avg_list = Strsubject_score_chinese_avg_list + @"
-                    SELECT
-                        student_id
-                        , student_name
-                        , rank_grade_year
-                        , rank_dept_name
-                        , rank_class_name
-                        , rank_tag1
-                        , rank_tag2
-                        , rank_group_name
-                        , rank_group_code
-                        , sum_score
-                        , sum_credit
-                        FROM  " + TableName + " UNION ALL ";
-                }
-                Strsubject_score_chinese_avg_list = Strsubject_score_chinese_avg_list.Substring(0, Strsubject_score_chinese_avg_list.Length - 10) + @"
-       
-            ) as subject_score_chinese_avg5
-group BY
-         student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
+        SELECT
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code,
+            SUM(sum_score) AS sum_score_s,
+            SUM(sum_credit) AS sum_credit_s,
+            (SELECT parse_number FROM parse_number)::INT AS parse_number
+        FROM
+        (
+            SELECT
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code" + semstrChinese + @"
+            FROM subject_score_chinese_bucket
+            WHERE bucket_key IS NOT NULL
+            GROUP BY
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code,
+                bucket_key
+        ) AS subject_score_chinese_avg5
+        GROUP BY
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code
     ) AS subject_score_chinese_avg_round
 )
 ,subject_score_chinese_rank_list AS
@@ -1465,122 +1658,122 @@ group BY
 
 ";
  
-                // 多學期英文
-                //依考試群組分群計算成績
-                StringBuilder sbSubjectEnglishScore = new StringBuilder();
-                SubjectSql.Clear();
+                // 多學期英文 - 使用 bucket_key 重構（效能優化）
+                StringBuilder sbSubjectEnglishBucket = new StringBuilder();
+                StringBuilder sbSubjectEnglishCaseWhen = new StringBuilder();
+                string semstrEnglish = "";
+                
+                // 建立 bucket_key 的 CASE WHEN 語句
+                sbSubjectEnglishCaseWhen.AppendLine("        CASE");
                 foreach (string REGGroupName in RegGroupSubjMapDic.Keys)
                 {
-                    if (RegGroupCalcMapDic[REGGroupName]["英文"][0] == "加權平均")
-                        semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score " + @"
-    ,SUM(subject_credit) AS sum_credit ";
-                    else
-                        semstr = ",SUM(subject_origin_score) AS sum_score " + @"
-    ,Count(subject_credit) AS sum_credit ";
                     foreach (GradeYearSemesterInfo gs in calSemesterList)
                     {
-                        string ss = "a";
-                        if (gs.Semester == 2)
-                            ss = "b";
                         int subjectNum = (gs.GradeYear - 1) * 2 + gs.Semester - 1;
-                        SubjectSql.Add("subject_score_english_avg_" + REGGroupName + gs.GradeYear + ss);
-                        string str = @",subject_score_english_avg_" + REGGroupName + gs.GradeYear + ss + @" AS (
- 
-SELECT
-        student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code " + semstr + @"
-	FROM 
-		subject_score
-	INNER JOIN student_list
-		ON subject_score.student_id = student_list.student_id
-	WHERE 
-        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND" + @"
-        student_list.rank_group_name = '" + REGGroupName + @"' AND subject IN (" + RegGroupSubjMapDic[REGGroupName]["英文"][subjectNum] + @") " + @"	
-    GROUP BY 
-    student_list.student_id
-        ,student_list.student_name
-        ,student_list.rank_grade_year
-        ,student_list.rank_dept_name
-        ,student_list.rank_class_name
-        ,student_list.rank_tag1
-        ,student_list.rank_tag2
-        ,student_list.rank_group_name
-        ,student_list.rank_group_code
-)
-";
-                            sbSubjectEnglishScore.AppendLine(str);
-
-                        }
+                        string subjectList = RegGroupSubjMapDic[REGGroupName]["英文"][subjectNum];
+                        
+                        sbSubjectEnglishCaseWhen.AppendLine("            WHEN b.rank_group_name = " + SqlLiteral(REGGroupName) + 
+                            " AND b.grade_year = " + gs.GradeYear + 
+                            " AND b.semester = " + gs.Semester + 
+                            " AND b.subject IN (" + subjectList + ")");
+                        sbSubjectEnglishCaseWhen.AppendLine("                THEN " + SqlLiteral("英文_" + REGGroupName + "_" + gs.GradeYear + (gs.Semester == 1 ? "a" : "b")));
                     }
+                }
+                sbSubjectEnglishCaseWhen.AppendLine("            ELSE NULL");
+                sbSubjectEnglishCaseWhen.AppendLine("        END AS bucket_key");
+                
+                // 建立 bucket CTE
+                sbSubjectEnglishBucket.AppendLine(@",subject_score_english_bucket AS
+(
+    SELECT
+        b.*,");
+                sbSubjectEnglishBucket.Append(sbSubjectEnglishCaseWhen.ToString());
+                sbSubjectEnglishBucket.AppendLine(@"
+    FROM subject_entry_score_base b
+)");
+                
+                // 判斷是否使用加權平均
+                if (RegGroupSubjMapDic.Count > 0)
+                {
+                    string firstGroup = RegGroupSubjMapDic.Keys.First();
+                    if (RegGroupCalcMapDic[firstGroup]["英文"][0] == "加權平均")
+                        semstrEnglish = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                    else
+                        semstrEnglish = ",SUM(subject_origin_score) AS sum_score, COUNT(subject_credit) AS sum_credit";
+                }
+                else
+                {
+                    semstrEnglish = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                }
+                
+                StringBuilder sbSubjectEnglishScore = new StringBuilder();
+                sbSubjectEnglishScore.Append(sbSubjectEnglishBucket.ToString());
 
                     string Strsubject_score_english_avg_list = @"
 ,subject_score_english_avg_list AS
 (
-
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    SELECT
+        student_id,
+        student_name,
+        rank_grade_year,
+        rank_dept_name,
+        rank_class_name,
+        rank_tag1,
+        rank_tag2,
+        rank_group_name,
+        rank_group_code,
+        round(sum_score_s/sum_credit_s, parse_number) AS avg_score
     FROM
     (
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,SUM(sum_score) AS sum_score_s
-        ,SUM(sum_credit) AS sum_credit_s
-        ,(select parse_number from parse_number)::INT AS parse_number
-        FROM  ( ";
-                foreach (string TableName in SubjectSql)
-                {
-                    Strsubject_score_english_avg_list = Strsubject_score_english_avg_list + @"
-                    SELECT
-                        student_id
-                        , student_name
-                        , rank_grade_year
-                        , rank_dept_name
-                        , rank_class_name
-                        , rank_tag1
-                        , rank_tag2
-                        , rank_group_name
-                        ,rank_group_code
-                        , sum_score
-                        , sum_credit
-                        FROM  " + TableName + " UNION ALL ";
-                }
-                Strsubject_score_english_avg_list = Strsubject_score_english_avg_list.Substring(0, Strsubject_score_english_avg_list.Length - 10) + @"
-       
-            ) as subject_score_english_avg5
-group BY
-student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
+        SELECT
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code,
+            SUM(sum_score) AS sum_score_s,
+            SUM(sum_credit) AS sum_credit_s,
+            (SELECT parse_number FROM parse_number)::INT AS parse_number
+        FROM
+        (
+            SELECT
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code" + semstrEnglish + @"
+            FROM subject_score_english_bucket
+            WHERE bucket_key IS NOT NULL
+            GROUP BY
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code,
+                bucket_key
+        ) AS subject_score_english_avg5
+        GROUP BY
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code
     ) AS subject_score_english_avg_round
 )
 ,subject_score_english_rank_list AS
@@ -1642,122 +1835,122 @@ student_id
 
 ";
 
-                // 多學期數學
-                //依考試群組分群計算成績
-                StringBuilder sbSubjectMathScore = new StringBuilder();
-                SubjectSql.Clear();
+                // 多學期數學 - 使用 bucket_key 重構（效能優化）
+                StringBuilder sbSubjectMathBucket = new StringBuilder();
+                StringBuilder sbSubjectMathCaseWhen = new StringBuilder();
+                string semstrMath = "";
+                
+                // 建立 bucket_key 的 CASE WHEN 語句
+                sbSubjectMathCaseWhen.AppendLine("        CASE");
                 foreach (string REGGroupName in RegGroupSubjMapDic.Keys)
                 {
-                    if (RegGroupCalcMapDic[REGGroupName]["數學"][0] == "加權平均")
-                        semstr = ",SUM(subject_origin_score * subject_credit) AS sum_score " + @"
-    ,SUM(subject_credit) AS sum_credit ";
-                    else
-                        semstr = ",SUM(subject_origin_score) AS sum_score " + @"
-    ,Count(subject_credit) AS sum_credit ";
                     foreach (GradeYearSemesterInfo gs in calSemesterList)
                     {
-                        string ss = "a";
-                        if (gs.Semester == 2)
-                            ss = "b";
                         int subjectNum = (gs.GradeYear - 1) * 2 + gs.Semester - 1;
-                        SubjectSql.Add("subject_score_math_avg_" + REGGroupName + gs.GradeYear + ss);
-                        string str = @",subject_score_math_avg_" + REGGroupName + gs.GradeYear + ss + @" AS (
- 
-SELECT
-        student_list.student_id
-		,student_list.student_name
-		,student_list.rank_grade_year
-		,student_list.rank_dept_name
-		,student_list.rank_class_name
-		,student_list.rank_tag1
-		,student_list.rank_tag2
-		,student_list.rank_group_name
-        ,student_list.rank_group_code " + semstr + @"
-	FROM 
-		subject_score
-	INNER JOIN student_list
-		ON subject_score.student_id = student_list.student_id
-	WHERE 
-        subject_score.grade_year = " + gs.GradeYear + @" AND subject_score.semester = " + gs.Semester + @" AND" + @"
-        student_list.rank_group_name = '" + REGGroupName + @"' AND subject IN (" + RegGroupSubjMapDic[REGGroupName]["數學"][subjectNum] + @") " + @"	
-    GROUP BY 
-    student_list.student_id
-        ,student_list.student_name
-        ,student_list.rank_grade_year
-        ,student_list.rank_dept_name
-        ,student_list.rank_class_name
-        ,student_list.rank_tag1
-        ,student_list.rank_tag2
-        ,student_list.rank_group_name
-        ,student_list.rank_group_code
-)
-";
-                            sbSubjectMathScore.AppendLine(str);
-
-                        }
+                        string subjectList = RegGroupSubjMapDic[REGGroupName]["數學"][subjectNum];
+                        
+                        sbSubjectMathCaseWhen.AppendLine("            WHEN b.rank_group_name = " + SqlLiteral(REGGroupName) + 
+                            " AND b.grade_year = " + gs.GradeYear + 
+                            " AND b.semester = " + gs.Semester + 
+                            " AND b.subject IN (" + subjectList + ")");
+                        sbSubjectMathCaseWhen.AppendLine("                THEN " + SqlLiteral("數學_" + REGGroupName + "_" + gs.GradeYear + (gs.Semester == 1 ? "a" : "b")));
                     }
-
+                }
+                sbSubjectMathCaseWhen.AppendLine("            ELSE NULL");
+                sbSubjectMathCaseWhen.AppendLine("        END AS bucket_key");
+                
+                // 建立 bucket CTE
+                sbSubjectMathBucket.AppendLine(@",subject_score_math_bucket AS
+(
+    SELECT
+        b.*,");
+                sbSubjectMathBucket.Append(sbSubjectMathCaseWhen.ToString());
+                sbSubjectMathBucket.AppendLine(@"
+    FROM subject_entry_score_base b
+)");
+                
+                // 判斷是否使用加權平均
+                if (RegGroupSubjMapDic.Count > 0)
+                {
+                    string firstGroup = RegGroupSubjMapDic.Keys.First();
+                    if (RegGroupCalcMapDic[firstGroup]["數學"][0] == "加權平均")
+                        semstrMath = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                    else
+                        semstrMath = ",SUM(subject_origin_score) AS sum_score, COUNT(subject_credit) AS sum_credit";
+                }
+                else
+                {
+                    semstrMath = ",SUM(subject_origin_score * subject_credit) AS sum_score, SUM(subject_credit) AS sum_credit";
+                }
+                
+                StringBuilder sbSubjectMathScore = new StringBuilder();
+                sbSubjectMathScore.Append(sbSubjectMathBucket.ToString());
 
                     string Strsubject_score_math_avg_list = @"
 ,subject_score_math_avg_list AS
 (
-
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,round(sum_score_s/sum_credit_s,parse_number) AS avg_score
+    SELECT
+        student_id,
+        student_name,
+        rank_grade_year,
+        rank_dept_name,
+        rank_class_name,
+        rank_tag1,
+        rank_tag2,
+        rank_group_name,
+        rank_group_code,
+        round(sum_score_s/sum_credit_s, parse_number) AS avg_score
     FROM
     (
-SELECT
-        student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
-        ,SUM(sum_score) AS sum_score_s
-        ,SUM(sum_credit) AS sum_credit_s
-        ,(select parse_number from parse_number)::INT AS parse_number
-        FROM ( ";
-                foreach (string TableName in SubjectSql)
-                {
-                    Strsubject_score_math_avg_list = Strsubject_score_math_avg_list + @"
-                    SELECT
-                        student_id
-                        , student_name
-                        , rank_grade_year
-                        , rank_dept_name
-                        , rank_class_name
-                        , rank_tag1
-                        , rank_tag2
-                        , rank_group_name
-                        , rank_group_code
-                        , sum_score
-                        , sum_credit
-                        FROM  " + TableName + " UNION ALL ";
-                }
-                Strsubject_score_math_avg_list = Strsubject_score_math_avg_list.Substring(0, Strsubject_score_math_avg_list.Length - 10) + @"
-  ) as subject_score_math_avg5
-group BY
-student_id
-        ,student_name
-        ,rank_grade_year
-        ,rank_dept_name
-        ,rank_class_name
-        ,rank_tag1
-        ,rank_tag2
-        ,rank_group_name
-        ,rank_group_code
+        SELECT
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code,
+            SUM(sum_score) AS sum_score_s,
+            SUM(sum_credit) AS sum_credit_s,
+            (SELECT parse_number FROM parse_number)::INT AS parse_number
+        FROM
+        (
+            SELECT
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code" + semstrMath + @"
+            FROM subject_score_math_bucket
+            WHERE bucket_key IS NOT NULL
+            GROUP BY
+                student_id,
+                student_name,
+                rank_grade_year,
+                rank_dept_name,
+                rank_class_name,
+                rank_tag1,
+                rank_tag2,
+                rank_group_name,
+                rank_group_code,
+                bucket_key
+        ) AS subject_score_math_avg5
+        GROUP BY
+            student_id,
+            student_name,
+            rank_grade_year,
+            rank_dept_name,
+            rank_class_name,
+            rank_tag1,
+            rank_tag2,
+            rank_group_name,
+            rank_group_code
     ) AS subject_score_math_avg_round
 )
 ,subject_score_math_rank_list AS
@@ -2151,43 +2344,41 @@ SELECT * from score_list limit 1
 
                 bkw.ReportProgress(50);
 
-                    QueryHelper queryHelper = new QueryHelper();
-                try
-                {                    
-                     queryHelper.Select(insertRankSql);
-                }
-                catch
-                {
-                    MsgBox.Show("計算失敗");
-                }
-                // Error: Use of unassigned local variable 'n'.
-               // Console.Write(n);
-                
-
+                // Todo 2-1: 在 DoWork 中執行 SQL，發生例外時讓 BackgroundWorker 自動設定 bwE.Error
+                QueryHelper queryHelper = new QueryHelper();
+                queryHelper.Select(insertRankSql);
 
                 bkw.ReportProgress(100);
+                }
+                catch (Exception ex)
+                {
+                    // Todo 2-1: 將例外傳遞給 RunWorkerCompleted 處理
+                    bwE.Result = ex;
+                }
             };
 
-            bkw.RunWorkerCompleted += delegate
+            bkw.RunWorkerCompleted += delegate (object bwSender, RunWorkerCompletedEventArgs bwE)
             {
                 pbLoading.Visible = false;
-                if (bkwException != null)
+                btnCacluate.Enabled = true;
+                btnPrevious.Enabled = true;
+
+                // Todo 2-2: 在 RunWorkerCompleted（UI thread）內統一處理成功 / 失敗
+                if (bwE.Error != null || bwE.Result is Exception)
                 {
-                    btnCacluate.Enabled = true;
-                    btnPrevious.Enabled = true;
-                    throw new Exception("計算排名失敗", bkwException);                    
+                    var ex = bwE.Error ?? (Exception)bwE.Result;
+                    MsgBox.Show("計算失敗：" + ex.Message);
+                    FISCA.Presentation.MotherForm.SetStatusBarMessage("");
+                    return;
                 }
 
                 MessageBox.Show("計算完成");
                 FISCA.Presentation.MotherForm.SetStatusBarMessage("");
-                //MotherForm.SetStatusBarMessage("排名計算完成");
-                //pbLoading.Visible = false;
-                btnCacluate.Enabled = true;
-                btnPrevious.Enabled = true;
                 this.DialogResult = DialogResult.OK;
             };
 
-            bkw.RunWorkerAsync();
+            // Todo 1-1: 將 rankStudents 透過 BackgroundWorker 傳入 DoWork
+            bkw.RunWorkerAsync(rankStudents);
         }
 
         private void CalculateTechnologyAssessmentRankStep2_Resize(object sender, EventArgs e)
@@ -2197,7 +2388,12 @@ SELECT * from score_list limit 1
 
         private void CalculateTechnologyAssessmentRankStep2_FormClosing(object sender, FormClosingEventArgs e)
         {
-            //this.DialogResult = DialogResult.Abort;
+            // Todo 4-1: 禁止計算中關閉視窗，避免跨執行緒操作已 Dispose 的控制項
+            if (pbLoading.Visible)
+            {
+                MsgBox.Show("正在計算中，請稍候計算完成再關閉視窗。");
+                e.Cancel = true;
+            }
         }
 
         private void btnExportNoRank_Click(object sender, EventArgs e)

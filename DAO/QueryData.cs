@@ -94,7 +94,7 @@ namespace SHEvaluation.Rank.DAO
             return value;
         }
 
-        public DataTable GetSkillDomainSubject(int entryYear)  
+        public DataTable GetSkillDomainSubject(int entryYear)
         {
             DataTable value = new DataTable();
             try
@@ -131,7 +131,7 @@ namespace SHEvaluation.Rank.DAO
 
  
  ";
-                query =  string.Format(query,entryYear);
+                query = string.Format(query, entryYear);
                 DataTable dt = qh.Select(query);
                 value = dt;
                 //foreach (DataRow dr in dt.Rows)
@@ -147,7 +147,41 @@ namespace SHEvaluation.Rank.DAO
 
         }
 
+        /// <summary>
+        /// 依年級取得一般狀態學生 ID
+        /// </summary>
+        /// <param name="GradeYear"></param>
+        /// <returns></returns>
+        public List<string> GetStudentIDByGradeYearStatus1(int GradeYear)
+        {
+            List<string> value = new List<string>();
 
+            try
+            {
+                QueryHelper qh = new QueryHelper();
+                string query = string.Format(@"
+                SELECT
+                    student.id AS student_id
+                FROM
+                    student
+                    INNER JOIN class ON student.ref_class_id = class.id
+                WHERE
+                    student.status = 1
+                    AND class.grade_year = {0}
+                ", GradeYear);
+                DataTable dt = qh.Select(query);
+                foreach (DataRow dr in dt.Rows)
+                {
+                    value.Add(dr["student_id"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            return value;
+        }
 
     }
 }

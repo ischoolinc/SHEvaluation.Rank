@@ -50,7 +50,7 @@
             this.cboStudentTag2.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboStudentTag2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboStudentTag2.Enabled = false;
-            this.cboStudentTag2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboStudentTag2.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentTag2.FormattingEnabled = true;
             this.cboStudentTag2.ItemHeight = 21;
             this.cboStudentTag2.Location = new System.Drawing.Point(128, 343);
@@ -70,7 +70,7 @@
             // 
             this.labelX5.BackgroundStyle.Class = "";
             this.labelX5.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX5.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX5.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX5.ForeColor = System.Drawing.Color.Black;
             this.labelX5.Location = new System.Drawing.Point(30, 345);
             this.labelX5.Name = "labelX5";
@@ -83,10 +83,10 @@
             this.cboStudentTag1.DisplayMember = "Text";
             this.cboStudentTag1.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboStudentTag1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboStudentTag1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboStudentTag1.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentTag1.FormattingEnabled = true;
             this.cboStudentTag1.ItemHeight = 21;
-            this.cboStudentTag1.Location = new System.Drawing.Point(152, 68);
+            this.cboStudentTag1.Location = new System.Drawing.Point(152, 69);
             this.cboStudentTag1.Name = "cboStudentTag1";
             this.cboStudentTag1.Size = new System.Drawing.Size(240, 27);
             this.cboStudentTag1.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -102,7 +102,7 @@
             // 
             this.labelX4.BackgroundStyle.Class = "";
             this.labelX4.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX4.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX4.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX4.ForeColor = System.Drawing.Color.Black;
             this.labelX4.Location = new System.Drawing.Point(22, 70);
             this.labelX4.Name = "labelX4";
@@ -115,10 +115,10 @@
             this.cboStudentFilter.DisplayMember = "Text";
             this.cboStudentFilter.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.cboStudentFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboStudentFilter.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.cboStudentFilter.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentFilter.FormattingEnabled = true;
             this.cboStudentFilter.ItemHeight = 21;
-            this.cboStudentFilter.Location = new System.Drawing.Point(150, 26);
+            this.cboStudentFilter.Location = new System.Drawing.Point(150, 27);
             this.cboStudentFilter.Name = "cboStudentFilter";
             this.cboStudentFilter.Size = new System.Drawing.Size(242, 27);
             this.cboStudentFilter.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -134,7 +134,7 @@
             // 
             this.labelX3.BackgroundStyle.Class = "";
             this.labelX3.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX3.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX3.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX3.ForeColor = System.Drawing.Color.Black;
             this.labelX3.Location = new System.Drawing.Point(22, 28);
             this.labelX3.Name = "labelX3";
@@ -205,7 +205,7 @@
             // 
             this.labelX1.BackgroundStyle.Class = "";
             this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX1.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX1.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX1.ForeColor = System.Drawing.Color.Black;
             this.labelX1.Location = new System.Drawing.Point(65, 113);
             this.labelX1.Name = "labelX1";
@@ -240,7 +240,7 @@
             // 
             this.labelX2.BackgroundStyle.Class = "";
             this.labelX2.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX2.Font = new System.Drawing.Font("微軟正黑體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.labelX2.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX2.ForeColor = System.Drawing.Color.Black;
             this.labelX2.Location = new System.Drawing.Point(220, 113);
             this.labelX2.Name = "labelX2";

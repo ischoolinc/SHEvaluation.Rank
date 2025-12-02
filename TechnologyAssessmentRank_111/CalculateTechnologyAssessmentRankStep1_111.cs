@@ -19,6 +19,7 @@ namespace SHEvaluation.Rank
     public partial class CalculateTechnologyAssessmentRankStep1_111 : BaseForm
     {
         List<TagConfigRecord> _TagList = new List<TagConfigRecord>();
+        
         List<StudentRecord> _StudentList = new List<StudentRecord>();
 
         // 不排名學生ID
@@ -32,6 +33,18 @@ namespace SHEvaluation.Rank
         Dictionary<string, string> StudentDeptNameDict = new Dictionary<string, string>();
         Exception bkwException = null;
         List<StudentRecord> _StudentFilterList = new List<StudentRecord>();
+
+        // Step1NextResult: 用於從 BackgroundWorker DoWork 傳遞資料到 RunWorkerCompleted
+        private class Step1NextResult
+        {
+            public Dictionary<string, udtRegistrationDept> DeptDict { get; set; }
+            public Dictionary<string, List<udtRegistrationSubjectNew>> SubjDict { get; set; }
+            public Dictionary<string, string> DeptNameDict { get; set; }
+
+            // 新增：把 Tag 過濾的 StudentTagRecord 也放進 Result
+            public List<StudentTagRecord> Tag1Student { get; set; }
+            public List<StudentTagRecord> Tag2Student { get; set; }
+        }
         BackgroundWorker _bgWorkerLoadDefaultData = new BackgroundWorker();
         BackgroundWorker _bgWorkerStep1Next = new BackgroundWorker();
         Dictionary<string, List<GradeYearSemesterInfo>> StudGradeYearSemsDict = new Dictionary<string, List<GradeYearSemesterInfo>>();
@@ -64,59 +77,65 @@ namespace SHEvaluation.Rank
 
         private void _bgWorkerStep1Next_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-
+            // 處理錯誤情況
             if (bkwException != null)
             {
-                throw new Exception("學生列表讀取失敗", bkwException);
+                MessageBox.Show("學生列表讀取失敗：" + bkwException.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Visible = true;
+                this.UserControlEnale(true);
+                FISCA.Presentation.MotherForm.SetStatusBarMessage("");
+                bkwException = null; // 清除例外，避免下次誤判
+                return;
             }
+
             if (_StudentFilterList.Count == 0)
             {
                 MessageBox.Show("沒有找到符合條件的學生");
                 this.Visible = true;
-                btnNext.Enabled = true;
+                this.UserControlEnale(true);
+                FISCA.Presentation.MotherForm.SetStatusBarMessage("");
                 return;
             }
 
-
-
-            #region 整理學生類別
-            List<StudentTagRecord> tag1Student = new List<StudentTagRecord>();
-            List<StudentTagRecord> tag2Student = new List<StudentTagRecord>();
-            if (!string.IsNullOrEmpty(studentTag1))
+            // 從 DoWork 的結果取得資料
+            Step1NextResult result = e.Result as Step1NextResult;
+            if (result == null)
             {
-                List<string> tag1IDs = _TagList.Where(x => x.Prefix == studentTag1).Select(x => x.ID).ToList();
-                if (tag1IDs.Count == 0)
-                {
-                    tag1IDs = _TagList.Where(x => x.Name == studentTag1).Select(x => x.ID).ToList();
-                }
-                tag1Student = StudentTag.SelectAll().Where(x => tag1IDs.Contains(x.RefTagID)).ToList();
-            }
-            if (!string.IsNullOrEmpty(studentTag2))
-            {
-                List<string> tag2IDs = _TagList.Where(x => x.Prefix == studentTag2).Select(x => x.ID).ToList();
-                if (tag2IDs.Count == 0)
-                {
-                    tag2IDs = _TagList.Where(x => x.Name == studentTag2).Select(x => x.ID).ToList();
-                }
-                tag2Student = StudentTag.SelectAll().Where(x => tag2IDs.Contains(x.RefTagID)).ToList();
-            }
-            #endregion
-
-            ctrr2.SetStudentDataList(_StudentFilterList, tag1Student, tag2Student, StudentDeptNameDict, scoreErrIDList, _StudentList, studentFilterIDList);
-
-            ctrr2.StartPosition = FormStartPosition.CenterScreen;
-            if (ctrr2.ShowDialog() == DialogResult.Cancel)
-            {
+                // 如果沒有結果資料，表示發生錯誤
+                MessageBox.Show("資料處理發生錯誤", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Visible = true;
+                this.UserControlEnale(true);
                 FISCA.Presentation.MotherForm.SetStatusBarMessage("");
-                ctrr2.Visible = false;
+                return;
+            }
+
+            // 從 Result 取得在背景執行中已處理好的 Tag 資料
+            List<StudentTagRecord> tag1Student = result.Tag1Student ?? new List<StudentTagRecord>();
+            List<StudentTagRecord> tag2Student = result.Tag2Student ?? new List<StudentTagRecord>();
+
+            // 在 UI thread 設定 Step2 的資料
+            ctrr2.SetRegistrationDept(result.DeptDict);
+            ctrr2.SetRegistrationSubject(result.SubjDict);
+            ctrr2.SetStudentDataList(_StudentFilterList, tag1Student, tag2Student, result.DeptNameDict, scoreErrIDList, _StudentList, studentFilterIDList);
+
+            // 只呼叫一次 ShowDialog()
+            ctrr2.StartPosition = FormStartPosition.CenterScreen;
+            var dialogResult = ctrr2.ShowDialog();
+
+            if (dialogResult == DialogResult.Cancel)
+            {
+                // 回到 Step1：重新啟用 Step1 的 UI
+                FISCA.Presentation.MotherForm.SetStatusBarMessage("");
                 this.Visible = true;
                 this.StartPosition = FormStartPosition.CenterScreen;
                 this.UserControlEnale(true);
             }
-            else if(ctrr2.ShowDialog() == DialogResult.OK) {
+            else if (dialogResult == DialogResult.OK)
+            {
+                // 直接關閉 Step1，代表使用者在 Step2 完成整個流程
                 this.Close();
             }
-                
+
         }
 
         private void _bgWorkerStep1Next_DoWork(object sender, DoWorkEventArgs e)
@@ -145,27 +164,27 @@ namespace SHEvaluation.Rank
                     if (!tmpDeptDict.ContainsKey(data.DeptName))
                         tmpDeptDict.Add(data.DeptName, data);
                 }
-                ctrr2.SetRegistrationDept(tmpDeptDict);
+                // 不在 DoWork 中呼叫 Step2 的 setter，改為放入 Result
 
                 // 設定科目 key: SubjectName                
                 List<udtRegistrationSubjectNew> SubjectList = new List<udtRegistrationSubjectNew>();
                 SubjectList = accessHelper.Select<udtRegistrationSubjectNew>();
 
                 Dictionary<string, List<udtRegistrationSubjectNew>> tmpSubjDict = new Dictionary<string, List<udtRegistrationSubjectNew>>();
-                
+
 
                 foreach (udtRegistrationSubjectNew data in SubjectList)
                 {
                     if (!tmpSubjDict.ContainsKey(data.RegGroupName))
                     {
                         tmpSubjDict.Add(data.RegGroupName, new List<udtRegistrationSubjectNew>());
-                        tmpSubjDict[data.RegGroupName].Add(data);                    
+                        tmpSubjDict[data.RegGroupName].Add(data);
                     }
                     else
-                        tmpSubjDict[data.RegGroupName].Add(data); 
+                        tmpSubjDict[data.RegGroupName].Add(data);
 
                 }
-                ctrr2.SetRegistrationSubject(tmpSubjDict);
+                // 不在 DoWork 中呼叫 Step2 的 setter，改為放入 Result
 
 
 
@@ -208,6 +227,64 @@ student.id IN
 
                 #endregion
 
+                // ===================== 整理學生類別（背景執行） =====================
+                List<StudentTagRecord> tag1Student = new List<StudentTagRecord>();
+                List<StudentTagRecord> tag2Student = new List<StudentTagRecord>();
+
+                // 一次抓全部 StudentTag
+                List<StudentTagRecord> allStudentTags = StudentTag.SelectAll();
+                var tagIdToStudentTags = allStudentTags.ToLookup(t => t.RefTagID);
+
+                // 共用方法：依 Prefix/Name 找 TagID
+                Func<string, List<string>> getTagIdsByPrefixOrName = (tagName) =>
+                {
+                    if (string.IsNullOrEmpty(tagName))
+                        return new List<string>();
+
+                    var ids = _TagList
+                        .Where(x => x.Prefix == tagName)
+                        .Select(x => x.ID)
+                        .ToList();
+
+                    if (ids.Count == 0)
+                    {
+                        ids = _TagList
+                            .Where(x => x.Name == tagName)
+                            .Select(x => x.ID)
+                            .ToList();
+                    }
+
+                    return ids;
+                };
+
+                if (!string.IsNullOrEmpty(studentTag1))
+                {
+                    var tag1IDs = new HashSet<string>(getTagIdsByPrefixOrName(studentTag1));
+                    tag1Student = tag1IDs
+                        .SelectMany(id => tagIdToStudentTags[id])
+                        .ToList();
+                }
+
+                if (!string.IsNullOrEmpty(studentTag2))
+                {
+                    var tag2IDs = new HashSet<string>(getTagIdsByPrefixOrName(studentTag2));
+                    tag2Student = tag2IDs
+                        .SelectMany(id => tagIdToStudentTags[id])
+                        .ToList();
+                }
+                // ===================== 整理學生類別（結束） =====================
+
+                // 將資料放入 Result，在 RunWorkerCompleted 中再設定給 Step2
+                e.Result = new Step1NextResult
+                {
+                    DeptDict = tmpDeptDict,
+                    SubjDict = tmpSubjDict,
+                    DeptNameDict = StudentDeptNameDict,
+
+                    // 新增這兩個回傳值
+                    Tag1Student = tag1Student,
+                    Tag2Student = tag2Student
+                };
 
             }
             catch (Exception ex)
@@ -267,7 +344,7 @@ student.id IN
             ctrr2.SetButtonEnable(false);
             ctrr2.SetSelStudentTag(studentTag1, studentTag2, studentFilter);
             ctrr2.SetParseNumber(parseNumber);
-    
+
             ctrr2.SetStudGradeYearSems(StudGradeYearSemsDict);
 
             _bgWorkerStep1Next.RunWorkerAsync();
@@ -308,30 +385,36 @@ student.id IN
         private void LoadDefaultData()
         {
             _bgWorkerLoadDefaultData.ReportProgress(1);
+
             StudentIDListAll.Clear();
-            // 三年級一般生
-            _StudentList = K12.Data.Student.SelectAll().Where(x => (x.Status == StudentRecord.StudentStatus.一般 ) && !string.IsNullOrEmpty(x.RefClassID) && x.Class.GradeYear != null && x.Class.GradeYear.Value == 3).ToList();
+            // 過濾不排名名單與成績不滿5學期
+            _StudentFilterList.Clear();
+            scoreErrIDList.Clear();
+            QueryData qd = new QueryData();
+
+            //// 三年級一般生
+            //_StudentList = K12.Data.Student.SelectAll().Where(x => (x.Status == StudentRecord.StudentStatus.一般) && !string.IsNullOrEmpty(x.RefClassID) && x.Class.GradeYear != null && x.Class.GradeYear.Value == 3).ToList();
+
+            // 取得三年級一般狀態學生 ID
+            StudentIDListAll = qd.GetStudentIDByGradeYearStatus1(3);
+
             _bgWorkerLoadDefaultData.ReportProgress(30);
+            _StudentList = K12.Data.Student.SelectByIDs(StudentIDListAll);
+
             _TagList = K12.Data.TagConfig.SelectByCategory(TagCategory.Student);
 
             _bgWorkerLoadDefaultData.ReportProgress(50);
 
-           foreach (StudentRecord rec in _StudentList)
-                StudentIDListAll.Add(rec.ID);
-
-            QueryData qd = new QueryData();
+            //foreach (StudentRecord rec in _StudentList)
+            //    StudentIDListAll.Add(rec.ID);         
 
             // 取得學生成績年級學生
             StudGradeYearSemsDict = qd.GetScoreGradeSemesterByGradeYear(StudentIDListAll);
 
             _bgWorkerLoadDefaultData.ReportProgress(70);
 
-            // 過濾不排名名單與成績不滿5學期
-            _StudentFilterList.Clear();
-            scoreErrIDList.Clear();
-
             // 完全沒成績
-            foreach(string id in StudentIDListAll)
+            foreach (string id in StudentIDListAll)
             {
                 if (!StudGradeYearSemsDict.ContainsKey(id))
                     scoreErrIDList.Add(id);
@@ -351,7 +434,7 @@ student.id IN
                     _StudentFilterList.Add(rec);
             }
 
-            
+
             _bgWorkerLoadDefaultData.ReportProgress(100);
 
         }
@@ -365,7 +448,7 @@ student.id IN
             cboStudentTag1.Enabled = value;
             cboStudentTag2.Enabled = value;
             iptParseNum.Enabled = value;
-        
+
         }
 
         private void cboStudentFilter_SelectedIndexChanged(object sender, EventArgs e)
