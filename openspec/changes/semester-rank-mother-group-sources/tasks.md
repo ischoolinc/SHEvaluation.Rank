@@ -1,0 +1,213 @@
+# Tasks
+
+## 1. 共用母群模型與目前學生來源
+
+- [x] 1.1 新增學生母群資料，含學生 ID、學號、姓名、原始副本與工作副本，以及五種排名各一組名稱與參與值；將新檔加入 `SHEvaluation.Rank.csproj`，建置專案並確認編譯成功
+- [x] 1.2 把目前學生的狀態、班級、年級、勾選年級、科別 `COALESCE` 與類別 `First()` 抽成目前學生來源，確認不排名類別不再刪除學生；以同一組年級與類別比對，五種母群名稱與抽出前的欄位值一致
+- [x] 1.3 實作初始參與順序：三種來源都先保留來源名稱與參與值，類別名稱空白則該項不參與、目前學生來源的空白科別仍參與，然後三種來源都套用不排名類別；用目前學生、快照與 Excel 各一名符合不排名類別的學生驗證名稱不變、初始五種都不參與，且舊歷史批次未被更新
+
+第一階段完成的是共用模型。Task 2.2 已把確認清單改接 `StudentMotherGroup`，不再用 `_StudentFilterList` 刪除不排名學生。排名 SQL 與 `rank_*` 寫入仍留到第 3 階段；計算按鈕目前不寫入排名資料。
+
+## 2. 計算期間與確認清單
+
+- [x] 2.1 在條件畫面加入可編輯學年度與學期 1/2，預設系統目前值，來源預設為目前學生；開啟表單確認預設值，並確認歷史來源期間的控制項尚未改寫這兩個計算值
+- [x] 2.2 新增確認清單，以學生 ID 綁定五種唯讀母群名稱與五種參與狀態，顯示母群總人數、參與人數與排除人數；搜尋只過濾畫面，人數仍以完整工作副本計算，且此步驟不查成績表。此步驟才取代現有學生表，符合不排名類別的學生留在確認清單，不再沿用 `_StudentFilterList` 的刪除
+- [x] 2.3 實作個別與多選參與調整，以及還原到進入清單時的初始參與；調整後不寫入 `rank_*`，還原後名稱與初始參與與進入清單時相同
+
+第二階段最後補強：視窗 Resize 會重新排列圖1、圖2；這些動態控制項改用絕對位置，不再同時用 Anchor 拉伸。學生總人數單獨一行，年、科、班、類別一、類別二的參與／排除人數各占固定表格一列。學校系統視窗仍未開啟，實際畫面待人工確認。
+
+## 3. 排名 SQL 與舊結果相容
+
+- [x] 3.1 年級 SQL 的 `student_list` 改帶五個名稱與五個參與旗標，五種窗口分組都加入對應旗標，四種成績的寫入列只保留該項參與者；檢查產生的 SQL，確認不參與者在 `RANK`、`COUNT`、標準差、百分位與五標之前已被排除
+
+Task 3.1 的 `student_list` 來自確認清單工作副本。五種參與旗標進入窗口分組，`score_list` 各分支只保留該項參與者。`SemesterRankWriteGate` 仍禁止寫入，這段 SQL 尚未對資料庫執行。
+- [x] 3.2 類別名稱空白且不參與時不寫入空白類別排名；科別名稱空白但參與時仍寫入科排名；以這兩種學生檢查 `rank_matrix.rank_type` 與 `rank_name`
+- [x] 3.3 沒有該項分數的參與者不產生該項 `rank_detail`，也不計入該項 `matrix_count`，確認清單仍保留該生；用一名缺科目成績、一名缺分項成績的學生驗證
+
+Tasks 3.2、3.3 沿用原有空白類別條件與分數 `IS NOT NULL` 條件，沒有改排名公式，也沒有改 `rank_*` 寫入語句。檢查的是產生後的 SQL 文字與確認清單，尚未在 PostgreSQL 執行。
+- [x] 3.4 目前學生來源、相同計算期間與擇優設定、且未改初始參與時，比對新舊有效 `rank_matrix` 與 `rank_detail` 的項目、類型、人數、分數與名次；重複科目的重複計數維持舊結果
+
+Task 3.4 產生唯讀比對語句：同一段排名 SQL、同一個學年度學期與同一組擇優片段，左側保留舊公式，右側套用參與旗標，兩側都在 `, update_data AS` 之前停下。比對欄位涵蓋四種成績與五種排名的項目、類型、母群名稱、`matrix_count`、分數、名次、百分位、平均、標準差、五標與級距；重複科目仍用原本的 `unnest`，沒有加 `DISTINCT`。這段語句尚未在 PostgreSQL 執行，不可把排名結果視為已經一致。`SemesterRankWriteGate` 仍禁止寫入。
+
+## 4. 快照與計算成敗一致性
+
+- [x] 4.1 只讀查詢四張排名表的唯一索引與約束，確認舊的無效列與新的有效列能否並存；現行程式已用同一句停用舊列並插入新列。若所有勾選年級無法沿用這個方式，停止並回報，不改寫舊列母群名稱、不刪除舊批次，也不逐年級提交有效排名
+
+Task 4.1 產出四張表的唯讀目錄 SQL，以及依回傳列判斷新舊列能否並存的規則。UNIQUE 不再只靠欄位名稱認定插入必然失敗：能由語句與限制確定衝突時才是 stop，需要實際鍵值或索引條件時是 not-verified，有足夠條件確認舊無效列與新有效列可以同時存在時才是 coexist。`App.config` 沒有連線字串，這段 SQL 尚未在 PostgreSQL 執行，索引與約束尚未實際驗證，不能認定新舊列可以並存。表單已改由 `SemesterRankPublishSql.Build` 組成單一語句，但該語句尚未在 PostgreSQL 執行，不能認定單一語句可以公布所有勾選年級。`SemesterRankWriteGate` 仍禁止寫入。Task 4.2 的失敗回滾尚未在資料庫驗證。Task 4.3 的快照只有靜態組譯，尚未在資料庫公布。
+- [ ] 4.2 用一次 `QueryHelper.Select` 的單一 PostgreSQL 語句同時停用本次所有勾選年級的舊有效排名並啟用新排名；語句失敗時驗證舊有效排名與執行前相同、新排名未生效，且沒有使用批次 ID 0。故意在多個年級的語句中製造失敗，確認不會只剩部分年級被停用或啟用
+
+Task 4.2 已建立單一語句組譯，並依審查補上失敗回報與執行期失敗判斷，見 `Stage4_Task42_Review.md`、`Stage4_Task42_Final_Review.md` 與 `Stage4_Task42_Safety_Review.md`。成功時同一句回傳明細筆數。明細筆數不符、沒有矩陣、沒有學生列、母群身分衝突或故意失敗時，失敗條件使用執行期統計值，不用常數 `1/0`。同一批次的同一學生只保留一種母群身分，身分衝突會拒絕整句，不取第一筆。重複科目仍留在排名明細。`cd.Save()` 在排名語句之前執行；排名失敗時，這份擇優設定可能已經寫入，而且不會隨排名語句回滾。這些都是靜態檢查。專案沒有測試資料庫連線資訊，沒有執行 `INSERT`、`UPDATE` 或 `DELETE`，不能認定失敗會回復、舊排名未被誤停，或新排名沒有部分生效。`SemesterRankWriteGate` 仍回傳 false。此項維持未完成，直到資料庫驗證通過。Task 4.3 的快照只有靜態組譯，尚未在資料庫公布。
+- [ ] 4.3 公布成功時在原 `Setting` 寫入 `MotherGroupSnapshot version="1"`，內容是圖2最終值，並保留學年度、學期、考試名稱、不排名類別、類別、年級與擇優節點；讀回 XML 可還原全部學生與五種名稱、參與值。公布前失敗時只清理未生效資料，不修改舊有效列
+
+Task 4.3 已把圖2確認清單的工作副本寫入新 `rank_batch.setting` 的 `MotherGroupSnapshot version="1"`，與新批次同一個 `INSERT`，不更新既有批次。讀回測試涵蓋全部學生、五種名稱與參與值、XML 特殊字元、空白名稱、全不參與與未進入排名清單的學生。寫入前會先檢查學生識別不可空白、不可重複，全部通過後才修改 `Setting`。讀回使用暫存清單；重複識別、排名類型不完整或重複、非法 XML、版本錯誤與來源種類錯誤都回傳 false，且學生清單為空。原有學年度、學期、考試名稱、不排名類別、類別、年級與擇優節點仍保留。排名公式、`rank_batch_student`、`rank_matrix` 與 `rank_detail` 的計算規則沒有改。`SemesterRankWriteGate` 仍回傳 false，沒有執行 `INSERT`、`UPDATE` 或 `DELETE`。公布前失敗時是否只清理未生效資料，尚未在資料庫驗證，所以此項維持未完成。見 `Stage4_Task43_Review.md` 與 `Stage4_Task43_Final_Review.md`。
+
+## 5. 歷史批次還原
+
+- [ ] 5.1 列出設定考試名稱為學期成績的全部批次，含學年期、說明、年級與是否有版本 1 快照，且不含定期評量與技職繁星；以一筆舊批次與一筆技職批次驗證清單內容
+
+Task 5.1 已把歷史學期成績批次清單接到圖1。查詢只讀 `rank_batch` 的識別、學年度、學期、說明與設定，不篩掉舊的無效批次，也不把同一學年期收成一筆。考試名稱不是「學期成績」的列，包括定期評量、技職繁星與其他排名，都不會進入清單。清單顯示批次識別、學年期、說明、排名年級，以及是否有 `MotherGroupSnapshot version="1"`。使用者可指定其中一筆；該批的學年度、學期另存，不覆蓋本次計算期間。此步驟不還原學生母群。靜態測試用同一學年期的兩筆學期批次，以及定期評量、技職繁星與其他排名的設定驗證篩選。這段 `SELECT` 尚未在 PostgreSQL 執行，不能認定學校資料庫的實際批次已列出，所以此項維持未完成。Tasks 4.1、4.2、4.3 的資料庫驗證仍未完成。見 `Stage5_Task51_Review.md`。
+- [ ] 5.2 版本 1 快照先成為來源原值，再套用本次不排名類別，且不更新該舊批次；載入一名快照中參與為 true 且符合目前不排名類別的學生，確認五種名稱仍是快照原值、五種初始參與為不參與，並確認該歷史 `rank_batch.setting` 未被改寫
+
+Task 5.2 已依 Task 5.1 選取的 `rank_batch.id` 唯讀該批 `setting`，並用 `MotherGroupSnapshot.TryRestore` 載入版本 1 快照。快照名稱與參與先成為來源原值，再套用本次不排名類別；符合者五種初始參與為不參與，名稱不變。五種都不參與與沒有本次成績的學生仍留下。設定必須是考試名稱「學期成績」，且只能有一個 `MotherGroupSnapshot version="1"`。快照內的 `Source.historyBatchId` 不是這次選取的 `rank_batch.id`。沒有版本 1 快照、快照重複、考試名稱不符或快照無法還原時不進入圖 2，清空確認清單，計算按鈕保持關閉，也不改用目前學生資料。確認清單建立成功後才啟用計算按鈕。`SemesterRankWriteGate` 仍回傳 false。無快照批次的排名資料還原留在 Task 5.3。歷史批次清單查詢失敗時會清除選取與歷史批次識別。全批次查詢在快照很大時有效能風險，本次沒有改資料庫篩選。Task 5.4 已改為每次按下一步都依圖1重建年級與擇優採計清單。設定查詢尚未在 PostgreSQL 執行，不能認定學校資料庫的歷史快照已還原，所以此項維持未完成。Tasks 4.1、4.2、4.3 與 Task 5.1 的資料庫驗證仍未完成。見 `Stage5_Task52_Review.md` 與 `Stage5_Task52_Final_Review.md`。
+- [ ] 5.3 無快照時以去重後的 `rank_batch_student` 與 `rank_detail` 還原年、班、類別與科別；沒有科排名列則科別空白、不參與並警示，不用目前科別補；類別原本空白不發缺漏警示，並在還原後套用不排名預設
+
+Task 5.3 在沒有版本 1 快照時，才依選取的 `rank_batch.id` 唯讀 `rank_batch_student`、`rank_detail` 與 `rank_matrix`。年、班與類別優先用學生列的 `matrix_grade`、`matrix_class`、`matrix_tag1`、`matrix_tag2`；沒有學生列才改用對應 `rank_name`。科別只取科排名的 `rank_name`。沒有科排名時名稱留白、不參與並警示。類別原本空白不發缺漏警示。同一學生同一排名類型有不同名稱時保留全部名稱、不任取第一筆，該項留白且不參與。Task 5.6 已把這些名稱顯示在確認清單；這段查詢仍未在 PostgreSQL 執行。還原後套用本次不排名類別。查詢沒有在 PostgreSQL 執行，不能認定學校舊批次已還原，所以此項維持未完成。Tasks 4.1、4.2、4.3、5.1、5.2 的資料庫驗證仍未完成。見 `Stage5_Task53_Review.md`。
+- [ ] 5.4 歷史學生沒有本次成績仍留在確認清單，該成績項目不產生名次；年排名名稱無法解析年級時提示且不產生該生新明細，不改用目前班級年級
+
+Task 5.4 每次按下一步都先以共用流程依圖1年級勾選與擇優採計重建 `_GradeYearList`、`_GradeSelectList`，目前學生與歷史來源不再沿用前一次清單。圖2計算學年度、學期仍取自圖1。歷史學生沒有本次成績仍留在確認清單；既有成績條件仍以分數不是 null 才產生該項明細與人數，本次沒有改排名公式。年排名名稱無法解析時提示並保留學生，不產生該生新明細，也不改用目前年級、班級或科別。`SemesterRankWriteGate` 仍回傳 false。排名語句沒有在 PostgreSQL 執行，不能認定缺成績與無法解析年級的實際排名結果，所以此項維持未完成。Tasks 4.1、4.2、4.3、5.1、5.2、5.3 的資料庫驗證仍未完成。見 `Stage5_Task54_Review.md`。
+- [ ] 5.5 歷史清單可用學號加入不在清單中的學生，帶入目前五種母群並套用初始參與規則；重複加入與無法唯一對應時不新增列
+
+Task 5.5 只在母群來源為歷史學期成績排名時顯示「加入學生」。學號以 `student.student_number` 查詢，零筆或多筆都不新增。唯一學生才帶入目前年、科、班與類別，並套用本次不排名類別；原有歷史學生的五種母群名稱不改。沒有本次成績仍留在確認清單，既有分數條件仍負責不產生該項明細。這段 `SELECT` 尚未在 PostgreSQL 執行，不能認定學校學號查詢結果，所以此項維持未完成。Tasks 4.1、4.2、4.3、5.1、5.2、5.3、5.4 的資料庫驗證仍未完成。見 `Stage5_Task55_Review.md`。
+- [ ] 5.6 同一學生的同一排名類型若還原出多個不同名稱，不取第一筆、不用目前母群覆蓋，確認清單警示全部衝突名稱，該項不選定且不參與，未衝突的其他排名仍還原；用同一班排名同時出現兩個班名的舊資料驗證
+
+Task 5.6 把同一學生、同一排名類型的不同歷史名稱留在該項，確認清單的「母群衝突」欄列出排名類型與全部名稱。該項不選定、初始不參與；勾選或還原參與都不能改成參與。其他排名維持原名稱與參與。沒有用目前班級、科別或類別補衝突。靜態測試用兩個班名的資料驗證。這不是學校舊批次的實際查詢，所以此項維持未完成。Tasks 4.1、4.2、4.3、5.1、5.2、5.3、5.4、5.5 的資料庫驗證仍未完成。見 `Stage5_Task56_Review.md`。
+
+Task 5.5 的兩項遺留只記錄、不在本次改歷史母群來源規則。沒有班級時，新增學生的年排名名稱是空白，但初始參與仍為 true；計算時 Task 5.4 會因為無法解析年級而不產生明細，畫面勾選與實際不排名不一致。加入學生時會同步讀取全部學生標籤，學生很多時可能讓畫面停頓。這兩項都尚未改動。
+
+- [ ] 5.7 獨立待辦：歷史加入學生仍只依學號。相同學號對到多位學生時阻擋加入。確認清單已有不同 `student.id` 但學號相同時，`ContainsIdentity` 可能誤判為已在清單。未另案要求前不改 `HistoryStudentAdd` 與 `ContainsIdentity`。日後確認清單內以 `student.id` 為唯一識別，不只使用學號。本項不屬於 Excel 13 欄，也不屬於 Task 10.2
+
+Task 5.7 只記錄現況。歷史加入學生的查詢仍是 `student.student_number`，零筆或多筆都不新增。Excel 13 欄、排名 SQL、`MotherGroupSnapshot version="1"` 與 Task 10.2 都不處理這項。未另案要求前維持未完成。
+
+## 6. Excel 匯入與匯出
+
+Excel 欄位維持 13 欄。第 3 欄是學生狀態，六種對照維持一般 1、延修 2、休學 4、輟學 8、畢業或離校 16、刪除 256。匯入身分仍是學號加 `student.status`。匯出時 `Status` 已有值就直接轉換；沒有值時以缺值的 `student.id` 同一句查詢目前 `student.status`。查不到、查詢失敗或不在六種值內就回報，不寫成一般，也不依學號猜測。這個狀態是目前主檔，不是歷史當時的狀態，也不改母群名稱或參與。下面三項原先的 12 欄實作不能關閉這些 Task。`MotherGroupSnapshot version="1"`、排名公式、`SemesterRankPublishSql` 與 Task 10.2 的公布測試不因這次規格改變而修改。Task 5.7 也不在這三項內。
+
+- [x] 6.1 以 Aspose.Cells 匯出 13 欄工作副本。第 3 欄只寫一般、延修、休學、輟學、畢業或離校、刪除。`Status` 缺值時，以 `student.id` 一批查目前 `student.status`；查不到、查詢失敗或不在六種值內就回報該生，不寫成一般，也不依學號猜測。參與值只寫「參與」或「不參與」。五種母群名稱與參與內容與確認清單一致。開啟匯出檔核對標題、學生狀態與一名已調整參與狀態的學生
+
+Task 6.1 用既有 Aspose.Cells 把確認清單工作副本匯出成 13 欄，姓名後面是學生狀態。六種 `student.status` 只寫一般、延修、休學、輟學、畢業或離校、刪除。`StudentMotherGroup.Status` 可空；目前學生來源只納入一般學生，並把 `StudentRecord.StudentStatus` 轉成資料庫代碼 1 後帶入。工作副本會複製這個狀態。狀態已有值時不查詢；缺值時把不重複的 `student.id` 組成一句 `SELECT student.id, student.status ... IN (...)`。查不到、查詢失敗、同一識別超過一筆，或不在六種值內，就回報該生且不存檔，不寫成一般，也不把查到的狀態寫回確認清單。學號以文字儲存格保留前導零。五種母群名稱與參與只讀工作副本。靜態測試把活頁簿存檔後再讀回，核對標題、六種狀態、學號 `00123`，以及年排名已改為不參與的學生。還沒有在學校畫面按匯出，也還沒有對 PostgreSQL 執行這句狀態查詢。匯入仍使用原本 12 欄，Task 6.2、6.3、5.7 沒有實作。見 `Stage6_Task61_Status13_Review.md`。
+
+下列三段是先前 12 欄實作的紀錄，不能單獨代表這次 13 欄。Task 6.1 當時用既有 Aspose.Cells 把確認清單工作副本匯出成 12 欄。欄位順序是學號、姓名、年排名母群、班排名母群、科排名母群、類別一母群、類別二母群、年排名參與、班排名參與、科排名參與、類別一參與、類別二參與。參與只寫「參與」或「不參與」。靜態測試會把活頁簿存檔後再讀回核對標題、五種名稱、空白母群、不參與與特殊字元，並確認確認清單沒有被改寫。該次還沒有在學校畫面按匯出並用 Excel 開啟檔案，也沒有實作匯入。見 `Stage6_Task61_Review.md`。
+- [x] 6.2 匯入時驗證 13 欄標題、空白學號、空白或不在對照表的學生狀態、相同學號加相同狀態的檔內重複、同一 `student.id` 重複、非法參與值，以及 `student.student_number` 加 `student.status` 的零筆或多筆。相同學號、不同狀態可各自對應。任一錯誤都不建立確認清單，並回報 Excel 列號與錯誤內容。學號保留前導零
+
+Task 6.2 把匯入改成與匯出相同的 13 欄。學生狀態只接受一般、延修、休學、輟學、畢業或離校、刪除，並與 Task 6.1 共用同一組對照，轉成 `student.status` 的 1、2、4、8、16、256。比對改成一句 `(student.student_number, student.status) IN (...)`。零筆回報找不到，一筆採用該 `student.id`，超過一筆回報不唯一且不任選。相同學號、不同狀態可同時通過；相同學號與相同狀態，或解析到同一個 `student.id`，都回報列號。學號或狀態空白、狀態文字不在對照表、參與值不是「參與」或「不參與」時，整份 `IsValid` 為 false，學生清單是空的。姓名不同時驗證結果採用 `student.name` 並保留警告。學號 `00123` 維持文字。靜態測試用記憶體中的查詢結果覆蓋上述案例，沒有對 PostgreSQL 執行，也沒有在學校畫面選檔。Task 6.3 的再次匯入與不排名預設仍未完成。見 `Stage6_Task62_Status13_Review.md`。
+
+先前 12 欄紀錄：Task 6.2 當時讀取工作表「母群」的 12 欄，學號以 `SELECT student.id, student.student_number, student.name` 比對。那段紀錄不能關閉 13 欄 Task。見 `Stage6_Task62_Review.md`。
+- [x] 6.3 通過驗證的檔案成為來源，姓名與主檔不同時採用主檔姓名並保留警告，再套用不排名預設；將同一份 13 欄匯出檔再次匯入，確認對到同一個 `student.id`。符合不排名類別者的初始參與與檔內值不同，五種母群名稱與學號、學生狀態對應仍一致；不符合者的參與值與檔案相同
+
+Task 6.3 用 Task 6.2 已通過的學生建立確認清單。`CreateGroups` 採用已解析的 `student.id` 與 `student.status`，不再以學號查找。`Load` 與 `ShowConfirmList` 不呼叫 `ContainsIdentity`，相同學號、不同 `student.id` 會同時留下。五種母群名稱與參與先用 Excel 原值，再套用圖1不排名類別；符合者五種初始不參與且名稱不變，不符合者保留檔內參與。姓名不同時清單用 `student.name` 並保留警告。任一列失敗時不建立可套用學生，原有確認清單不變。沒有本次成績的學生仍留在清單。學號 `00123` 保留前導零。靜態測試含學號 101 的一般與休學、13 欄匯出再匯入，以及確認清單載入兩筆。還沒有在學校畫面選檔，也沒有對 PostgreSQL 執行查詢。Task 5.7 的 `ContainsIdentity` 沒有改。見 `Stage6_Task63_Status13_Review.md`。
+
+先前 12 欄紀錄：Task 6.3 當時在圖1選擇「Excel 母群清單」後，於下一步用驗證結果建立確認清單，並套用不排名類別。那段紀錄不能單獨代表 13 欄往返。見 `Stage6_Task63_Review.md`。
+
+## 7. 跨來源整合
+
+Task 5.4 已讓兩種來源在每次下一步時依圖1重建 `_GradeYearList` 與 `_GradeSelectList`。第 7 節實際計算仍不得提前解除 `SemesterRankWriteGate`。
+
+第七階段整合時另須處理三項已記錄、尚未改動的問題：新增學生沒有班級時年排名名稱空白但初始參與仍為 true；每次加入學生都會讀取全部學生標籤，可能造成畫面停頓；歷史母群衝突名稱目前只留在確認清單，快照仍只存空白名稱與不參與。這三項不在 Task 6.1、Task 6.2、Task 6.3、Task 7.1、Task 7.2 或 Task 7.3 處理。
+
+- [ ] 7.1 以目前學生來源、預設參與與選定學年期完成一次計算，確認新批次快照、有效排名與舊公式比對結果同時成立，且檢索畫面只看到公布後的排名
+
+Task 7.1 用同一份目前學生確認清單靜態組出三件事：新批次 `MotherGroupSnapshot version="1"`、同一句公布語句，以及同一學年度學期的舊公式比對。預設參與沒有再改寫。符合不排名類別的學生留在快照且五種不參與；空白科別仍參與，空白類別不參與。檢索畫面兩段查詢都只讀 `is_alive = true`。`SemesterRankWriteGate` 仍在計算按鈕進入這些語句前返回 false。沒有執行 `INSERT`、`UPDATE`、`DELETE`，也沒有開啟學校畫面，所以不能認定資料庫上的新排名、快照與舊公式結果已經同時成立，此項維持未完成。新增歷史學生的空白年排名、每次加入學生讀取全部標籤，以及歷史衝突名稱沒有寫進快照，都不屬於 Task 7.1，本次沒有改。見 `Stage7_Task71_Review.md`。
+- [ ] 7.2 以無快照歷史批次做母群、另一個學年期做成績完成一次計算，確認母群期間與成績期間不同、無成績學生仍在快照、有成績項目的名次不含不參與者
+
+Task 7.2 以批次 88 的無快照排名資料還原母群，歷史期間是 113 學年度第 2 學期，成績期間是圖1的 114 學年度第 1 學期。兩段期間分開保存。新批次快照記錄歷史批次識別，學年度與學期仍是 114-1。沒有本次成績的學生留在確認清單與快照；排名語句仍以選定學年度連接成績，並保留分數不是 null 的條件，不另造明細。不參與者在名次計算前被旗標排除。`SemesterRankWriteGate` 仍回傳 false。還原查詢與公布語句都沒有在 PostgreSQL 執行，也沒有開啟學校畫面，所以此項維持未完成。三項已記錄的遺留問題不在本次範圍。見 `Stage7_Task72_Review.md`。
+- [ ] 7.3 建置 `SHEvaluation.Rank.csproj`，確認沒有新增的編譯錯誤，且定期評量與技職繁星檔案沒有行為修改
+
+Task 7.3 以 Excel 母群與圖1選定的 114 學年度第 1 學期做靜態整合。五種名稱與參與來自 Excel，不改用目前班級、科別或類別；符合不排名類別者五種不參與且名稱不變。同一份確認清單進入快照與排名 SQL。沒有本次成績的學生留在清單，分數條件仍是不是 null。五種參與旗標在對應排名前生效。成績期間不是歷史批次的 113-2。定期評量與技職繁星檔案沒有接上母群計算。MSBuild Debug 沒有新增編譯錯誤。`SemesterRankWriteGate` 仍回傳 false。Excel 學號查詢、公布語句與學校畫面都沒有實際執行，所以此項維持未完成。三項已記錄的遺留問題不在本次範圍。見 `Stage7_Task73_Review.md`。
+
+Task 4.2、4.3、5.1 到 5.6、6.1 到 6.3、7.1 到 7.3 的 PostgreSQL 或畫面驗收尚未完成，維持未勾選。Phase 8～11 的證據不可用來提前勾選這些 Task。
+
+三項歷史來源遺留保持獨立，不納入 Phase 8～11：沒有班級的新增學生年排名名稱空白但初始參與仍為 true；每次加入學生讀取全部學生標籤；歷史衝突名稱只留在確認清單，快照只存空白名稱與不參與。Task 5.7 的學號去重限制也保持獨立，不在 Excel 13 欄、Task 10.2 或 Phase 11 處理。
+
+每次 Apply 只執行下面其中一個 Task。Phase 11 必須等 Phase 10 的必要證據全部通過。
+
+## 8. Q1 畫面載入狀態
+
+- [x] 8.1 確認 `K12.Data` 物件及其關聯屬性的執行緒安全，範圍包含初次載入使用的預設學年度、學期、學校設定檔、學生類別、`Student.SelectAll()` 與 `Class.GradeYear`。確認結果寫入本 Task 紀錄。未確認可離開 UI 執行緒前，不把這些讀取移到背景執行緒。不改學生篩選與擇優設定規則，不改 C# 行為，`SemesterRankWriteGate` 仍回傳 false
+
+Task 8.1 的結論見 `Stage8_Task81_Review.md`。`Library/K12.Data.xml` 沒有這五項的執行緒安全契約。`K12.Data.dll` 2.0.0.8 的對應方法沒有鎖：預設學年度與學期寫入靜態 `SysConfig`，學校組態使用沒有鎖的靜態 `ConfigurationManager`，學生、班級與類別都寫入靜態 `EntityCache`。`StudentRecord.Class` 每次都呼叫 `Class.SelectByID`，`GradeYear` 只在取得班級紀錄後讀欄位。五項都尚無足夠證據可離開 UI 執行緒，Task 8.2 不得把牠們放進 `BackgroundWorker`。沒有修改 C#，篩選與擇優規則未改，`SemesterRankWriteGate` 仍回傳 false，沒有執行排名寫入。
+
+- [x] 8.2 依 8.1 的結論，讓 `labelX6` 依序持續顯示畫面初始化、載入學校設定、載入學生類別、載入學生清單、載入年級清單。可離緒的讀取才放入背景工作；尚未確認的讀取留在 UI 執行緒，並在讀取前交回訊息迴圈使階段文字先畫出。不使用 `Application.DoEvents()`，不顯示沒有依據的百分比，不新增視窗
+
+Task 8.2 的實作見 `Stage8_Task82_Review.md`。五段讀取都留在 UI 執行緒。建構函式只先顯示圖1、停用下一步並寫入「正在初始化畫面…」；`OnShown` 之後以五次 `BeginInvoke` 依序執行畫面初始化、學校設定、學生類別、學生清單與年級清單，每段文字都在該段同步讀取之前排入訊息迴圈。沒有 `Application.DoEvents()`，沒有百分比，沒有新視窗，也沒有為這些讀取建立 `BackgroundWorker`。學生篩選與擇優規則未改。成功時恢復原本說明、失敗處理與重新啟用下一步屬於 Task 8.3，本次沒有做。`SemesterRankWriteGate` 仍回傳 false，沒有執行排名寫入。
+
+- [x] 8.3 五段都成功時恢復「說明：班、科、年排名會自動計算。分項成績擇優項目請參考成績計算規則。」並啟用下一步。任一階段失敗時左下角顯示該階段與錯誤，不恢復原文，清空半套類別與年級，下一步維持停用。建置專案，確認定期評量與技職繁星沒有行為修改，`SemesterRankWriteGate` 仍回傳 false
+
+Task 8.3 的實作見 `Stage8_Task83_Review.md`。五段都成功才把 `labelX6` 恢復原本說明並啟用下一步。任一階段例外顯示「載入○○失敗：錯誤原因」，不恢復原文，清空類別、年級與暫存清單，下一步維持停用，且不能進入確認母群。`BeginInvoke` 排程與 UI 執行緒讀取維持 Task 8.2。表單已關閉或結果已判定時不再更新控制項。沒有 `Application.DoEvents()`。學生篩選、擇優規則、三種母群來源與排名 SQL 未改。MSBuild Debug 成功。Task 8.2 與 8.3 靜態檢查通過。`SemesterRankWriteGate` 仍回傳 false，沒有執行排名寫入，也沒有開啟學校畫面。
+
+## 9. Q2 排名寫入前保護
+
+- [x] 9.1 在計算按鈕的閘門返回之後加入確認框與執行中旗標。確認框顯示圖1學年度、學期、母群來源，以及會停用的有效學期成績排名，並說明擇優組態先寫入、排名語句失敗時不會回復。取消時不呼叫 `cd.Save()`、不執行排名 SQL。執行中第二次點擊不建立另一筆計算。閘門仍先返回，`CanWriteRankTables()` 維持 false，因此這段路徑目前不會碰到資料庫
+
+Task 9.1 的實作見 `Stage9_Task91_Review.md`。確認框與 `_rankCalculationRunning` 在 `CanWriteRankTables()` 返回之後。閘門仍先顯示既有阻擋訊息並返回，所以目前不會出現確認框，也不會呼叫 `cd.Save()` 或排名 SQL。允許寫入之後，確認框使用圖2上已帶入的計算學年度、學期與母群來源，並列出可解析年級的有效學期成績排名。取消只清除執行中旗標。確認後才停用計算與上一步。`cd.Save()`、`Build`、`ApplyParticipation` 與唯一一次 `Select` 的相對順序未改。`SemesterRankWriteGate` 仍回傳 false，沒有執行排名寫入。
+
+- [x] 9.2 靜態檢查確認框、執行中旗標、取消路徑沒有 `cd.Save()` 與 `queryHelper.Select(insertRankSql)`，且 `cd.Save()`、`Build`、`ApplyParticipation` 與唯一一次 `Select` 的順序仍符合 Task 4.2。不執行 `INSERT`、`UPDATE`、`DELETE`。`SemesterRankWriteGate` 仍回傳 false
+
+Task 9.2 的實作見 `Stage9_Task92_Review.md`。`_rankCalculationRunning` 在年排名提示、閘門阻擋訊息與確認框之前設下；這些訊息框的訊息迴圈不能再進入第二次計算。確認框與最終 `calc_condition` 都只使用確認清單可解析年級和圖1勾選年級的交集，圖1只勾選一年級時不會把其他年級顯示成將被停用。取消不呼叫 `cd.Save()`、不送出排名 SQL。確認後才停用計算與上一步。確認框、前置資料、`RunWorkerAsync` 與背景工作的例外會清除執行中旗標並恢復按鈕。`cd.Save()`、`SemesterRankSql.Build`、`SemesterRankPublishSql.Build`、`ApplyParticipation` 與唯一一次 `queryHelper.Select` 的相對順序未改。實際失敗仍顯示「計算排名失敗」，不顯示「計算完成」。三種母群來源共用 `RunRankCalculation`。MSBuild Debug 成功。Task 9.1、9.2、4.2、5.4、7.1、7.2、7.3 靜態檢查通過。`SemesterRankWriteGate` 仍回傳 false，沒有執行排名寫入，沒有開始 Phase 10 或 Phase 11。
+
+- [x] 9.3 排名計算工作副本與空年級防護。寫入閘門返回之後、確認框之前，先提交尚未寫入的參與編輯，再在畫面執行緒建立獨立工作副本；沒有可計算年級時顯示「沒有可計算的年級」並返回，不顯示確認框、不呼叫 `cd.Save()`、不產生或執行排名 SQL。確認框年級、`SemesterRankSql.Build`、`MotherGroupSnapshot.Append`、擇優 XML 與 SQL 擇優片段使用同一份副本，背景工作不直接讀 `_confirmList` 或 `_GradeSelectList`。確定後停用五種參與核取、右鍵批次參與、還原參與與歷史來源的加入學生，事件處理仍檢查執行中旗標；完成、失敗、取消或沒有年級時只恢復原本可用與可見的狀態。以靜態測試驗證，不改排名公式、三種母群來源、`MotherGroupSnapshot version="1"`、四張 `rank_*` 表與 Task 4.2 的單一語句順序。`SemesterRankWriteGate` 維持 false，不執行 `INSERT`、`UPDATE`、`DELETE`，不改定期評量與技職繁星
+
+Task 9.3 的靜態測試須涵蓋：空年級返回位於閘門 `return` 之後、`cd.Save()` 之前，且該路徑沒有確認框、`cd.Save()`、`SemesterRankSql.Build` 與 `queryHelper.Select`；工作副本的學生與排名欄位物件不同於畫面清單，並含學生 ID、學號、姓名、五種名稱、五種參與與衝突資訊；擇優清單、學年度、學期、三個類別條件、來源種類與歷史批次識別使用本次副本；未提交編輯在複製前寫入確認清單；背景工作區段不讀 `_confirmList` 與 `_GradeSelectList`；參與核取、右鍵批次、還原參與與加入學生都檢查執行中旗標；確定後才停用這些控制項，恢復時使用計算前的可用與可見狀態，取消與空年級不留下停用；`cd.Save()`、`Build`、`Publish`、`ApplyParticipation` 與唯一一次 `Select` 的順序仍在；閘門仍是 `return false`。MSBuild Debug 與既有 Task 4.2、Phase 7 靜態檢查仍須通過。
+
+Task 9.3 的人工驗收條件先列入，不在本 Task 對學校畫面執行，因為閘門維持 false，確認框與 `cd.Save()` 目前到不了：圖1只勾一年級而確認清單沒有一年級時，只看到「沒有可計算的年級」，沒有確認框，學校擇優組態不變；有交集時確認框年級與後來的 `calc_condition` 相同；確認框還開著或計算進行中時，改參與、還原或加入學生都不進入這次 SQL 與快照；取消、沒有年級、計算完成與計算失敗之後，原本可編輯的控制項恢復，原本隱藏的加入學生與匯入仍隱藏；三種母群來源都走這條路徑。這些畫面條件留到 Task 11.2，且必須在 Task 9.3 完成、Task 11.1 打開閘門之後才能做。
+
+Task 9.3 的實作見 `Stage9_Task93_Review.md`。寫入閘門的返回仍是計算流程的第一個返回。閘門允許寫入之後，才用工作副本與圖1勾選年級的交集判斷；交集為空時顯示「沒有可計算的年級」，不顯示確認框，不呼叫 `cd.Save()`、`SemesterRankSql.Build` 或排名 SQL。按下計算後先提交尚未寫入的參與編輯，這次提交不受執行中旗標阻擋，再深層複製確認清單與擇優清單。確認框、`Build`、`MotherGroupSnapshot.Append`、擇優 XML 與 SQL 擇優片段使用這份副本。背景工作不讀畫面 `_confirmList` 或 `_GradeSelectList`。參與核取、右鍵批次、還原參與與加入學生都檢查執行中旗標。確定後停用這些控制項；取消、空年級、成功或失敗時清除旗標，並恢復計算前的 Enabled 與 Visible。MSBuild Debug 成功。Task 9.3、9.1、9.2、4.2、7.1、7.2、7.3 靜態檢查通過。`SemesterRankWriteGate` 仍回傳 false，沒有執行排名寫入，沒有開始 Phase 10 或 Phase 11。
+
+## 10. PostgreSQL 安全驗證
+
+Phase 10 只使用獨立測試資料庫上的 PostgreSQL 9.6 與 17.1。不使用正式學校資料庫，不把學校連線寫入 `App.config`，不從學校端 `QueryHelper` 做首次寫入。產品語句維持單次 `Select`，不送 `BEGIN`、`COMMIT` 或 `SAVEPOINT`。
+
+- [x] 10.1 在 9.6 與 17.1 的獨立測試庫執行排名表目錄 `SELECT`。出現 stop，或 unique、exclusion 仍有未解釋的 unknown 時停止，不改舊列母群名稱、不刪舊批次、不開放寫入
+
+Task 10.1 的結案見 `Stage10_Task101_Final_Review.md`。使用者已確認 `1admin_coredev4`（PostgreSQL 9.6.24，`10.240.0.4`）與 `1admin_debug1`（PostgreSQL 17.11，`10.240.0.9`）是獨立測試庫。目錄 CSV 確認四張 `rank_*` 表、`is_alive` 允許 NULL，以及 `rank_matrix_unique_key` 的九欄定義；沒有 stop，沒有未解釋的 unique 或 exclusion。探針在兩個版本都讓 S1、S3、S4、F1、F2、F3 與必要 isolation 為 pass，S3、S4 的計畫保留 `update_data` 與 `id < 0` join，而且 UPDATE 早於 INSERT；兩次 `ROLLBACK` 後暫存表都不存在。這個唯一鍵因此判為 coexist，範圍是該約束與已測到的公布形狀。未執行的鍵值彙總 `SELECT` 不改判 coexist，也不再阻擋本 Task。產品四表公布仍屬 Task 10.2，本次沒有開始。`SemesterRankWriteGate` 仍回傳 false，沒有開始 Task 10.2 到 10.5 或 Phase 11。
+
+- [x] 10.2 三種母群來源各以最小確認清單在兩個版本執行成功公布。核對五種參與、圖1學年度與學期、四張 `rank_*` 表的關聯、新排名有效、舊學期成績有效列已停用，以及其他排名有效列未被停用。核對後回復測試寫入，不把測試排名留在庫中
+
+Task 10.2 的結案見 `Stage10_Task102_Final_Review.md`。使用者已在 `1admin_debug1`（PostgreSQL 17.11）與 `1admin_coredev4`（PostgreSQL 9.6.24）對目前學生、歷史確認清單、Excel 確認清單各執行一組 A、B、C。六組 B 都是 51 項必要檢查通過、`TEST_RESULT=pass`、`published_count=32`、新排名矩陣 20 筆、新排名明細 32 筆、`MotherGroupSnapshot version=1`，五種母群名稱與參與通過。六組 C 都在 `ROLLBACK` 後讓四張 `rank_*` 表回到測試前筆數，測試鍵值殘留為 0，暫存成績表不存在。沒有 `COMMIT`。`SemesterRankWriteGate` 仍回傳 false。沒有開始 Task 10.3 的資料庫執行，也沒有開始 Phase 11。
+
+- [x] 10.3 兩個版本都對含兩個年級的語句做故意失敗。語句錯誤後先 `ROLLBACK TO SAVEPOINT`，或改由獨立交易回復已中止的 PostgreSQL 交易，再檢查兩個年級的舊有效排名與執行前相同，且沒有新的有效排名
+
+Task 10.3 的結案見 `Stage10_Task103_Final_Review.md`。使用者已在 `1admin_coredev4`（PostgreSQL 9.6.24）與 `1admin_debug1`（PostgreSQL 17.11）執行 `Stage10_Task103_Failure_A.sql`、`B.sql`、`C.sql`。兩個版本都是 14/14 pass、`TEST_RESULT=pass`，並捕捉 `22P02`。一年級與二年級的舊有效排名都保留。沒有新批次、新排名矩陣或明細殘留。`ROLLBACK` 後四張 `rank_*` 表回到測試前數量，測試鍵值為 0。沒有 `COMMIT`。`SemesterRankWriteGate` 仍回傳 false。Task 10.4、10.5 與 Phase 11 沒有開始。
+
+- [x] 10.4 量測公布語句長度與實際閘道限制。超過時記錄為停止條件，不改成逐年級各自提交，也不開放寫入
+
+Task 10.4 已在 `1admin_debug1`（PostgreSQL 17.11，`server_version_num` 170011）用 `tools\Task104TransportProbe.exe` 走 `QueryHelper.Select` 完成。連線啟用 TLS 1.2。Session 登入被伺服器拒絕後，工具改以帳號密碼登入 admin 契約，再送出唯讀 `SELECT current_database()`。四段都 `ok=true`：SQL UTF-8 1,048,576、2,097,152、4,194,304、7,340,032 bytes，對應 DSA XML 1,048,650、2,097,226、4,194,378、7,340,106 bytes，耗時 2863、5921、17689、31747 ms。`transport-verified=true`。產品語句由 `SemesterRankSql.Build`、`MotherGroupSnapshot.Append`、`SemesterRankPublishSql.Build` 與 `ApplyParticipation` 組成，三個年級放在同一句。3000 人的 SQL 是 5,898,440 bytes，`<SQL>` 元素是 6,404,899 bytes，都小於已接受的 7,340,032 bytes。這次沒有遇到長度拒絕，預期學校人數沒有形成停止條件，維持單句公布。`SemesterRankWriteGate` 仍回傳 false。沒有開始 Task 11.1。
+
+- [x] 10.5 在同一獨立測試庫以 `SELECT` 核對歷史批次清單、無快照還原與 Excel 學號查詢。這三項不寫入。通過本項不勾選 Task 4.2、4.3、5.1 到 7.3
+
+Task 10.5 已在 PostgreSQL 9.6.24 與 17.11 完成歷史批次清單、無快照還原、Excel 學號加 `student.status` 的唯讀查詢實測。這只完成資料庫查詢驗證，實際 WinForms 畫面留到 Task 11.2。通過本項不勾選 Task 4.2、4.3、5.1 到 7.3，也不開放寫入。
+
+## 11. 開放實際排名寫入
+
+- [x] 11.1 只在 Task 9.3 已完成，且 Task 10.1 到 10.5 的必要證據於 PostgreSQL 9.6 與 17.1 都通過之後，才讓 `SemesterRankWriteGate.CanWriteRankTables()` 回傳 true，並同步更新原本要求 `return false` 的靜態檢查。證據或 Task 9.3 缺任一項則本 Task 不實作。保留原有排名公式、工作副本、空年級防護與三種母群來源規則
+
+Task 11.1 已讓 `SemesterRankWriteGate.CanWriteRankTables()` 回傳 true。Phase 2 到 Phase 9 的 `MotherGroupPhase*Check` 改為確認閘門回傳 true；確認框、執行中旗標、工作副本、空年級防護、單次 `Select` 與失敗訊息仍留在原計算流程。三種母群來源都進入同一條 `RunRankCalculation`。MSBuild Debug 成功，既有 `useWeightedAvg` 警告仍在，沒有新增編譯錯誤。Phase 2 到 Phase 9 靜態檢查通過，包含 `phase7-task71-check`、`phase7-task72-check`、`phase7-task73-check` 與 `phase9-task91-check` 到 `phase9-task93-check`。沒有連線資料庫，沒有執行排名寫入。Task 11.2 沒有開始。
+
+- [ ] 11.2 以獨立測試庫確認取消確認不儲存組態、不執行排名 SQL，執行中不能開始第二筆計算，且實際計算失敗時顯示失敗、不顯示計算完成。同時核對 Task 9.3 列出的人工驗收條件：沒有可計算年級不儲存組態、確認框年級與計算結果一致、計算中的畫面修改不進入這次 SQL 與快照，以及控制項恢復後不啟用原本隱藏的項目。不使用正式學校資料庫
+
+Task 11.2 只完成實測準備，尚未在畫面上操作，也尚未勾選。可交給測試人員的檔案是 `bin\TestPackage\SHEvaluation.Rank.dll`。本機唯一的 iSchool 桌面 `C:\Test\1campus_desktop_x64` 登入點是 `1admin_debug9`，不是 `1admin_coredev4` 或 `1admin_debug1`，所以沒有把 DLL 放進該桌面。實際 WinForms 與排名寫入仍由使用者在核准的測試系統執行。
+
+## 12. JSONB 母群快照
+
+- [x] 12.1 新批次由確認清單工作副本產生 `MotherGroupSnapshot` JSON。setting 不含快照。JSON 含學生識別、學號、姓名、可解析年級或 null、五種名稱與 JSON boolean 參與。`source_kind` 為 `Current`、`History`、`Excel`。歷史來源才有 `source_batch_id`。其他 extension 保留，同名快照只留一筆。舊 XML 解析保留
+- [x] 12.2 `SemesterRankPublishSql` 在同一個 `INSERT` 寫入 setting 與 `'...'::jsonb` extension。不另下 `UPDATE`。失敗檢查與單一語句維持不變。語法限 PostgreSQL 9.6 到 17 已有的 `::jsonb`
+- [x] 12.3 歷史還原先讀 extension，再讀 XML 版本 1，最後才讀 `rank_batch_student`。JSON 存在但無法還原時停止，不改走 XML 或排名學生。無快照時以母群欄位還原，有名稱者預設參與，空白不推測並提示；沒有排名學生列時不開啟確認清單
+- [x] 12.4 歷史清單以數字 `id` 由大到小排列，並顯示快照有(JSON)、快照有(XML)或快照無。重新載入保留選取批次
+- [x] 12.5 靜態檢查 JSON 往返、特殊字元、其他 extension、壞快照不回退、公布語句與 Debug 編譯。不連線資料庫
+- [ ] 12.6 人工測試：PostgreSQL 9.6 與 17 寫入並讀回 JSON 快照、舊 XML 快照、無快照的 `rank_batch_student`、壞 JSON、Excel 往返與五種排名結果。不使用正式學校資料庫，不執行 Archive
+
+Tasks 12.1 到 12.5 已在程式完成。新批次的 setting 不再呼叫 `MotherGroupSnapshot.Append`；快照改由 `MotherGroupSnapshotJson.Compose` 寫進同一個 `INSERT` 的 `extension`。舊 XML 的 `TryRestore` 仍在。畫面的無快照路徑改讀 `rank_batch_student`，不再呼叫 `HistoryRankRestore.SelectSql`。`MotherGroupSnapshotJsonCheck` 與 Phase 4.2、4.3、5.1、5.2、5.3、7.1、7.2、7.3、9.3 靜態檢查通過。MSBuild Debug 成功，只有既有的 `useWeightedAvg` 警告。沒有連線 PostgreSQL。Task 12.6 與既有的資料庫、畫面人工項目維持未完成。沒有執行 Archive。
+
+## 13. 下一步防重複與處理提示
+
+- [x] 13.1 三種來源共用下一步旗標。按下後立刻停用下一步並顯示對應的 labelX6 提示。第二頁開啟後解除旗標且第一頁維持停用；上一步、取消、失敗與沒有資料時恢復按鈕與原本說明。每個背景完成事件都要恢復狀態
+- [x] 13.2 Excel 選檔留在畫面執行緒。解析、學號查詢與驗證改到背景工作，背景不操作 WinForms。成功後才顯示確認清單。歷史還原順序不變
+- [ ] 13.3 人工測試：連按下一步、歷史查詢延遲、無快照仍進第二頁、歷史失敗可重試、Excel 取消與錯誤可重試、大量匯入有提示、三種來源可上一步後再執行。不執行 Archive
+
+## 14. JSONB 學生清單
+
+正式 `student_list` 改為一份 JSON 陣列加 `jsonb_to_recordset`。成績 CTE、`ApplyParticipation`、`calc_condition` 的年級列、四張排名表與單一語句回復不改。SQL 用的 JSON 不寫進 `rank_batch.extension`。不執行 Archive。
+
+- [x] 14.1 由確認清單工作副本產生學生 JSON。空白名稱維持空字串，參與維持 boolean，`student_id` 是 JSON number。重複、非整數或前導零的學生識別停止計算。三種來源共用 `SemesterRankSql.Build`
+- [x] 14.2 `student_list` 投影 12 欄，包含五種 `participate_*`。`ApplyParticipation` 不改。未勾選年級不進入 JSON 與 `calc_condition`。手寫 SELECT 夾具仍可走舊 `UNION ALL`，正式路徑不產生那些 SELECT
+- [x] 14.3 靜態檢查特殊字元、空字串、false、重複阻擋、兩個年級的 `calc_condition`、成績 CTE 仍有 `UNION ALL`，以及 1、100、500、1000、2000、5000 人的 JSON 長度與 C# 組成時間。Debug 編譯。不連線資料庫
+
+Tasks 14.1 到 14.3 已在程式完成。正式 `SemesterRankSql.Build` 只收集學生物件；`BuildLegacySelects` 保留舊 SELECT，只給比較與既有檢查。`SemesterRankPublishSql` 在有 `Students` 時產生一個 `jsonb_to_recordset`。只有測試明確傳入舊清單旗標時，手寫 `Selects` 才走 `UNION ALL`；正式畫面呼叫沒有這個旗標，缺 JSON 學生就停止。`ApplyParticipation`、成績 CTE 與四表寫入未改。`semester-rank-student-json-check` 通過。MSBuild Debug 成功，只有既有 `useWeightedAvg` 警告。沒有連線 PostgreSQL，因此沒有新舊排名結果或 SQL 執行時間。Task 14.4、14.5、12.6、13.3 維持未完成。沒有執行 Archive。
+- [ ] 14.4 在獨立測試庫比對新舊 `student_list`、成績來源與五種排名結果，並記錄 SQL 解析與完整排名時間。PostgreSQL 9.6 與 17 都要做。不使用正式學校資料庫
+- [ ] 14.5 三種母群來源回歸：目前學生、JSON 快照、舊 XML 快照、無快照還原，以及 Excel 的歷史年級。確認 113-2 來源計算 114-2 時讀的是 114-2 成績。不執行 Archive
+
+## Workflow follow-up
+
+- 使用者確認本變更後才執行 `/opsx:apply`。
+- 每次 Apply 只執行一個 Task。
+- Phase 11 等待 Task 9.3 完成，且 Phase 10 的必要證據全部通過後才可執行。
+- 本次規劃不執行 `/opsx:archive`。全部 Task 的驗收完成前不歸檔。

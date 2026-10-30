@@ -328,3 +328,16 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+# Local Cursor workflow
+.cursor/
+
+# One-off probe tools and their build output
+/tools/
+
+# Working notes and database probe scripts
+/Explore_Report.md
+/Todo.md
+/Stage*.md
+/Stage*.sql
+/*操作說明.md

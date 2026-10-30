@@ -132,6 +132,12 @@
     <Compile Include="CalculateSemesterAssessmentRank.Designer.cs">
       <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
     </Compile>
+    <Compile Include="SemesterRankMotherGroupConfirmForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SemesterRankMotherGroupConfirmForm.Designer.cs">
+      <DependentUpon>SemesterRankMotherGroupConfirmForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="ClassCoursePlan.cs" />
     <Compile Include="DAO\GlobalValue.cs" />
     <Compile Include="Manual.cs">
@@ -140,6 +146,61 @@
     <Compile Include="Manual.Designer.cs">
       <DependentUpon>Manual.cs</DependentUpon>
     </Compile>
+    <Compile Include="MotherGroup\RankSlot.cs" />
+    <Compile Include="MotherGroup\StudentMotherGroup.cs" />
+    <Compile Include="MotherGroup\CurrentStudentMotherGroupBuilder.cs" />
+    <Compile Include="MotherGroup\CurrentStudentMotherGroupSource.cs" />
+    <Compile Include="MotherGroup\MotherGroupInitialParticipation.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase1Check.cs" />
+    <Compile Include="MotherGroup\SemesterRankConfirmRequest.cs" />
+    <Compile Include="MotherGroup\CalculationPeriod.cs" />
+    <Compile Include="MotherGroup\CalculationPeriodBinder.cs" />
+    <Compile Include="MotherGroup\SemesterHistoryBatchCatalog.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase5Task51Check.cs" />
+    <Compile Include="MotherGroup\HistorySnapshotRestore.cs" />
+    <Compile Include="MotherGroup\HistoryRankRestore.cs" />
+    <Compile Include="MotherGroup\HistoryCalculationScope.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase5Task54Check.cs" />
+    <Compile Include="MotherGroup\HistoryStudentAdd.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase5Task55Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase5Task56Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupExcelExchange.cs" />
+    <Compile Include="MotherGroup\MotherGroupExcelImport.cs" />
+    <Compile Include="MotherGroup\MotherGroupExcelApply.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase6Task63Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase7Task71Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase7Task72Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase7Task73Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase6Task62Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase6Task61Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase5Task53Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase5Task52Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupConfirmList.cs" />
+    <Compile Include="MotherGroup\MotherGroupConfirmGrid.cs" />
+    <Compile Include="MotherGroup\SemesterRankWriteGate.cs" />
+    <Compile Include="MotherGroup\SemesterRankScreenLayout.cs" />
+    <Compile Include="MotherGroup\SemesterRankSql.cs" />
+    <Compile Include="MotherGroup\SemesterRankStudentJson.cs" />
+    <Compile Include="MotherGroup\SemesterRankStudentJsonCheck.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase3Task31Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase3Task3233Check.cs" />
+    <Compile Include="MotherGroup\SemesterRankCompatibility.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase3Task34Check.cs" />
+    <Compile Include="MotherGroup\SemesterRankCatalog.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase4Task41Check.cs" />
+    <Compile Include="MotherGroup\SemesterRankPublishSql.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase4Task42Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupSnapshot.cs" />
+    <Compile Include="MotherGroup\MotherGroupSnapshotJson.cs" />
+    <Compile Include="MotherGroup\MotherGroupSnapshotJsonCheck.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase4Task43Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase2Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase8Task82Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase8Task83Check.cs" />
+    <Compile Include="MotherGroup\RankCalculationConfirm.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase9Task91Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase9Task92Check.cs" />
+    <Compile Include="MotherGroup\MotherGroupPhase9Task93Check.cs" />
     <Compile Include="TechnologyAssessmentRank_111\CalculateTechnologyAssessmentRankDeptGroupSet _111.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -269,6 +330,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="CalculateSemesterAssessmentRank.resx">
       <DependentUpon>CalculateSemesterAssessmentRank.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SemesterRankMotherGroupConfirmForm.resx">
+      <DependentUpon>SemesterRankMotherGroupConfirmForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Manual.resx">
       <DependentUpon>Manual.cs</DependentUpon>
