@@ -51,7 +51,9 @@ namespace SHEvaluation.Rank.MotherGroup
             Expect(errors, semester.SelectedItem.ToString() == "2", "計算學期應預設系統目前值");
             Expect(errors, source.SelectedItem.ToString() == CalculationPeriod.CurrentSourceName, "母群來源應預設依目前學生資料產生");
             Expect(errors, source.Items.Count == 3 && source.Items[1].ToString() == CalculationPeriod.HistorySourceName && source.Items[2].ToString() == CalculationPeriod.ExcelSourceName, "母群來源應可改選歷史學期成績排名與 Excel 母群清單");
-            Expect(errors, !historyYear.Enabled && !historySemester.Enabled, "歷史來源學年度與學期不可編輯，避免覆蓋計算期間");
+            Expect(errors, !historyYear.Enabled && !historySemester.Enabled, "目前學生來源初始應停用歷史期間");
+            Expect(errors, historyYear.Value == 114 && (string)historySemester.SelectedItem == "2", "歷史期間應預設系統學年度與學期，不應寫死為 1");
+            Expect(errors, period.HistorySchoolYear == "114" && period.HistorySemester == "2", "歷史期間模型應與初始化欄位一致");
 
             historyYear.Value = 113;
             historySemester.SelectedItem = "1";

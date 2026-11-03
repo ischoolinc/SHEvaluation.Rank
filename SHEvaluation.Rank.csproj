@@ -156,6 +156,9 @@
     <Compile Include="MotherGroup\CalculationPeriod.cs" />
     <Compile Include="MotherGroup\CalculationPeriodBinder.cs" />
     <Compile Include="MotherGroup\SemesterHistoryBatchCatalog.cs" />
+    <Compile Include="MotherGroup\SemesterHistoryPeriodGuard.cs" />
+    <Compile Include="MotherGroup\SemesterHistoryStudentParticipation.cs" />
+    <Compile Include="MotherGroup\SemesterHistorySourceCheck.cs" />
     <Compile Include="MotherGroup\MotherGroupPhase5Task51Check.cs" />
     <Compile Include="MotherGroup\HistorySnapshotRestore.cs" />
     <Compile Include="MotherGroup\HistoryRankRestore.cs" />
@@ -177,6 +180,7 @@
     <Compile Include="MotherGroup\MotherGroupPhase5Task52Check.cs" />
     <Compile Include="MotherGroup\MotherGroupConfirmList.cs" />
     <Compile Include="MotherGroup\MotherGroupConfirmGrid.cs" />
+    <Compile Include="MotherGroup\MotherGroupConfirmGridAccessibilityCheck.cs" />
     <Compile Include="MotherGroup\SemesterRankWriteGate.cs" />
     <Compile Include="MotherGroup\SemesterRankScreenLayout.cs" />
     <Compile Include="MotherGroup\SemesterRankSql.cs" />

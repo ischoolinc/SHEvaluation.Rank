@@ -36,13 +36,14 @@ namespace SHEvaluation.Rank.MotherGroup
             historySchoolYear.Enabled = false;
             historySchoolYear.Minimum = 1;
             historySchoolYear.Maximum = 9999;
-            historySchoolYear.Value = 1;
+            historySchoolYear.Value = yearNumber;
             historySemester.Enabled = false;
             historySemester.DropDownStyle = ComboBoxStyle.DropDownList;
             historySemester.Items.Clear();
             historySemester.Items.Add("1");
             historySemester.Items.Add("2");
-            historySemester.SelectedIndex = 0;
+            historySemester.SelectedItem = period.Semester;
+            period.SetHistoryPeriod(yearNumber.ToString(), period.Semester);
         }
 
         public static void ReadCalculation(NumericUpDown schoolYear, ComboBox semester, CalculationPeriod period)

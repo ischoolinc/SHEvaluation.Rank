@@ -341,3 +341,34 @@ ASALocalRun/
 /Stage*.md
 /Stage*.sql
 /*操作說明.md
+
+# Generated local agent workflow (OpenSpec artifacts remain versioned)
+/.agents/
+
+# Windows folder metadata
+[Dd]esktop.ini
+[Tt]humbs.db
+$RECYCLE.BIN/
+
+# Local credentials and machine-specific overrides
+.env
+.env.*
+!.env.example
+!.env.sample
+*.local.config
+
+# Diagnostic output and temporary patch/backup files
+*.dmp
+*.hdmp
+*.etl
+*.bak
+*.orig
+*.rej
+
+# Local student exports: keep fixtures under their dedicated source directories
+/*.xlsx
+/*.xls
+/*.csv
+/*.tsv
+/exports/
+/test-output/

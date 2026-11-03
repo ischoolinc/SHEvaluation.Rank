@@ -44,6 +44,16 @@ namespace SHEvaluation.Rank.MotherGroup
             HistorySemester = semester ?? "";
         }
 
+        public void SelectHistoryBatch(string batchId)
+        {
+            HistoryBatchId = batchId ?? "";
+        }
+
+        public void ClearHistoryBatchSelection()
+        {
+            HistoryBatchId = "";
+        }
+
         public void ClearHistoryBatch()
         {
             HistoryBatchId = "";

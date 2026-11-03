@@ -32,6 +32,7 @@ namespace SHEvaluation.Rank.MotherGroup
             AddRank(grid, RankKinds.Class, "母群：班排名", "班排名參與");
             AddRank(grid, RankKinds.Tag1, "母群：類別一", "類別一參與");
             AddRank(grid, RankKinds.Tag2, "母群：類別二", "類別二參與");
+            InstallBoundedAccessibility(grid);
         }
 
         public const int PopulationHeaderHeight = 24;
@@ -63,6 +64,7 @@ namespace SHEvaluation.Rank.MotherGroup
             AddText(population, "populationRank", "排名", 120);
             AddText(population, "populationParticipate", "參與人數", 110);
             AddText(population, "populationExclude", "排除人數", 110);
+            InstallBoundedAccessibility(population);
             population.Rows.Clear();
             foreach (string rankType in RankKinds.All)
             {
@@ -93,6 +95,7 @@ namespace SHEvaluation.Rank.MotherGroup
             AddText(detail, "detailTotal", "母群人數", 90);
             AddText(detail, "detailParticipate", "參與", 70);
             AddText(detail, "detailExclude", "排除", 70);
+            InstallBoundedAccessibility(detail);
         }
 
         public static ContextMenuStrip CreateParticipationMenu(DataGridView grid, MotherGroupConfirmList list, Label summary, DataGridView population, DataGridView detail)
@@ -253,7 +256,7 @@ namespace SHEvaluation.Rank.MotherGroup
             gridRow.Cells[NameColumn(slot.RankType)].Value = slot.GroupName ?? "";
             DataGridViewCell participateCell = gridRow.Cells[ParticipateColumn(slot.RankType)];
             participateCell.Value = slot.Participate;
-            participateCell.ReadOnly = slot.HasConflict;
+            participateCell.ReadOnly = slot.HasConflict && !slot.AllowParticipationDespiteConflict;
         }
 
         private static bool HasConflict(StudentMotherGroup group)
@@ -366,6 +369,60 @@ namespace SHEvaluation.Rank.MotherGroup
             column.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             column.SortMode = DataGridViewColumnSortMode.NotSortable;
             grid.Columns.Add(column);
+        }
+
+        // Preserve the normal accessibility tree and cell actions. Only replace the
+        // Framework row Bounds implementation, which recursively visits offscreen rows.
+        private static void InstallBoundedAccessibility(DataGridView grid)
+        {
+            if (grid.RowTemplate is BoundedAccessibleRow)
+                return;
+            DataGridViewRow previous = grid.RowTemplate;
+            grid.RowTemplate = new BoundedAccessibleRow
+            {
+                Height = previous.Height,
+                MinimumHeight = previous.MinimumHeight,
+                DefaultCellStyle = previous.DefaultCellStyle.Clone(),
+                Resizable = previous.Resizable
+            };
+        }
+
+        private sealed class BoundedAccessibleRow : DataGridViewRow
+        {
+            public BoundedAccessibleRow()
+            {
+            }
+
+            protected override AccessibleObject CreateAccessibilityInstance()
+            {
+                return new BoundedRowAccessibleObject(this);
+            }
+
+            private sealed class BoundedRowAccessibleObject : DataGridViewRowAccessibleObject
+            {
+                private readonly DataGridViewRow row;
+
+                public BoundedRowAccessibleObject(DataGridViewRow row) : base(row)
+                {
+                    this.row = row;
+                }
+
+                public override Rectangle Bounds
+                {
+                    get
+                    {
+                        DataGridView grid = row.DataGridView;
+                        if (grid == null || grid.IsDisposed || !grid.IsHandleCreated
+                            || row.Index < 0 || !row.Visible || !grid.Visible)
+                            return Rectangle.Empty;
+                        Rectangle bounds = grid.GetRowDisplayRectangle(row.Index, true);
+                        bounds.Intersect(grid.ClientRectangle);
+                        if (bounds.Width <= 0 || bounds.Height <= 0)
+                            return Rectangle.Empty;
+                        return grid.RectangleToScreen(bounds);
+                    }
+                }
+            }
         }
 
         private static void AddRank(DataGridView grid, string rankType, string nameHeader, string participateHeader)

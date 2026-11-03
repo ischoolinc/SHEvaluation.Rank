@@ -56,6 +56,7 @@ namespace SHEvaluation.Rank
         TextBox _txtAddStudentNumber;
         Button _btnAddHistoryStudent;
         const string ScreenLoadReadyText = "說明：班、科、年排名會自動計算。分項成績擇優項目請參考成績計算規則。";
+        const string NoHistoryBatchText = "這個歷史期間沒有可選的歷史批次。";
         public CalculateSemesterAssessmentRank()
         {
             InitializeComponent();
@@ -435,18 +436,19 @@ namespace SHEvaluation.Rank
                 ApplyCalculationPeriodEditors();
                 if (!IsHistorySourceSelected())
                 {
+                    SetHistoryFiltersEnabled(false);
                     if (_cboHistoryBatch != null)
                     {
                         _bindingHistoryBatch = true;
                         _cboHistoryBatch.SelectedIndex = -1;
-                        _cboHistoryBatch.Enabled = false;
+                        _cboHistoryBatch.Items.Clear();
                         _bindingHistoryBatch = false;
                     }
                     if (_calculationPeriod != null)
                         _calculationPeriod.ClearHistoryBatch();
                     return;
                 }
-                _cboHistoryBatch.Enabled = true;
+                SetHistoryFiltersEnabled(true);
                 try
                 {
                     LoadHistoryBatches();
@@ -457,6 +459,8 @@ namespace SHEvaluation.Rank
                     MessageBox.Show("歷史批次清單讀取失敗。\n" + ex.Message);
                 }
             };
+            _nudHistorySchoolYear.ValueChanged += delegate { OnHistoryPeriodChanged(); };
+            _cboHistorySemester.SelectedIndexChanged += delegate { OnHistoryPeriodChanged(); };
             _cboHistoryBatch.SelectedIndexChanged += delegate
             {
                 if (_bindingHistoryBatch || _calculationPeriod == null || _cboHistoryBatch == null)
@@ -464,12 +468,47 @@ namespace SHEvaluation.Rank
                 HistoryRankBatch selected = _cboHistoryBatch.SelectedItem as HistoryRankBatch;
                 if (selected == null)
                 {
-                    _calculationPeriod.ClearHistoryBatch();
+                    _calculationPeriod.ClearHistoryBatchSelection();
                     return;
                 }
-                _calculationPeriod.RememberHistoryBatch(selected.Id, selected.SchoolYear, selected.Semester);
-                ShowHistoryPeriod(selected.SchoolYear, selected.Semester);
+                _calculationPeriod.SelectHistoryBatch(selected.Id);
             };
+        }
+
+        private void SetHistoryFiltersEnabled(bool enabled)
+        {
+            if (_nudHistorySchoolYear != null)
+                _nudHistorySchoolYear.Enabled = enabled;
+            if (_cboHistorySemester != null)
+                _cboHistorySemester.Enabled = enabled;
+            if (_cboHistoryBatch != null)
+                _cboHistoryBatch.Enabled = enabled;
+        }
+
+        private void OnHistoryPeriodChanged()
+        {
+            if (_bindingHistoryBatch || !_historySourceEventsReady || !IsHistorySourceSelected())
+                return;
+            SyncHistoryPeriodFromControls();
+            try
+            {
+                LoadHistoryBatches();
+            }
+            catch (Exception ex)
+            {
+                ClearFailedHistorySelection();
+                MessageBox.Show("歷史批次清單讀取失敗。\n" + ex.Message);
+            }
+        }
+
+        private void SyncHistoryPeriodFromControls()
+        {
+            if (_calculationPeriod == null || _nudHistorySchoolYear == null)
+                return;
+            string semester = _cboHistorySemester == null || _cboHistorySemester.SelectedItem == null
+                ? ""
+                : _cboHistorySemester.SelectedItem.ToString();
+            _calculationPeriod.SetHistoryPeriod(decimal.ToInt32(_nudHistorySchoolYear.Value).ToString(), semester);
         }
 
         private bool IsCurrentSourceSelected()
@@ -622,10 +661,13 @@ namespace SHEvaluation.Rank
 
         private void LoadHistoryBatches()
         {
+            SyncHistoryPeriodFromControls();
             string previousId = _calculationPeriod == null ? "" : _calculationPeriod.HistoryBatchId;
             QueryHelper queryHelper = new QueryHelper();
             DataTable table = queryHelper.Select(SemesterHistoryBatchCatalog.SelectSql);
-            List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.Read(table);
+            string filterYear = _nudHistorySchoolYear == null ? "" : decimal.ToInt32(_nudHistorySchoolYear.Value).ToString();
+            string filterSemester = _cboHistorySemester == null || _cboHistorySemester.SelectedItem == null ? "" : _cboHistorySemester.SelectedItem.ToString();
+            List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.FilterPeriod(SemesterHistoryBatchCatalog.Read(table), filterYear, filterSemester);
             SemesterHistoryBatchCatalog.SortByIdDescending(batches);
             HistoryRankBatch reselect = null;
             _cboHistoryBatch.Sorted = false;
@@ -645,15 +687,15 @@ namespace SHEvaluation.Rank
                 _bindingHistoryBatch = false;
             }
             _cboHistoryBatch.SelectedItem = reselect;
-        }
-
-        private void ShowHistoryPeriod(string schoolYear, string semester)
-        {
-            int yearNumber;
-            if (_nudHistorySchoolYear != null && int.TryParse(schoolYear, out yearNumber) && yearNumber >= _nudHistorySchoolYear.Minimum && yearNumber <= _nudHistorySchoolYear.Maximum)
-                _nudHistorySchoolYear.Value = yearNumber;
-            if (_cboHistorySemester != null && (semester == "1" || semester == "2"))
-                _cboHistorySemester.SelectedItem = semester;
+            if (reselect == null && _calculationPeriod != null)
+                _calculationPeriod.ClearHistoryBatchSelection();
+            if (labelX6 != null)
+            {
+                if (batches.Count == 0)
+                    labelX6.Text = NoHistoryBatchText;
+                else if (labelX6.Text == NoHistoryBatchText)
+                    labelX6.Text = ScreenLoadReadyText;
+            }
         }
 
         private void btnNext_Click(object sender, EventArgs e)
@@ -793,8 +835,17 @@ namespace SHEvaluation.Rank
                 return;
             }
 
-            _calculationPeriod.RememberHistoryBatch(selected.Id, selected.SchoolYear, selected.Semester);
+            SyncHistoryPeriodFromControls();
+            if (selected.SchoolYear != _calculationPeriod.HistorySchoolYear || selected.Semester != _calculationPeriod.HistorySemester)
+            {
+                ReleaseNextStep(true);
+                MessageBox.Show(SemesterHistoryPeriodGuard.MismatchMessage);
+                return;
+            }
+            _calculationPeriod.RememberHistoryBatch(selected.Id, _calculationPeriod.HistorySchoolYear, _calculationPeriod.HistorySemester);
             string batchId = selected.Id;
+            string historyYear = _calculationPeriod.HistorySchoolYear;
+            string historySemester = _calculationPeriod.HistorySemester;
             // 年級與擇優採計已由下一步共用的 CaptureCalculationScope 依圖1重設。這裡不讀目前班級或年級。
             string calculationSchoolYear = _calculationPeriod.SchoolYear;
             string calculationSemester = _calculationPeriod.Semester;
@@ -825,6 +876,7 @@ namespace SHEvaluation.Rank
             bkw.WorkerReportsProgress = true;
             Exception bkwException = null;
             bool settingFound = false;
+            bool periodRejected = false;
             HistorySnapshotLoad load = null;
             HistoryRankLoad rankLoad = null;
             bkw.ProgressChanged += delegate (object sender, ProgressChangedEventArgs args)
@@ -840,6 +892,12 @@ namespace SHEvaluation.Rank
                 {
                     bkw.ReportProgress(0, "正在讀取歷史批次及母群資料...");
                     QueryHelper queryHelper = new QueryHelper();
+                    DataTable periodTable = queryHelper.Select(SemesterHistoryPeriodGuard.SelectSql(batchId));
+                    if (!SemesterHistoryPeriodGuard.Matches(periodTable, batchId, historyYear, historySemester))
+                    {
+                        periodRejected = true;
+                        return;
+                    }
                     DataTable table = queryHelper.Select(HistorySnapshotRestore.SelectSettingSql(batchId));
                     string settingXml;
                     string extensionJson;
@@ -858,12 +916,13 @@ namespace SHEvaluation.Rank
                             Name = tag.Name
                         });
                     }
-                    load = HistorySnapshotRestore.LoadStored(batchId, extensionJson, settingXml, excludedCategory, tagDefinitions, links);
+                    load = HistorySnapshotRestore.LoadSemester(batchId, extensionJson, settingXml, excludedCategory, tagDefinitions, links);
                     if (load.Restored || load.Message != HistorySnapshotRestore.MissingSnapshotMessage)
                         return;
                     bkw.ReportProgress(0, "正在讀取歷史批次及母群資料...");
                     DataTable rankTable = queryHelper.Select(HistoryRankRestore.SelectBatchStudentSql(batchId));
                     rankLoad = HistoryRankRestore.ReadBatchStudents(batchId, rankTable, excludedCategory, tagDefinitions, links);
+                    SemesterHistoryStudentParticipation.KeepYearDeptClassParticipating(rankLoad);
                 }
                 catch (Exception ex)
                 {
@@ -875,6 +934,14 @@ namespace SHEvaluation.Rank
                 if (IsDisposed)
                 {
                     _nextStepRunning = false;
+                    return;
+                }
+                if (periodRejected)
+                {
+                    ClearLoadedConfirmList();
+                    btnPrevious.Enabled = true;
+                    ReleaseNextStep(true);
+                    MessageBox.Show(SemesterHistoryPeriodGuard.MismatchMessage);
                     return;
                 }
                 if (bkwException != null || !settingFound)
@@ -932,8 +999,6 @@ namespace SHEvaluation.Rank
                     lbSchoolYear.Text = calculationSchoolYear;
                     lbSemester.Text = calculationSemester;
                     PublishConfirmRequest();
-                    if (!string.IsNullOrEmpty(rankLoad.Notice))
-                        MessageBox.Show(rankLoad.Notice);
                     ShowConfirmList(rankLoad.Students, studentsById);
                 }
                 catch (Exception ex)
@@ -1090,7 +1155,7 @@ namespace SHEvaluation.Rank
                 _bindingHistoryBatch = false;
             }
             if (_calculationPeriod != null)
-                _calculationPeriod.ClearHistoryBatch();
+                _calculationPeriod.ClearHistoryBatchSelection();
         }
 
         internal void btnPrevious_Click(object sender, EventArgs e)

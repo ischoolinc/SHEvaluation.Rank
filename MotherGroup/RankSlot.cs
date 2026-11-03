@@ -25,6 +25,7 @@ namespace SHEvaluation.Rank.MotherGroup
         public string RankType { get; set; }
         public string GroupName { get; set; }
         public bool Participate { get; set; }
+        public bool AllowParticipationDespiteConflict { get; set; }
         public List<string> ConflictNames { get; set; }
 
         public bool HasConflict
@@ -38,6 +39,7 @@ namespace SHEvaluation.Rank.MotherGroup
             clone.RankType = RankType;
             clone.GroupName = GroupName;
             clone.Participate = Participate;
+            clone.AllowParticipationDespiteConflict = AllowParticipationDespiteConflict;
             if (ConflictNames != null)
             {
                 clone.ConflictNames = new List<string>();

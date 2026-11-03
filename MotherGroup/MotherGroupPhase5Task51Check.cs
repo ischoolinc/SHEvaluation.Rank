@@ -55,14 +55,16 @@ namespace SHEvaluation.Rank.MotherGroup
             AddRow(table, "92", "113", "2", "重算", withoutSnapshot);
             AddRow(table, "93", "113", "2", "舊版快照", versionTwo);
             AddRow(table, "94", "114", "1", "定期", Setting("114", "1", "定期評量", "<年級>1</年級>"));
-            AddRow(table, "95", "114", "1", "繁星", Setting("114", "1", "技職繁星", "<年級>3</年級>"));
+            AddRow(table, "95", "114", "1", "繁星", "<Setting 學年度=\"114\" 學期=\"1\"><年級>3</年級></Setting>");
             AddRow(table, "96", "114", "1", "其他", Setting("114", "1", "期中考", "<年級>1</年級>"));
             AddRow(table, "97", "113", "1", "壞掉", "<Setting 考試名稱=\"學期成績\"");
             AddRow(table, "", "113", "2", "沒有識別", withSnapshot);
 
             List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.Read(table);
-            Expect(errors, batches.Count == 3, "只應留下考試名稱為學期成績的三筆");
-            Expect(errors, batches[0].Id == "91" && batches[1].Id == "92" && batches[2].Id == "93", "同一學年度學期的不同批次都應保留，且維持查詢順序");
+            Expect(errors, batches.Count == 5, "應留下學期成績，以及考試名稱有值的定期評量");
+            Expect(errors, batches[0].Id == "91" && batches[1].Id == "92" && batches[2].Id == "93" && batches[3].Id == "94" && batches[4].Id == "96", "同一學年度學期的不同批次都應保留，且維持查詢順序");
+            Expect(errors, batches[0].SourceType == "學期成績" && batches[3].SourceType == "定期評量" && batches[3].ExamName == "定期評量" && batches[4].ExamName == "期中考", "學期成績與定期評量都應可辨識");
+            Expect(errors, batches[3].DisplayText.IndexOf("94｜定期評量｜114學年度第1學期｜定期評量｜") == 0 && batches[3].DisplayText.IndexOf("建立時間") < 0, "清單應顯示來源類型、期間與評量名稱，且不稱作建立時間");
             Expect(errors, batches[0].SchoolYear == "113" && batches[0].Semester == "2" && batches[0].Description == "第一次計算", "應顯示學年度、學期與批次說明");
             Expect(errors, batches[0].GradeYears == "1、2" && batches[0].HasVersion1Snapshot, "應顯示排名年級與版本 1 快照");
             Expect(errors, batches[1].GradeYears == "2" && !batches[1].HasVersion1Snapshot && batches[1].Description == "重算", "沒有快照的學期批次仍應列出");
@@ -71,10 +73,10 @@ namespace SHEvaluation.Rank.MotherGroup
             bool foundExcluded = false;
             foreach (HistoryRankBatch batch in batches)
             {
-                if (batch.Id == "94" || batch.Id == "95" || batch.Id == "96" || batch.Id == "97")
+                if (batch.Id == "95" || batch.Id == "97")
                     foundExcluded = true;
             }
-            Expect(errors, !foundExcluded, "定期評量、技職繁星、其他排名與非法 XML 不應出現");
+            Expect(errors, !foundExcluded, "沒有考試名稱的技職繁星與非法 XML 不應出現");
             Expect(errors, SemesterHistoryBatchCatalog.TryRead("98", "113", "2", "空白名稱", Setting("113", "2", "", "<年級>1</年級>")) == null, "考試名稱空白不應列入");
             return errors;
         }

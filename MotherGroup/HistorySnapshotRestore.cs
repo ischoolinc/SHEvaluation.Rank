@@ -41,6 +41,7 @@ namespace SHEvaluation.Rank.MotherGroup
         public const string MissingSnapshotMessage = "這筆歷史批次沒有可讀取的版本 1 母群快照。沒有快照的批次留待後續還原，本次不會改用目前學生資料。";
         public const string UnreadableSnapshotMessage = "這筆歷史批次的版本 1 母群快照無法還原。本次不會進入確認清單，也不會改用目前學生資料。";
         public const string WrongExamMessage = "這筆歷史批次的考試名稱不是學期成績，本次不會進入確認清單，也不會改用目前學生資料。";
+        public const string UnrecognizedExamMessage = "這筆歷史批次沒有可辨識的考試名稱，本次不會進入確認清單，也不會改用目前學生資料。";
         public const string DuplicateSnapshotMessage = "這筆歷史批次有多個版本 1 母群快照，無法還原。本次不會進入確認清單，也不會改用目前學生資料。";
 
         public static string SelectSettingSql(string batchId)
@@ -91,6 +92,42 @@ namespace SHEvaluation.Rank.MotherGroup
                 return HistorySnapshotLoad.Success(selectedBatchId ?? "", settingXml ?? "", json.Students);
             }
             return Load(selectedBatchId, settingXml, excludedCategory, tagDefinitions, studentTags);
+        }
+
+        public static HistorySnapshotLoad LoadSemester(string selectedBatchId, string extensionJson, string settingXml, string excludedCategory, IList<TagDefinition> tagDefinitions, IList<StudentTagLink> studentTags)
+        {
+            string original = settingXml ?? "";
+            string batchId = selectedBatchId ?? "";
+            string examName;
+            int version1Count;
+            if (!TryInspectSnapshot(original, out examName, out version1Count) || (examName == null && version1Count < 0))
+                return HistorySnapshotLoad.Fail(batchId, original, UnreadableSnapshotMessage);
+            string sourceType;
+            if (!SemesterHistoryBatchCatalog.TryClassifyExam(examName, out sourceType) || sourceType.Length == 0)
+                return HistorySnapshotLoad.Fail(batchId, original, UnrecognizedExamMessage);
+
+            MotherGroupJsonRead json = MotherGroupSnapshotJson.Read(extensionJson);
+            if (json.Present)
+            {
+                if (!json.Restored)
+                    return HistorySnapshotLoad.Fail(batchId, original, json.Message);
+                ApplyExcluded(json.Students, excludedCategory, tagDefinitions, studentTags);
+                return HistorySnapshotLoad.Success(batchId, original, json.Students);
+            }
+            if (version1Count == 0)
+                return HistorySnapshotLoad.Fail(batchId, original, MissingSnapshotMessage);
+            if (version1Count != 1)
+                return HistorySnapshotLoad.Fail(batchId, original, DuplicateSnapshotMessage);
+
+            List<StudentMotherGroup> students;
+            string kind;
+            string snapshotHistoryBatchId;
+            if (!MotherGroupSnapshot.TryRestore(original, out students, out kind, out snapshotHistoryBatchId))
+                return HistorySnapshotLoad.Fail(batchId, original, UnreadableSnapshotMessage);
+            IgnoreSnapshotHistoryBatchId(batchId, snapshotHistoryBatchId, kind);
+            ApplyExcluded(students, excludedCategory, tagDefinitions, studentTags);
+            SemesterHistoryStudentParticipation.ApplyNoJsonYearDeptClass(students);
+            return HistorySnapshotLoad.Success(batchId, original, students);
         }
 
         public static HistorySnapshotLoad Load(string selectedBatchId, string settingXml, string excludedCategory, IList<TagDefinition> tagDefinitions, IList<StudentTagLink> studentTags)
