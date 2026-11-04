@@ -226,56 +226,18 @@ namespace SHEvaluation.Rank.MotherGroup
 
         private static string LoadFormula(string source, List<string> errors)
         {
-            int start = source.IndexOf(", subject_score AS");
-            int end = source.IndexOf("SELECT count(*) FROM score_list");
-            if (start < 0 || end <= start)
+            Expect(errors, source.IndexOf("SemesterRankFormulaSql.Build(gradeSelectCopy)") >= 0, "產品畫面應改呼叫共用公式組句");
+            string formula = SemesterRankFormulaSql.Build(new string[] { "學年調整成績", "手動調整成績", "補考成績", "重修成績" });
+            if (formula.IndexOf(", subject_score AS") < 0 || formula.IndexOf("SELECT count(*) FROM score_list") < 0)
             {
-                errors.Add("應能從表單取出年級排名 SQL");
+                errors.Add("應能從共用公式組句取得年級排名 SQL");
                 return "";
             }
-            string formula = source.Substring(start, end - start);
-            int broken = formula.IndexOf("::DECIMAL\"");
-            int resume = broken < 0 ? -1 : formula.IndexOf("+ @\"", broken);
-            if (broken < 0 || resume < 0)
-            {
-                errors.Add("應能辨識表單裡 GREATEST 的字串接縫");
-                return "";
-            }
-            formula = formula.Substring(0, broken + "::DECIMAL".Length) + formula.Substring(resume + "+ @\"".Length);
-            string[] attributes = new string[] { "學年調整成績", "擇優採計成績", "補考成績", "重修成績" };
-            StringBuilder bestOf = new StringBuilder();
-            foreach (string attribute in attributes)
-            {
-                string fragment = AssignedFragment(source, attribute);
-                if (fragment.Length == 0)
-                {
-                    errors.Add("表單缺少擇優片段：" + attribute);
-                    return "";
-                }
-                bestOf.Append("\n\t\t\t").Append(fragment);
-            }
+            Expect(errors, formula.IndexOf("@學年調整成績") >= 0 && formula.IndexOf("@擇優採計成績") >= 0 && formula.IndexOf("@補考成績") >= 0 && formula.IndexOf("@重修成績") >= 0, "共用公式應含四種擇優 xpath");
+            Expect(errors, formula.IndexOf("+ schoolYearAdjScore") < 0 && formula.IndexOf("+ @\"") < 0, "共用公式不可殘留 C# 接縫");
             int greatest = formula.IndexOf(") AS subject_greatest_score");
-            if (greatest < 0)
-            {
-                errors.Add("GREATEST 結果欄位不存在");
-                return "";
-            }
-            formula = formula.Insert(greatest, bestOf.ToString());
-            Expect(errors, formula.IndexOf(", update_data AS") > greatest && formula.IndexOf("INSERT INTO") > greatest, "原寫入語句應仍留在公式尾端，供比對時切除");
+            Expect(errors, greatest >= 0 && formula.IndexOf(", update_data AS") > greatest && formula.IndexOf("INSERT INTO") > greatest, "原寫入語句應仍留在公式尾端，供比對時切除");
             return formula;
-        }
-
-        private static string AssignedFragment(string source, string attribute)
-        {
-            string token = "xpath('/root/Subject/@" + attribute + "'";
-            int at = source.IndexOf(token);
-            if (at < 0)
-                return "";
-            int start = source.LastIndexOf("\"", at);
-            int end = source.IndexOf("\"", at);
-            if (start < 0 || end <= start)
-                return "";
-            return source.Substring(start + 1, end - start - 1);
         }
 
         private static string ReadForm(List<string> errors)

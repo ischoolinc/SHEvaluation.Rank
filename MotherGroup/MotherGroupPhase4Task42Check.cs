@@ -260,7 +260,8 @@ namespace SHEvaluation.Rank.MotherGroup
             Expect(errors, source.IndexOf("MotherGroupSnapshotJson.Compose") >= 0 && source.IndexOf("MotherGroupSnapshot.Append") < 0 && source.IndexOf("UPDATE rank_batch") < 0, "快照寫在新批次的 extension，不另外更新既有批次");
             int saveAt = source.IndexOf("cd.Save()");
             Expect(errors, saveAt >= 0 && saveAt < select && source.IndexOf("不會隨排名語句回滾") >= 0 && source.IndexOf("不會隨排名語句回滾") < saveAt, "排名失敗時，先前儲存的擇優設定不會被排名語句回滾");
-            Expect(errors, source.IndexOf(", subject_score AS") >= 0 && CountOf(source, "CROSS JOIN calc_condition") == 2, "表單應保留原公式，並把兩處跨年級配對交給組譯器");
+            Expect(errors, source.IndexOf("SemesterRankFormulaSql.Build(gradeSelectCopy)") >= 0 && source.IndexOf("string insertRankSql = @\"") < 0, "表單應呼叫共用公式組句，不再內嵌 verbatim SQL");
+            Expect(errors, CountOf(SemesterRankFormulaSql.BuildOriginOnly(), "CROSS JOIN calc_condition") == 2, "共用公式仍有兩處跨年級配對交給組譯器");
             int worker = source.LastIndexOf("bkw.DoWork +=");
             int completed = source.LastIndexOf("bkw.RunWorkerCompleted +=");
             Expect(errors, worker >= 0 && completed > worker, "計算應在背景工作裡執行");
@@ -306,14 +307,14 @@ namespace SHEvaluation.Rank.MotherGroup
 
         private static string Formula(string source, List<string> errors)
         {
-            int start = source.IndexOf(", subject_score AS");
-            int end = source.IndexOf("SELECT count(*) FROM score_list");
-            if (start < 0 || end <= start)
+            string formula = SemesterRankFormulaSql.BuildOriginOnly();
+            if (formula.IndexOf(", subject_score AS") < 0 || formula.IndexOf("SELECT count(*) FROM score_list") < 0)
             {
-                errors.Add("應能從表單取出排名公式");
+                errors.Add("應能從共用公式組句取得排名公式");
                 return "";
             }
-            return source.Substring(start, end - start) + "SELECT count(*) FROM score_list";
+            Expect(errors, source.IndexOf("SemesterRankFormulaSql.Build(gradeSelectCopy)") >= 0, "產品畫面應改呼叫共用公式組句");
+            return formula;
         }
 
         private static string Read(string path, List<string> errors)

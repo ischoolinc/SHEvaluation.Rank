@@ -387,20 +387,20 @@ namespace SHEvaluation.Rank.MotherGroup
                 }
                 if (matches.Count == 0)
                 {
-                    issues.Add(MotherGroupExcelIssue.Create(row.RowNumber, row.StudentNumber, "找不到學號「" + row.StudentNumber + "」、學生狀態「" + row.StatusText + "」的學生。"));
+                    issues.Add(MotherGroupExcelIssue.Create(row.RowNumber, row.StudentNumber, "第 " + row.RowNumber + " 列：找不到學號「" + row.StudentNumber + "」、學生狀態「" + row.StatusText + "」的學生。"));
                     row.Blocked = true;
                     continue;
                 }
                 if (matches.Count > 1)
                 {
-                    issues.Add(MotherGroupExcelIssue.Create(row.RowNumber, row.StudentNumber, "學號「" + row.StudentNumber + "」、學生狀態「" + row.StatusText + "」對應多位學生，沒有任選。"));
+                    issues.Add(MotherGroupExcelIssue.Create(row.RowNumber, row.StudentNumber, "第 " + row.RowNumber + " 列：學號「" + row.StudentNumber + "」、學生狀態「" + row.StatusText + "」對應多位學生，沒有任選。"));
                     row.Blocked = true;
                     continue;
                 }
                 string studentId = Cell(matches[0], "student_id").Trim();
                 if (studentId.Length == 0)
                 {
-                    issues.Add(MotherGroupExcelIssue.Create(row.RowNumber, row.StudentNumber, "學號「" + row.StudentNumber + "」、學生狀態「" + row.StatusText + "」的學生沒有識別。"));
+                    issues.Add(MotherGroupExcelIssue.Create(row.RowNumber, row.StudentNumber, "第 " + row.RowNumber + " 列：學號「" + row.StudentNumber + "」、學生狀態「" + row.StatusText + "」的學生沒有識別。"));
                     row.Blocked = true;
                     continue;
                 }

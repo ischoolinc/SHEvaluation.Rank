@@ -85,12 +85,11 @@ namespace SHEvaluation.Rank.MotherGroup
                 return errors;
             }
             string source = File.ReadAllText(path, Encoding.UTF8);
-            int start = source.IndexOf(", subject_score AS");
-            int end = source.IndexOf("SELECT count(*) FROM score_list");
-            Expect(errors, start >= 0 && end > start, "應能從表單取出年級排名 SQL");
-            if (start < 0 || end <= start)
+            Expect(errors, source.IndexOf("SemesterRankFormulaSql.Build(gradeSelectCopy)") >= 0, "產品畫面應改呼叫共用公式組句");
+            string template = SemesterRankFormulaSql.BuildOriginOnly();
+            Expect(errors, template.IndexOf(", subject_score AS") >= 0 && template.IndexOf("SELECT count(*) FROM score_list") >= 0, "應能從共用公式組句取得年級排名 SQL");
+            if (template.IndexOf(", subject_score AS") < 0 || template.IndexOf("SELECT count(*) FROM score_list") < 0)
                 return errors;
-            string template = source.Substring(start, end - start);
             string sql = SemesterRankSql.ApplyParticipation(template);
             Expect(errors, sql.IndexOf("PARTITION BY rank_grade_year, subject ORDER") < 0, "年排名 RANK 分組應已帶參與旗標");
             Expect(errors, sql.IndexOf("PARTITION BY rank_grade_year, subject, participate_year ORDER BY subject_origin_score DESC") >= 0, "原始成績年排名應在 RANK 前以參與旗標分組");

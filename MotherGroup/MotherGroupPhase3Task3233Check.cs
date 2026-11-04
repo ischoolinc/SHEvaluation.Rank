@@ -229,14 +229,14 @@ namespace SHEvaluation.Rank.MotherGroup
                 return "";
             }
             string source = File.ReadAllText(path, Encoding.UTF8);
-            int start = source.IndexOf(", subject_score AS");
-            int end = source.IndexOf("SELECT count(*) FROM score_list");
-            if (start < 0 || end <= start)
+            Expect(errors, source.IndexOf("SemesterRankFormulaSql.Build(gradeSelectCopy)") >= 0, "產品畫面應改呼叫共用公式組句");
+            string template = SemesterRankFormulaSql.BuildOriginOnly();
+            if (template.IndexOf(", subject_score AS") < 0 || template.IndexOf("SELECT count(*) FROM score_list") < 0)
             {
-                errors.Add("應能從表單取出年級排名 SQL");
+                errors.Add("應能從共用公式組句取得年級排名 SQL");
                 return "";
             }
-            return source.Substring(start, end - start);
+            return template;
         }
 
         private static string[] Branches(string sql)

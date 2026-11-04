@@ -373,7 +373,26 @@ namespace SHEvaluation.Rank.MotherGroup
 
         // Preserve the normal accessibility tree and cell actions. Only replace the
         // Framework row Bounds implementation, which recursively visits offscreen rows.
-        private static void InstallBoundedAccessibility(DataGridView grid)
+        internal static bool IsBoundedRow(DataGridViewRow row)
+        {
+            return row is BoundedAccessibleRow;
+        }
+
+        internal static DataGridViewRow CreateBoundedRow(DataGridView grid)
+        {
+            BoundedAccessibleRow row = new BoundedAccessibleRow();
+            if (grid != null && grid.RowTemplate != null)
+            {
+                row.Height = grid.RowTemplate.Height;
+                row.MinimumHeight = grid.RowTemplate.MinimumHeight;
+                if (grid.RowTemplate.DefaultCellStyle != null)
+                    row.DefaultCellStyle = grid.RowTemplate.DefaultCellStyle.Clone();
+                row.Resizable = grid.RowTemplate.Resizable;
+            }
+            return row;
+        }
+
+        internal static void InstallBoundedAccessibility(DataGridView grid)
         {
             if (grid.RowTemplate is BoundedAccessibleRow)
                 return;

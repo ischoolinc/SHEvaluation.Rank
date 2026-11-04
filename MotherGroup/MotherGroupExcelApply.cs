@@ -15,9 +15,22 @@ namespace SHEvaluation.Rank.MotherGroup
             {
                 if (text.Length > 0)
                     text.Append("\n");
-                text.Append(issue.Message);
+                text.Append(FormatIssue(issue));
             }
             return text.ToString();
+        }
+
+        public static string FormatIssue(MotherGroupExcelIssue issue)
+        {
+            if (issue == null)
+                return "";
+            string message = issue.Message ?? "";
+            if (issue.RowNumber <= 0)
+                return message;
+            string label = "第 " + issue.RowNumber + " 列";
+            if (message.IndexOf(label) >= 0)
+                return message;
+            return label + "：" + message;
         }
 
         public static string WarningText(MotherGroupExcelValidation validation)

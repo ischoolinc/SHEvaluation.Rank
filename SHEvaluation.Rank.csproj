@@ -50,9 +50,18 @@
       <HintPath>Library\FISCA.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="FISCA.Authentication">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\fisca\Libraries\FISCA.Authentication.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="FISCA.Data, Version=1.0.0.3, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Library\FISCA.Data.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="FISCA.DSAClient">
+      <HintPath>Library\FISCA.DSAClient.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="FISCA.DSAUtil, Version=3.9.0.10, Culture=neutral, processorArchitecture=MSIL">
@@ -193,6 +202,16 @@
     <Compile Include="MotherGroup\SemesterRankCatalog.cs" />
     <Compile Include="MotherGroup\MotherGroupPhase4Task41Check.cs" />
     <Compile Include="MotherGroup\SemesterRankPublishSql.cs" />
+    <Compile Include="MotherGroup\SemesterRankPublishTransport.cs" />
+    <Compile Include="MotherGroup\SemesterRankFailureReport.cs" />
+    <Compile Include="MotherGroup\SemesterRankFormulaSql.cs" />
+    <Compile Include="MotherGroup\SemesterRankMatrixDiagSql.cs" />
+    <Compile Include="MotherGroup\SemesterRankMatrixDiagCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankField687Diag.cs" />
+    <Compile Include="DAO\SemesterAssessmentRankQuery.cs" />
+    <Compile Include="MotherGroup\SemesterRankRetrievalCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankRetrievalHangCheck.cs" />
+    <Compile Include="MotherGroup\SemesterMatrixRankHangCheck.cs" />
     <Compile Include="MotherGroup\MotherGroupPhase4Task42Check.cs" />
     <Compile Include="MotherGroup\MotherGroupSnapshot.cs" />
     <Compile Include="MotherGroup\MotherGroupSnapshotJson.cs" />

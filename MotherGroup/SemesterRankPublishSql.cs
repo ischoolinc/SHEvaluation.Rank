@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
+using System.Xml;
 
 namespace SHEvaluation.Rank.MotherGroup
 {
@@ -34,7 +37,7 @@ namespace SHEvaluation.Rank.MotherGroup
             return Build(grades, schoolYear, semester, calculationSetting, null, formulaFromSubjectScore, injectFailure, legacyStudentSelects);
         }
 
-        public static SemesterRankPublishStatement Build(IList<SemesterRankGradeStudents> grades, string schoolYear, string semester, string calculationSetting, string extensionJson, string formulaFromSubjectScore, bool injectFailure, bool legacyStudentSelects = false)
+        public static SemesterRankPublishStatement Build(IList<SemesterRankGradeStudents> grades, string schoolYear, string semester, string calculationSetting, string extensionJson, string formulaFromSubjectScore, bool injectFailure, bool legacyStudentSelects = false, string operationId = null)
         {
             int yearNumber = RequirePeriod(schoolYear, "學年度");
             int semesterNumber = RequirePeriod(semester, "學期");
@@ -42,6 +45,9 @@ namespace SHEvaluation.Rank.MotherGroup
             string formula = RequireFormula(formulaFromSubjectScore);
             if (formula.IndexOf("0 AS batch_id") >= 0)
                 throw new InvalidOperationException("排名公式已帶批次識別 0，不建立公布語句。");
+            string operation = NormalizeOperationId(operationId);
+            if (operation != null)
+                calculationSetting = StampOperation(calculationSetting, operation);
 
             formula = ReplaceExactly(
                 formula,
@@ -71,7 +77,7 @@ namespace SHEvaluation.Rank.MotherGroup
                 1,
                 "排名公式的結尾必須是 SELECT count(*) FROM score_list。");
 
-            string sql = Header(ordered, yearNumber, semesterNumber, calculationSetting ?? "", extensionJson, legacyStudentSelects) + "\n" + formula;
+            string sql = Header(ordered, yearNumber, semesterNumber, calculationSetting ?? "", extensionJson, legacyStudentSelects, operation) + "\n" + formula;
             if (sql.IndexOf("CROSS JOIN calc_condition") >= 0 || sql.IndexOf("0 AS batch_id") >= 0 || sql.IndexOf(';') >= 0 || sql.IndexOf("1/0") >= 0)
                 throw new InvalidOperationException("公布語句仍有跨年級配對、批次識別 0、多個敘述或常數除以零。");
             return new SemesterRankPublishStatement(sql, injectFailure);
@@ -204,7 +210,87 @@ namespace SHEvaluation.Rank.MotherGroup
             sql.Append("\n)\n");
         }
 
-        private static string Header(List<SemesterRankGradeStudents> grades, int schoolYear, int semester, string calculationSetting, string extensionJson, bool legacyStudentSelects)
+        public static string AdvisoryLockCall(string operationId)
+        {
+            string operation = NormalizeOperationId(operationId);
+            if (operation == null)
+                throw new InvalidOperationException("操作識別格式不正確，不建立公布鎖定。");
+            int key1;
+            int key2;
+            AdvisoryLockKeys(operation, out key1, out key2);
+            return "pg_advisory_xact_lock("
+                + key1.ToString(CultureInfo.InvariantCulture)
+                + ", "
+                + key2.ToString(CultureInfo.InvariantCulture)
+                + ")";
+        }
+
+        /// <summary>
+        /// 以 UTF-8 SHA-256 產生固定鎖定鍵，供 PostgreSQL 9.6／17 的雙參數 pg_advisory_xact_lock 使用。
+        /// 鎖定鍵在程式端固定演算法產生，避免依賴新版資料庫雜湊函式。
+        /// </summary>
+        public static void AdvisoryLockKeys(string operationId, out int key1, out int key2)
+        {
+            string operation = NormalizeOperationId(operationId);
+            if (operation == null)
+                throw new InvalidOperationException("操作識別格式不正確，不建立公布鎖定。");
+            byte[] digest;
+            using (SHA256 sha = SHA256.Create())
+                digest = sha.ComputeHash(Encoding.UTF8.GetBytes("semester-rank-publish:" + operation));
+            key1 = (digest[0] << 24) | (digest[1] << 16) | (digest[2] << 8) | digest[3];
+            key2 = (digest[4] << 24) | (digest[5] << 16) | (digest[6] << 8) | digest[7];
+        }
+
+        public static string OperationAttribute(string operationId)
+        {
+            string operation = NormalizeOperationId(operationId);
+            if (operation == null)
+                throw new InvalidOperationException("操作識別格式不正確，不建立公布識別。");
+            return "操作識別=\"" + operation + "\"";
+        }
+
+        public static bool IsOperationId(string operationId)
+        {
+            if (string.IsNullOrEmpty(operationId) || operationId.Length != 20 || operationId.IndexOf("SR", StringComparison.Ordinal) != 0)
+                return false;
+            for (int i = 2; i < 16; i++)
+            {
+                char ch = operationId[i];
+                if (ch < '0' || ch > '9')
+                    return false;
+            }
+            for (int i = 16; i < 20; i++)
+            {
+                char ch = operationId[i];
+                bool digit = ch >= '0' && ch <= '9';
+                bool lower = ch >= 'a' && ch <= 'f';
+                if (!digit && !lower)
+                    return false;
+            }
+            return true;
+        }
+
+        private static string NormalizeOperationId(string operationId)
+        {
+            if (operationId == null)
+                return null;
+            string text = operationId.Trim();
+            if (!IsOperationId(text))
+                throw new InvalidOperationException("操作識別格式不正確，不建立公布語句。");
+            return text;
+        }
+
+        private static string StampOperation(string calculationSetting, string operationId)
+        {
+            XmlDocument document = new XmlDocument();
+            document.LoadXml(string.IsNullOrEmpty(calculationSetting) ? "<Setting />" : calculationSetting);
+            if (document.DocumentElement == null || document.DocumentElement.LocalName != "Setting")
+                throw new InvalidOperationException("排名設定不是 Setting，不能寫入操作識別。");
+            document.DocumentElement.SetAttribute("操作識別", operationId);
+            return document.DocumentElement.OuterXml;
+        }
+
+        private static string Header(List<SemesterRankGradeStudents> grades, int schoolYear, int semester, string calculationSetting, string extensionJson, bool legacyStudentSelects, string operationId)
         {
             StringBuilder sql = new StringBuilder();
             AppendStudentList(sql, grades, legacyStudentSelects);
@@ -230,6 +316,12 @@ namespace SHEvaluation.Rank.MotherGroup
                 sql.Append("\t\t, '");
                 sql.Append(Literal(extensionJson));
                 sql.Append("'::jsonb\n");
+            }
+            if (operationId != null)
+            {
+                sql.Append("\tFROM (SELECT ");
+                sql.Append(AdvisoryLockCall(operationId));
+                sql.Append(" AS locked) AS publish_lock\n");
             }
             sql.Append("\tRETURNING *\n)\n, calc_condition AS\n(\n");
             for (int i = 0; i < grades.Count; i++)
@@ -347,6 +439,8 @@ namespace SHEvaluation.Rank.MotherGroup
 
     public sealed class SemesterRankPublishOutcome
     {
+        public static SemesterRankCalculationTrace PendingTrace;
+
         public bool Succeeded { get; private set; }
         public string DialogMessage { get; private set; }
         public string StatusMessage { get; private set; }
@@ -360,8 +454,23 @@ namespace SHEvaluation.Rank.MotherGroup
 
         public static SemesterRankPublishOutcome From(Exception error, DataTable result)
         {
+            SemesterRankCalculationTrace trace = PendingTrace;
+            PendingTrace = null;
+            return From(error, result, trace);
+        }
+
+        public static SemesterRankPublishOutcome From(Exception error, DataTable result, SemesterRankCalculationTrace trace)
+        {
             if (error == null && SemesterRankPublishSql.HasPublishedDetails(result))
                 return new SemesterRankPublishOutcome(true, "計算完成", "排名計算完成");
+            if (trace != null)
+            {
+                if (error == null)
+                    error = new InvalidOperationException("排名明細沒有寫入。");
+                SemesterRankFailureReport report = SemesterRankFailureReport.Create(trace, error, true);
+                report.Save();
+                return new SemesterRankPublishOutcome(false, report.UserMessage, "排名計算失敗");
+            }
             string detail = error == null ? "排名明細沒有寫入。" : error.Message;
             if (detail != null && detail.IndexOf("沒有符合排名條件的學期成績，未執行排名公布") >= 0)
                 detail = "沒有成績";
