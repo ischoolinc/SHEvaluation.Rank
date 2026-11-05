@@ -372,3 +372,12 @@ $RECYCLE.BIN/
 /*.tsv
 /exports/
 /test-output/
+
+# Local semester-rank verification notes and environment-specific audit scripts
+/Rank[0-9]*_*.md
+/Rank_[0-9]*_*.md
+/Rank_[0-9]*_*.sql
+/排名計算_下一階段核對.md
+
+# Extracted tester feedback, screenshots, and local audit evidence
+/test-feedback-*/

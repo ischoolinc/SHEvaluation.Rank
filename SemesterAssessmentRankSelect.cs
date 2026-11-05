@@ -17,16 +17,25 @@ namespace SHEvaluation.Rank
     public partial class SemesterAssessmentRankSelect : BaseForm
     {
         private bool _IsLoading = false;
-        private bool _IsClosing = false;
+        private volatile bool _IsClosing = false;
         private bool _suppressEvents = false;
         private bool _detailRunning = false;
         private bool _localRowsForCheck;
         private int _initGeneration = 0;
-        private int _detailGeneration = 0;
+        private volatile int _detailGeneration = 0;
         private List<RankDataInfo> _allRows = new List<RankDataInfo>();
         private List<RankDataInfo> _viewRows = new List<RankDataInfo>();
         private int _sortColumn = -1;
         private bool _sortDescending;
+        private string _filterScope;
+        private List<RankDataInfo> _filterRows;
+        private readonly System.Windows.Forms.Timer _searchTimer = new System.Windows.Forms.Timer();
+        internal const int DisplayPageSize = 500;
+        private int _pageOffset;
+        private int _viewGeneration;
+        private bool _exportRunning;
+        private readonly DevComponents.DotNetBar.ButtonX _previousPage = new DevComponents.DotNetBar.ButtonX();
+        private readonly DevComponents.DotNetBar.ButtonX _nextPage = new DevComponents.DotNetBar.ButtonX();
 
         private readonly List<string> gradeYearList = new List<string>();
         private readonly List<string> rankTypeList = new List<string>();
@@ -34,6 +43,25 @@ namespace SHEvaluation.Rank
         public SemesterAssessmentRankSelect()
         {
             InitializeComponent();
+            _searchTimer.Interval = 350;
+            _searchTimer.Tick += delegate { _searchTimer.Stop(); LoadRowData(null, null); };
+            FormClosed += delegate { _searchTimer.Dispose(); };
+            DevComponents.DotNetBar.ButtonX retry = new DevComponents.DotNetBar.ButtonX();
+            retry.Text = "重新查詢";
+            retry.AccessibleName = "重新查詢排名資料";
+            retry.SetBounds(710, 48, 105, 28);
+            retry.Click += LoadRowData;
+            Controls.Add(retry);
+            _previousPage.Text = "上一頁";
+            _nextPage.Text = "下一頁";
+            _previousPage.SetBounds(590, btnExportToExcel.Top, 90, 28);
+            _nextPage.SetBounds(690, btnExportToExcel.Top, 90, 28);
+            _previousPage.Anchor = _nextPage.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
+            _previousPage.Enabled = _nextPage.Enabled = false;
+            _previousPage.Click += delegate { ChangePage(-1); };
+            _nextPage.Click += delegate { ChangePage(1); };
+            Controls.Add(_previousPage);
+            Controls.Add(_nextPage);
             pbLoading.BackColor = Color.White;
             dgvScoreRank.VirtualMode = true;
             dgvScoreRank.CellValueNeeded += dgvScoreRank_CellValueNeeded;
@@ -42,6 +70,11 @@ namespace SHEvaluation.Rank
             {
                 if (column.AutoSizeMode == DataGridViewAutoSizeColumnMode.AllCells)
                     column.AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+                if (column.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill)
+                {
+                    column.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    column.Width = 120;
+                }
                 column.SortMode = column is DataGridViewButtonColumn
                     ? DataGridViewColumnSortMode.NotSortable
                     : DataGridViewColumnSortMode.Programmatic;
@@ -126,7 +159,7 @@ namespace SHEvaluation.Rank
 
         private void LoadRowData(object sender, EventArgs e)
         {
-            if (_suppressEvents || _IsClosing)
+            if (_suppressEvents || _IsClosing || _exportRunning)
                 return;
             if (string.IsNullOrEmpty(cboSchoolYear.Text)
                 || string.IsNullOrEmpty(cboSemester.Text)
@@ -134,6 +167,7 @@ namespace SHEvaluation.Rank
                 || string.IsNullOrEmpty(cboScoreCategory.Text))
                 return;
             _detailGeneration++;
+            _viewGeneration++;
             if (_detailRunning)
                 return;
             BeginDetail(_detailGeneration);
@@ -141,8 +175,10 @@ namespace SHEvaluation.Rank
 
         private void BeginDetail(int generation)
         {
+            _searchTimer.Stop();
             _detailRunning = true;
             _IsLoading = true;
+            _previousPage.Enabled = _nextPage.Enabled = false;
             btnExportToExcel.Enabled = false;
             pbLoading.Visible = true;
             lblMsgCount.Text = "資料讀取中";
@@ -153,26 +189,50 @@ namespace SHEvaluation.Rank
             string semester = cboSemester.Text;
             string scoreType = cboScoreType.Text;
             string scoreCategory = cboScoreCategory.Text;
+            string scope = schoolYear + "|" + semester + "|" + scoreType + "|" + scoreCategory;
+            if (_filterScope != scope)
+            {
+                _filterScope = scope;
+                _filterRows = null;
+                ResetResultFilters();
+            }
+            string itemName = cboItemName.Text;
+            string rankType = cboRankType.Text;
+            string studentNumber = txtStudentNum.Text;
             List<string> grades = new List<string>(gradeYearList);
             List<string> ranks = new List<string>(rankTypeList);
             BackgroundWorker worker = new BackgroundWorker();
             List<RankDataInfo> loaded = null;
+            List<RankDataInfo> options = null;
             Exception error = null;
             long queryMs = 0;
             worker.DoWork += delegate
             {
                 try
                 {
-                    string sql = SemesterAssessmentRankQuery.DetailSql(schoolYear, semester, scoreType, scoreCategory, grades, ranks);
+                    string sql = SemesterAssessmentRankQuery.MatrixSql(schoolYear, semester, scoreType, scoreCategory, grades, ranks);
                     if (sql.Length == 0)
                     {
                         loaded = new List<RankDataInfo>();
                         return;
                     }
                     Stopwatch watch = Stopwatch.StartNew();
-                    DataTable table = new QueryHelper().Select(sql);
+                    QueryHelper helper = new QueryHelper();
+                    DataTable matrices = helper.Select(sql);
+                    List<long> matrixIds = SemesterAssessmentRankQuery.MatrixIds(matrices);
+                    options = SemesterAssessmentRankQuery.ReadRows(matrices);
+                    loaded = new List<RankDataInfo>();
+                    if (matrixIds.Count > 0)
+                    {
+                        loaded = SemesterAssessmentRankQuery.ReadPages(
+                            delegate(long cursor) { return helper.Select(SemesterAssessmentRankQuery.DetailPageSql(schoolYear, semester, scoreType, scoreCategory, grades, ranks, matrixIds, itemName, rankType, studentNumber, cursor)); },
+                            delegate { return _IsClosing || generation != _detailGeneration; });
+                        if (loaded == null) return;
+                    }
+                    if (!SemesterAssessmentRankQuery.SameMatrices(matrixIds, SemesterAssessmentRankQuery.MatrixIds(helper.Select(sql))))
+                        throw new InvalidOperationException("讀取期間目前採計排名已變動，請重新查詢。");
+                    SemesterAssessmentRankQuery.SortDefault(loaded);
                     queryMs = watch.ElapsedMilliseconds;
-                    loaded = SemesterAssessmentRankQuery.ReadRows(table);
                 }
                 catch (Exception ex)
                 {
@@ -197,17 +257,14 @@ namespace SHEvaluation.Rank
                     }
                     if (error != null)
                     {
+                        if (options != null) { _filterRows = options; FillResultFilters(); }
                         RestoreAfterDetailFailure(error);
                         return;
                     }
                     _allRows = loaded ?? new List<RankDataInfo>();
+                    _filterRows = options;
                     FillResultFilters();
-                    long bindMs = ApplyView();
-                    _IsLoading = false;
-                    pbLoading.Visible = false;
-                    btnExportToExcel.Enabled = true;
-                    SetEditorsEnabled(true);
-                    MotherForm.SetStatusBarMessage("資料讀取完成，查詢 " + queryMs + " 毫秒，畫面 " + bindMs + " 毫秒，共 " + _viewRows.Count + " 筆");
+                    BeginView(queryMs);
                 }
                 catch (Exception ex)
                 {
@@ -219,8 +276,26 @@ namespace SHEvaluation.Rank
 
         private void FillingDataGridView(object sender, EventArgs e)
         {
-            if (_suppressEvents || _IsLoading || _detailRunning || _IsClosing)
+            if (_suppressEvents || _IsClosing)
                 return;
+            if (!_localRowsForCheck)
+            {
+                if (sender == txtStudentNum)
+                {
+                    // Invalidate the running query immediately; debounce only the next request.
+                    _detailGeneration++;
+                    _viewGeneration++;
+                    btnExportToExcel.Enabled = false;
+                    _previousPage.Enabled = _nextPage.Enabled = false;
+                    _viewRows = new List<RankDataInfo>();
+                    dgvScoreRank.RowCount = 0;
+                    lblMsgCount.Text = "等待查詢";
+                    _searchTimer.Stop();
+                    _searchTimer.Start();
+                }
+                else LoadRowData(sender, e);
+                return;
+            }
             ApplyView();
             btnExportToExcel.Enabled = true;
         }
@@ -239,12 +314,27 @@ namespace SHEvaluation.Rank
             }
         }
 
+        private void ResetResultFilters()
+        {
+            _suppressEvents = true;
+            try
+            {
+                foreach (ComboBox combo in new ComboBox[] { cboItemName, cboRankType })
+                {
+                    combo.Items.Clear();
+                    combo.Items.Add("全部");
+                    combo.SelectedIndex = 0;
+                }
+            }
+            finally { _suppressEvents = false; }
+        }
+
         private void FillDistinct(ComboBox combo, int columnIndex)
         {
             string selected = combo.Text;
             combo.Items.Clear();
             combo.Items.Add("全部");
-            foreach (RankDataInfo row in _allRows)
+            foreach (RankDataInfo row in _filterRows ?? _allRows)
             {
                 string value = "" + SemesterAssessmentRankQuery.CellValue(row, columnIndex);
                 if (!combo.Items.Contains(value))
@@ -264,24 +354,85 @@ namespace SHEvaluation.Rank
             string studentNumber = txtStudentNum == null ? "" : txtStudentNum.Text;
             _viewRows = SemesterAssessmentRankQuery.Filter(_allRows, itemName, rankType, studentNumber);
             SemesterAssessmentRankQuery.SortRows(_viewRows, _sortColumn, _sortDescending);
-            UpdateSortGlyph();
-            dgvScoreRank.RowCount = 0;
-            dgvScoreRank.RowCount = _viewRows.Count;
-            lblMsgCount.Text = "共 " + _viewRows.Count + " 筆";
+            _pageOffset = 0;
+            BindPage();
             watch.Stop();
             return watch.ElapsedMilliseconds;
         }
 
+        private void BeginView(long queryMs)
+        {
+            int generation = ++_viewGeneration;
+            List<RankDataInfo> source = _allRows;
+            string item = cboItemName.Text, rank = cboRankType.Text, number = txtStudentNum.Text;
+            int column = _sortColumn;
+            bool descending = _sortDescending;
+            _IsLoading = true;
+            btnExportToExcel.Enabled = false;
+            _previousPage.Enabled = _nextPage.Enabled = false;
+            pbLoading.Visible = true;
+            lblMsgCount.Text = "正在整理排名資料";
+            BackgroundWorker worker = new BackgroundWorker();
+            long elapsed = 0;
+            worker.DoWork += delegate(object sender, DoWorkEventArgs e)
+            {
+                Stopwatch watch = Stopwatch.StartNew();
+                List<RankDataInfo> result = SemesterAssessmentRankQuery.Filter(source, item, rank, number);
+                SemesterAssessmentRankQuery.SortRows(result, column, descending);
+                elapsed = watch.ElapsedMilliseconds;
+                e.Result = result;
+            };
+            worker.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
+            {
+                if (!CanTouchUi() || generation != _viewGeneration) return;
+                if (e.Error != null) { RestoreAfterDetailFailure(e.Error); return; }
+                try
+                {
+                    _viewRows = (List<RankDataInfo>)e.Result;
+                    _pageOffset = 0;
+                    _IsLoading = false;
+                    pbLoading.Visible = false;
+                    BindPage();
+                    btnExportToExcel.Enabled = true;
+                    SetEditorsEnabled(true);
+                    MotherForm.SetStatusBarMessage("資料讀取完成，查詢 " + queryMs + " 毫秒，整理 " + elapsed + " 毫秒，共 " + _viewRows.Count + " 筆");
+                }
+                catch (Exception ex) { RestoreAfterDetailFailure(ex); }
+            };
+            worker.RunWorkerAsync();
+        }
+
+        private void BindPage()
+        {
+            UpdateSortGlyph();
+            int count = Math.Min(DisplayPageSize, Math.Max(0, _viewRows.Count - _pageOffset));
+            if (dgvScoreRank.RowCount != count) dgvScoreRank.RowCount = count;
+            if (count > 0) dgvScoreRank.FirstDisplayedScrollingRowIndex = 0;
+            dgvScoreRank.Invalidate();
+            lblMsgCount.Text = "共 " + _viewRows.Count + " 筆"
+                + (count == 0 ? "" : "，顯示 " + (_pageOffset + 1) + "～" + (_pageOffset + count) + " 筆");
+            _previousPage.Enabled = !_IsLoading && !_exportRunning && _pageOffset > 0;
+            _nextPage.Enabled = !_IsLoading && !_exportRunning && _pageOffset + count < _viewRows.Count;
+        }
+
+        private void ChangePage(int direction)
+        {
+            if (_IsLoading || _detailRunning || _exportRunning || _IsClosing) return;
+            int offset = _pageOffset + direction * DisplayPageSize;
+            if (offset < 0 || offset >= _viewRows.Count) return;
+            _pageOffset = offset;
+            BindPage();
+        }
+
         private void dgvScoreRank_CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
         {
-            if (e.RowIndex < 0 || e.RowIndex >= _viewRows.Count)
-                return;
-            e.Value = SemesterAssessmentRankQuery.CellValue(_viewRows[e.RowIndex], e.ColumnIndex);
+            RankDataInfo row = RowForView(e.RowIndex);
+            if (row != null) e.Value = SemesterAssessmentRankQuery.CellValue(row, e.ColumnIndex);
         }
 
         private void dgvScoreRank_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
         {
-            if (_IsLoading || _detailRunning || _IsClosing)
+            if (_IsLoading || _detailRunning || _exportRunning || _IsClosing)
                 return;
             if (e.ColumnIndex < 0 || e.ColumnIndex >= dgvScoreRank.Columns.Count)
                 return;
@@ -294,7 +445,8 @@ namespace SHEvaluation.Rank
                 _sortColumn = e.ColumnIndex;
                 _sortDescending = false;
             }
-            ApplyView();
+            if (_localRowsForCheck) ApplyView();
+            else BeginView(0);
         }
 
         private void UpdateSortGlyph()
@@ -337,6 +489,7 @@ namespace SHEvaluation.Rank
 
         private void btnExportToExcel_Click(object sender, EventArgs e)
         {
+            if (_IsLoading || _detailRunning || _exportRunning || _IsClosing) return;
             btnExportToExcel.Enabled = false;
             saveFileDialog.Title = "匯出排名資料";
             saveFileDialog.FileName = "匯出排名資料.xlsx";
@@ -346,39 +499,57 @@ namespace SHEvaluation.Rank
                 btnExportToExcel.Enabled = true;
                 return;
             }
-            try
+            string path = saveFileDialog.FileName;
+            List<int> columns = ExportColumnIndexes();
+            List<string> headers = new List<string>();
+            foreach (int column in columns) headers.Add(dgvScoreRank.Columns[column].HeaderText);
+            List<RankDataInfo> rows = new List<RankDataInfo>(_viewRows);
+            _exportRunning = true;
+            _previousPage.Enabled = _nextPage.Enabled = false;
+            SetEditorsEnabled(false);
+            lblMsgCount.Text = "正在匯出全部 " + rows.Count + " 筆";
+            pbLoading.Visible = true;
+            BackgroundWorker worker = new BackgroundWorker();
+            worker.DoWork += delegate { WriteExportWorkbook(path, rows, columns, headers); };
+            worker.RunWorkerCompleted += delegate(object owner, RunWorkerCompletedEventArgs result)
             {
-                Workbook workbook = new Workbook();
-                Worksheet worksheet = workbook.Worksheets[0];
-                worksheet.Name = "排名資料";
-                List<int> columns = ExportColumnIndexes();
-                List<List<string>> matrix = ExportMatrix(columns);
-                for (int colIndex = 0; colIndex < columns.Count; colIndex++)
-                    worksheet.Cells[0, colIndex].PutValue(dgvScoreRank.Columns[columns[colIndex]].HeaderText);
-                for (int rowIndex = 0; rowIndex < matrix.Count; rowIndex++)
-                {
-                    for (int colIndex = 0; colIndex < matrix[rowIndex].Count; colIndex++)
-                        worksheet.Cells[rowIndex + 1, colIndex].PutValue(matrix[rowIndex][colIndex]);
-                }
-                workbook.Save(saveFileDialog.FileName);
+                _exportRunning = false;
+                if (!CanTouchUi()) return;
+                pbLoading.Visible = false;
+                SetEditorsEnabled(true);
+                BindPage();
                 btnExportToExcel.Enabled = true;
+                if (result.Error != null)
+                {
+                    MessageBox.Show("檔案儲存失敗：" + result.Error.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
                 if (MessageBox.Show("檔案儲存完成，是否開啟？", "是否開啟", MessageBoxButtons.YesNo) == DialogResult.Yes)
                 {
                     try
                     {
-                        Process.Start(saveFileDialog.FileName);
+                        Process.Start(path);
                     }
                     catch (Exception ex)
                     {
                         MessageBox.Show("檔案開啟失敗：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("檔案儲存失敗：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                btnExportToExcel.Enabled = true;
-            }
+            };
+            worker.RunWorkerAsync();
+        }
+
+        internal static void WriteExportWorkbook(string path, IList<RankDataInfo> rows, IList<int> columns, IList<string> headers)
+        {
+            Workbook workbook = new Workbook();
+            Worksheet worksheet = workbook.Worksheets[0];
+            worksheet.Name = "排名資料";
+            for (int column = 0; column < columns.Count; column++)
+                worksheet.Cells[0, column].PutValue(headers[column]);
+            for (int index = 0; index < rows.Count; index++)
+                for (int column = 0; column < columns.Count; column++)
+                    worksheet.Cells[index + 1, column].PutValue("" + SemesterAssessmentRankQuery.CellValue(rows[index], columns[column]));
+            workbook.Save(path);
         }
 
         private void SemesterAssessmentRankSelect_Resize(object sender, EventArgs e)
@@ -466,7 +637,7 @@ namespace SHEvaluation.Rank
             }
             pbLoading.Visible = false;
             btnExportToExcel.Enabled = false;
-            lblMsgCount.Text = "";
+            lblMsgCount.Text = "讀取失敗，請重新查詢";
             SetEditorsEnabled(true);
             ShowFailure(error, "檢索明細", false);
         }
@@ -511,9 +682,9 @@ namespace SHEvaluation.Rank
 
         private RankDataInfo RowForView(int rowIndex)
         {
-            if (rowIndex < 0 || rowIndex >= _viewRows.Count)
+            if (rowIndex < 0 || rowIndex >= dgvScoreRank.RowCount || _pageOffset + rowIndex >= _viewRows.Count)
                 return null;
-            return _viewRows[rowIndex];
+            return _viewRows[_pageOffset + rowIndex];
         }
 
         private List<int> ExportColumnIndexes()
@@ -566,6 +737,7 @@ namespace SHEvaluation.Rank
 
         internal void LoadRowsForCheck(IList<RankDataInfo> rows)
         {
+            _localRowsForCheck = true;
             _allRows = new List<RankDataInfo>(rows ?? new List<RankDataInfo>());
             _suppressEvents = true;
             try
@@ -637,6 +809,17 @@ namespace SHEvaluation.Rank
         {
             return _viewRows.Count;
         }
+
+        internal void ChangePageForCheck(int direction) { ChangePage(direction); }
+
+        internal void BeginViewForCheck()
+        {
+            _localRowsForCheck = false;
+            BeginView(0);
+        }
+
+        internal bool ViewRunningForCheck() { return _IsLoading; }
+
 
         internal string ShownStudentNumberForCheck(int rowIndex)
         {

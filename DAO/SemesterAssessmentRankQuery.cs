@@ -8,6 +8,110 @@ namespace SHEvaluation.Rank.DAO
 {
     public static class SemesterAssessmentRankQuery
     {
+        public const int PageSize = 1000;
+
+        // Options come from matrices, never from the (possibly filtered) detail response.
+        public static string MatrixSql(string schoolYear, string semester, string scoreType, string scoreCategory, IList<string> grades, IList<string> ranks)
+        {
+            string detail = DetailSql(schoolYear, semester, scoreType, scoreCategory, grades, ranks);
+            if (detail.Length == 0)
+                return "";
+            int where = detail.IndexOf("WHERE rank_matrix.is_alive");
+            int order = detail.IndexOf("\nORDER BY");
+            return "SELECT rank_matrix.id AS rank_matrix_id, rank_matrix.item_name, rank_matrix.rank_type FROM rank_matrix\n"
+                + detail.Substring(where, order - where) + "\nORDER BY rank_matrix.id";
+        }
+
+        public static string DetailPageSql(string schoolYear, string semester, string scoreType, string scoreCategory, IList<string> grades, IList<string> ranks, IList<long> matrixIds, string item, string rankType, string studentNumber, long offset)
+        {
+            if (matrixIds == null || matrixIds.Count == 0)
+                return "";
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException("offset");
+            string detail = DetailSql(schoolYear, semester, scoreType, scoreCategory, grades, ranks);
+            if (detail.Length == 0)
+                return "";
+            detail = detail.Substring(0, detail.IndexOf("\nORDER BY"));
+            StringBuilder sql = new StringBuilder(detail);
+            sql.Append("\nAND rank_matrix.id IN (");
+            for (int i = 0; i < matrixIds.Count; i++)
+            {
+                if (matrixIds[i] <= 0)
+                    throw new ArgumentException("排名矩陣識別必須為正整數。");
+                if (i > 0) sql.Append(",");
+                sql.Append(matrixIds[i].ToString(CultureInfo.InvariantCulture));
+            }
+            sql.Append(")\nAND rank_detail.ref_matrix_id IS NOT NULL");
+            if (!string.IsNullOrEmpty(item) && item != "全部")
+                sql.Append("\nAND rank_matrix.item_name = '").Append(Literal(item)).Append("'");
+            if (!string.IsNullOrEmpty(rankType) && rankType != "全部")
+                sql.Append("\nAND rank_matrix.rank_type = '").Append(Literal(rankType)).Append("'");
+            // strpos preserves the existing literal substring filter, including %, _ and leading zeros.
+            if (!string.IsNullOrEmpty(studentNumber))
+                sql.Append("\nAND strpos(student.student_number, '").Append(Literal(studentNumber)).Append("') > 0");
+            // rank_detail has no unique constraint in the supported schema. ctid breaks
+            // ties without assuming that student IDs or detail IDs are unique.
+            sql.Append("\nORDER BY rank_matrix.id, rank_detail.ctid LIMIT ").Append(PageSize)
+                .Append(" OFFSET ").Append(offset.ToString(CultureInfo.InvariantCulture));
+            return sql.ToString();
+        }
+
+        public static List<long> MatrixIds(DataTable table)
+        {
+            List<long> ids = new List<long>();
+            foreach (DataRow row in table.Rows)
+                ids.Add(Convert.ToInt64(row["rank_matrix_id"], CultureInfo.InvariantCulture));
+            return ids;
+        }
+
+        public static bool SameMatrices(IList<long> before, IList<long> after)
+        {
+            if (before.Count != after.Count) return false;
+            for (int i = 0; i < before.Count; i++)
+                if (before[i] != after[i]) return false;
+            return true;
+        }
+
+        public static List<RankDataInfo> ReadPages(Func<long, DataTable> readPage, Func<bool> canceled)
+        {
+            List<RankDataInfo> rows = new List<RankDataInfo>();
+            long cursor = 0;
+            while (!canceled())
+            {
+                DataTable page = readPage(cursor);
+                if (page.Rows.Count == 0) return rows;
+                if (page.Rows.Count > PageSize)
+                    throw new InvalidOperationException("排名資料分批讀取超過上限，請重新查詢。");
+                cursor += page.Rows.Count;
+                rows.AddRange(ReadRows(page));
+                if (page.Rows.Count < PageSize) return rows;
+            }
+            return null;
+        }
+
+        public static void SortDefault(List<RankDataInfo> rows)
+        {
+            string[] kinds = new string[] { "班排名", "科排名", "年排名", "類別1排名", "類別2排名" };
+            rows.Sort(delegate(RankDataInfo left, RankDataInfo right)
+            {
+                int leftGrade, rightGrade;
+                int.TryParse(left.grade_year, out leftGrade);
+                int.TryParse(right.grade_year, out rightGrade);
+                int compared = leftGrade.CompareTo(rightGrade);
+                if (compared != 0) return compared;
+                compared = Array.IndexOf(kinds, left.rank_type).CompareTo(Array.IndexOf(kinds, right.rank_type));
+                if (compared != 0) return compared;
+                compared = string.Compare(left.rank_name, right.rank_name, StringComparison.CurrentCulture);
+                if (compared != 0) return compared;
+                compared = CompareRow(left, right, 11, false);
+                if (compared != 0) return compared;
+                DateTime leftTime, rightTime;
+                DateTime.TryParse(left.create_time, out leftTime);
+                DateTime.TryParse(right.create_time, out rightTime);
+                return rightTime.CompareTo(leftTime);
+            });
+        }
+
         public const string GradeYearSql = "SELECT DISTINCT class.grade_year FROM class INNER JOIN student ON student.ref_class_id = class.id WHERE student.status = 1 AND class.grade_year IS NOT NULL ORDER BY class.grade_year ASC;";
 
         public const string OptionSql = @"

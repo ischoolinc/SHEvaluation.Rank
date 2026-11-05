@@ -260,7 +260,9 @@ namespace SHEvaluation.Rank.MotherGroup
             if (kind == "timeout")
                 return "資料庫回報查詢被取消或逾時" + CodeSuffix(code) + "。這不能當成人數上限。";
             if (kind == "resource")
-                return "資料庫回報資源不足" + CodeSuffix(code) + "。這不能當成人數上限。";
+                return chain.IndexOf("Java heap space", StringComparison.OrdinalIgnoreCase) >= 0 || chain.IndexOf("OutOfMemoryError", StringComparison.OrdinalIgnoreCase) >= 0
+                    ? "排名查詢服務記憶體不足，資料未完整讀取。請縮小查詢條件後重新查詢，並提供錯誤識別碼給維護人員。"
+                    : "資料庫回報資源不足" + CodeSuffix(code) + "。這不能當成人數上限。";
             if (kind == "constraint")
                 return "資料庫回報限制衝突" + CodeSuffix(code) + "。";
             if (kind == "format")
@@ -310,7 +312,9 @@ namespace SHEvaluation.Rank.MotherGroup
                 return "integrity";
             if (code == "57014" || text.IndexOf("statement timeout") >= 0 || text.IndexOf("canceling statement") >= 0 || text.IndexOf("查詢逾時") >= 0)
                 return "timeout";
-            if (code == "53200" || code == "53100" || text.IndexOf("out of memory") >= 0 || text.IndexOf("disk full") >= 0)
+            if (code == "53200" || code == "53100" || text.IndexOf("out of memory") >= 0 || text.IndexOf("disk full") >= 0
+                || text.IndexOf("Java heap space", StringComparison.OrdinalIgnoreCase) >= 0
+                || text.IndexOf("OutOfMemoryError", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "resource";
             if ((!string.IsNullOrEmpty(code) && code.StartsWith("23"))
                 || text.IndexOf("duplicate key") >= 0

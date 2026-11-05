@@ -22,6 +22,7 @@ namespace SHEvaluation.Rank.MotherGroup
             {
                 List<string> errors = new List<string>();
                 errors.AddRange(CheckQuerySql());
+                errors.AddRange(CheckPagedRetrieval());
                 errors.AddRange(CheckFilterAndExportScope());
                 errors.AddRange(CheckFailureReport());
                 errors.AddRange(CheckPrivacyRedaction());
@@ -31,6 +32,7 @@ namespace SHEvaluation.Rank.MotherGroup
                 errors.AddRange(CheckPublishBoundary());
                 errors.AddRange(CheckPublishTransport());
                 errors.AddRange(CheckGridTiming());
+                errors.AddRange(CheckLargeResultInteractions());
                 if (errors.Count == 0)
                 {
                     Console.WriteLine("semester-rank-retrieval-check: ok");
@@ -49,6 +51,48 @@ namespace SHEvaluation.Rank.MotherGroup
                 Console.WriteLine(ex);
                 return 1;
             }
+        }
+
+        private static List<string> CheckPagedRetrieval()
+        {
+            List<string> errors = new List<string>();
+            string[] grades = new string[] { "3" };
+            string[] ranks = new string[] { "年排名" };
+            string sql = SemesterAssessmentRankQuery.DetailPageSql("114", "2", "學期", "科目成績", grades, ranks, new long[] { 10, 20 }, "國'文", "年排名", "001%_", 99);
+            Expect(errors, sql.Contains("OFFSET 99") && sql.Contains("ORDER BY rank_matrix.id, rank_detail.ctid LIMIT 1000") && sql.Contains("rank_matrix.id IN (10,20)"), "明細使用固定矩陣、實體列排序及有限頁數，不假設明細身分唯一");
+            Expect(errors, sql.Contains("item_name = '國''文'") && sql.Contains("rank_type = '年排名'") && sql.Contains("strpos(student.student_number, '001%_') > 0"), "條件送入資料庫，學號保持文字包含語意");
+            string catalog = SemesterAssessmentRankQuery.MatrixSql("114", "2", "學期", "科目成績", grades, ranks);
+            Expect(errors, !catalog.Contains("rank_detail") && catalog.Contains("ORDER BY rank_matrix.id"), "選項不依賴全量明細");
+            int calls = 0;
+            List<RankDataInfo> result = SemesterAssessmentRankQuery.ReadPages(delegate(long cursor)
+            {
+                calls++;
+                DataTable page = new DataTable();
+                page.Columns.Add("detail_id", typeof(long));
+                page.Columns.Add("student_number");
+                for (long id = cursor + 1; id <= Math.Min(cursor + SemesterAssessmentRankQuery.PageSize, 2001); id++)
+                    page.Rows.Add(id, id.ToString("00000"));
+                return page;
+            }, delegate { return false; });
+            Expect(errors, calls == 3 && result.Count == 2001 && result[0].student_number == "00001" && result[2000].student_number == "02001", "跨三頁完整合併且前導零保留");
+            result = SemesterAssessmentRankQuery.ReadPages(delegate(long cursor) { throw new Exception("取消後不應送出查詢"); }, delegate { return true; });
+            Expect(errors, result == null, "取消時不返回部分結果");
+            bool rejected = false;
+            try
+            {
+                SemesterAssessmentRankQuery.ReadPages(delegate(long cursor)
+                {
+                    DataTable page = new DataTable();
+                    page.Columns.Add("detail_id", typeof(long));
+                    for (int i = 0; i <= SemesterAssessmentRankQuery.PageSize; i++) page.Rows.Add(1L);
+                    return page;
+                }, delegate { return false; });
+            }
+            catch (InvalidOperationException) { rejected = true; }
+            Expect(errors, rejected, "回應超過分頁上限時應拒絕");
+            Expect(errors, !SemesterAssessmentRankQuery.SameMatrices(new long[] { 10, 20 }, new long[] { 10, 30 }), "採計矩陣變更必須被偵測");
+            Expect(errors, SemesterRankFailureReport.Classify("", "java.lang.OutOfMemoryError: Java heap space") == "resource", "Java heap space 應歸類為資源不足");
+            return errors;
         }
 
         private static List<string> CheckQuerySql()
@@ -460,7 +504,7 @@ namespace SHEvaluation.Rank.MotherGroup
             string calculate = File.ReadAllText("CalculateSemesterAssessmentRank.cs", Encoding.UTF8);
             Expect(errors, select.IndexOf("Application.DoEvents") < 0, "檢索畫面不使用 DoEvents");
             Expect(errors, select.IndexOf("throw new Exception(\"資料讀取失敗\"") < 0, "查詢完成事件不再拋出未處理例外");
-            Expect(errors, select.IndexOf("SemesterAssessmentRankQuery.DetailSql") >= 0 && select.IndexOf("VirtualMode = true") >= 0, "明細改為一次查詢，並用虛擬模式建立畫面");
+            Expect(errors, select.IndexOf("SemesterAssessmentRankQuery.DetailPageSql") >= 0 && select.IndexOf("VirtualMode = true") >= 0, "明細分批查詢，並用虛擬模式建立畫面");
             int load = select.IndexOf("void SemesterAssessmentRankSelect_Load");
             int loadEnd = select.IndexOf("void LoadRowData");
             string loadBody = load >= 0 && loadEnd > load ? select.Substring(load, loadEnd - load) : "";
@@ -581,6 +625,74 @@ namespace SHEvaluation.Rank.MotherGroup
             table.Columns.Add("detail_count");
             table.Rows.Add(matrix.ToString(), alive.ToString(), students.ToString(), details.ToString());
             return table;
+        }
+
+        private static List<string> CheckLargeResultInteractions()
+        {
+            List<string> errors = new List<string>();
+            const int count = 87771;
+            List<RankDataInfo> rows = new List<RankDataInfo>();
+            for (int i = 0; i < count; i++)
+                rows.Add(new RankDataInfo { rank_matrix_id = "M" + i, ref_student_id = "S" + i,
+                    student_number = i.ToString("000000"), item_name = "國文", rank_type = "年排名",
+                    score = (count - i).ToString(), rank = (i + 1).ToString() });
+            using (SemesterAssessmentRankSelect form = new SemesterAssessmentRankSelect())
+            {
+                form.UseLocalRowsForCheck();
+                form.ShowInTaskbar = false;
+                form.Show();
+                Stopwatch watch = Stopwatch.StartNew();
+                form.LoadRowsForCheck(rows);
+                DataGridView grid = form.RetrievalGridForCheck();
+                Expect(errors, form.ViewCountForCheck() == count && grid.RowCount == 500, "87771 筆結果保留完整，但畫面最多 500 列");
+                form.ChangePageForCheck(1);
+                Expect(errors, Identity(form, 0) == "M500|S500" && form.ShownStudentNumberForCheck(0) == "000500", "第二頁畫面與明細使用正確偏移，保留前導零");
+                for (int page = 1; page < (count - 1) / 500; page++) form.ChangePageForCheck(1);
+                Expect(errors, grid.RowCount == 271 && Identity(form, 270) == "M87770|S87770", "最後一頁沒有漏列或越界");
+                form.ChangePageForCheck(1);
+                Expect(errors, grid.RowCount == 271, "最後一頁不能再往後");
+                List<string> exported = form.ExportLinesForCheck();
+                Expect(errors, exported.Count == count && exported[0].Contains("000000") && exported[count - 1].Contains("087770"), "最後一頁匯出仍含完整結果且順序不變");
+                // Exercise the actual row/cell accessibility providers with a full page.
+                form.ChangePageForCheck(-1);
+                grid.CreateControl();
+                for (int index = 0; index < grid.RowCount; index++)
+                {
+                    Rectangle bounds = grid.Rows[index].AccessibilityObject.Bounds;
+                    Rectangle cellBounds = grid.Rows[index].Cells[0].AccessibilityObject.Bounds;
+                }
+                long bindingMs = watch.ElapsedMilliseconds;
+                form.BeginViewForCheck();
+                bool posted = false;
+                form.BeginInvoke(new Action(delegate { posted = true; }));
+                Stopwatch deadline = Stopwatch.StartNew();
+                while (form.ViewRunningForCheck() && deadline.ElapsedMilliseconds < 15000) Application.DoEvents();
+                Expect(errors, !form.ViewRunningForCheck() && posted, "背景整理期間畫面仍可處理訊息");
+                form.ClickHeaderForCheck("排名分數");
+                deadline.Restart();
+                while (form.ViewRunningForCheck() && deadline.ElapsedMilliseconds < 15000) Application.DoEvents();
+                Expect(errors, !form.ViewRunningForCheck() && Identity(form, 0) == "M87770|S87770" && grid.RowCount == 500, "全量背景排序後回到第一頁，非只排序目前頁");
+                form.ChangePageForCheck(1);
+                Expect(errors, Identity(form, 0) == "M87270|S87270", "排序後第二頁沿用全量排序");
+                Console.WriteLine("large result 87771 rows: page/accessibility " + bindingMs + "ms; background sort " + deadline.ElapsedMilliseconds + "ms; displayed=" + grid.RowCount);
+                form.Close();
+            }
+            string path = Path.Combine(Path.GetTempPath(), "rank-large-export-" + Guid.NewGuid().ToString("N") + ".xlsx");
+            try
+            {
+                Stopwatch watch = Stopwatch.StartNew();
+                SemesterAssessmentRankSelect.WriteExportWorkbook(path, rows,
+                    new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 },
+                    new string[] { "成績類型", "成績類別", "項目", "母群", "母群名稱", "學生班級", "座號", "學號", "姓名", "排名分數", "名次", "PR", "百分比" });
+                Aspose.Cells.Workbook saved = new Aspose.Cells.Workbook(path);
+                Expect(errors, saved.Worksheets[0].Cells.MaxDataRow == count
+                    && saved.Worksheets[0].Cells.MaxDataColumn == 12
+                    && saved.Worksheets[0].Cells[1, 7].StringValue == "000000"
+                    && saved.Worksheets[0].Cells[count, 7].StringValue == "087770", "實際 Excel 匯出保留 87771 筆、13 欄及首尾前導零學號");
+                Console.WriteLine("large Excel roundtrip: " + watch.ElapsedMilliseconds + "ms");
+            }
+            finally { if (File.Exists(path)) File.Delete(path); }
+            return errors;
         }
 
         private static List<string> CheckGridTiming()
