@@ -121,9 +121,9 @@ namespace SHEvaluation.Rank.MotherGroup
         {
             sourceType = "";
             string name = examName == null ? "" : examName.Trim();
-            if (name.Length == 0)
+            if (name != "學期成績")
                 return false;
-            sourceType = name == "學期成績" ? "學期成績" : "定期評量";
+            sourceType = "學期成績";
             return true;
         }
 

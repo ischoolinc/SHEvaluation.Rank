@@ -61,10 +61,10 @@ namespace SHEvaluation.Rank.MotherGroup
             AddRow(table, "", "113", "2", "沒有識別", withSnapshot);
 
             List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.Read(table);
-            Expect(errors, batches.Count == 5, "應留下學期成績，以及考試名稱有值的定期評量");
-            Expect(errors, batches[0].Id == "91" && batches[1].Id == "92" && batches[2].Id == "93" && batches[3].Id == "94" && batches[4].Id == "96", "同一學年度學期的不同批次都應保留，且維持查詢順序");
-            Expect(errors, batches[0].SourceType == "學期成績" && batches[3].SourceType == "定期評量" && batches[3].ExamName == "定期評量" && batches[4].ExamName == "期中考", "學期成績與定期評量都應可辨識");
-            Expect(errors, batches[3].DisplayText.IndexOf("94｜定期評量｜114學年度第1學期｜定期評量｜") == 0 && batches[3].DisplayText.IndexOf("建立時間") < 0, "清單應顯示來源類型、期間與評量名稱，且不稱作建立時間");
+            Expect(errors, batches.Count == 3, "學期排名設定只留下考試名稱為學期成績的批次");
+            Expect(errors, batches[0].Id == "91" && batches[1].Id == "92" && batches[2].Id == "93", "同一學年度學期的不同學期成績批次都應保留，且維持查詢順序");
+            Expect(errors, batches[0].SourceType == "學期成績" && batches[0].ExamName == "學期成績" && batches[1].ExamName == "學期成績" && batches[2].ExamName == "學期成績", "清單只接受學期成績");
+            Expect(errors, batches[0].DisplayText.IndexOf("91｜學期成績｜113學年度第2學期｜學期成績｜") == 0 && batches[0].DisplayText.IndexOf("建立時間") < 0, "清單應顯示來源類型、期間與評量名稱，且不稱作建立時間");
             Expect(errors, batches[0].SchoolYear == "113" && batches[0].Semester == "2" && batches[0].Description == "第一次計算", "應顯示學年度、學期與批次說明");
             Expect(errors, batches[0].GradeYears == "1、2" && batches[0].HasVersion1Snapshot, "應顯示排名年級與版本 1 快照");
             Expect(errors, batches[1].GradeYears == "2" && !batches[1].HasVersion1Snapshot && batches[1].Description == "重算", "沒有快照的學期批次仍應列出");
@@ -73,11 +73,12 @@ namespace SHEvaluation.Rank.MotherGroup
             bool foundExcluded = false;
             foreach (HistoryRankBatch batch in batches)
             {
-                if (batch.Id == "95" || batch.Id == "97")
+                if (batch.Id == "94" || batch.Id == "95" || batch.Id == "96" || batch.Id == "97")
                     foundExcluded = true;
             }
-            Expect(errors, !foundExcluded, "沒有考試名稱的技職繁星與非法 XML 不應出現");
+            Expect(errors, !foundExcluded, "定期評量、沒有考試名稱的技職繁星與非法 XML 不應出現");
             Expect(errors, SemesterHistoryBatchCatalog.TryRead("98", "113", "2", "空白名稱", Setting("113", "2", "", "<年級>1</年級>")) == null, "考試名稱空白不應列入");
+            Expect(errors, SemesterHistoryBatchCatalog.TryRead("99", "114", "2", "期中考", Setting("114", "2", "期中考", "<年級>1</年級>")) == null, "考試名稱不是學期成績不應列入");
             return errors;
         }
 
@@ -116,8 +117,12 @@ namespace SHEvaluation.Rank.MotherGroup
             int historyLoad = source.IndexOf("BeginHistorySnapshotRestore", next < 0 ? 0 : next);
             int currentLoad = source.IndexOf("new CurrentStudentMotherGroupSource()", next < 0 ? 0 : next);
             Expect(errors, next >= 0 && historyLoad > next && currentLoad > historyLoad, "歷史來源應走快照還原，且排在目前學生載入之前");
-            Expect(errors, source.IndexOf("queryHelper.Select(SemesterHistoryBatchCatalog.SelectSql)") >= 0, "歷史清單應使用唯讀批次查詢");
-            Expect(errors, source.IndexOf("RememberHistoryBatch") >= 0 && source.IndexOf("_nudCalcSchoolYear.Value =") < 0, "歷史學年度不應寫進計算學年度控制項");
+            int loadHistory = source.IndexOf("void LoadHistoryBatches");
+            int afterLoad = loadHistory < 0 ? -1 : source.IndexOf("private void btnNext_Click", loadHistory);
+            string loadBody = loadHistory >= 0 && afterLoad > loadHistory ? source.Substring(loadHistory, afterLoad - loadHistory) : "";
+            Expect(errors, loadBody.IndexOf("new QueryHelper().Select(SemesterHistoryBatchCatalog.SelectSql)") >= 0, "正式歷史批次查詢應使用 SemesterHistoryBatchCatalog.SelectSql");
+            Expect(errors, source.IndexOf("RememberHistoryBatch") >= 0 && source.IndexOf("_nudCalcSchoolYear.Value = _nudHistorySchoolYear") < 0 && source.IndexOf("_nudCalcSchoolYear.Value = selected") < 0, "歷史學年度不應寫進計算學年度控制項");
+            Expect(errors, source.IndexOf("ShowEditableCalculation()") >= 0 && source.IndexOf("_editableCalculation.SchoolYear") >= 0, "恢復的是先前可編輯的計算期間，不是歷史來源學年度");
             string gate = File.ReadAllText("MotherGroup\\SemesterRankWriteGate.cs", Encoding.UTF8);
             Expect(errors, gate.IndexOf("return true;") >= 0 && gate.IndexOf("return false;") < 0, "SemesterRankWriteGate 應回傳 true");
             string catalog = File.ReadAllText("MotherGroup\\SemesterHistoryBatchCatalog.cs", Encoding.UTF8);

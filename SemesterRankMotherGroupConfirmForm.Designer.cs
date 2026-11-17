@@ -1,32 +1,32 @@
-namespace SHEvaluation.Rank
-{
-    partial class SemesterRankMotherGroupConfirmForm
-    {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
-        private System.ComponentModel.IContainer components = null;
-
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-
-        #region Windows Form Designer generated code
-
-        /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
-        /// </summary>
-        private void InitializeComponent()
+namespace SHEvaluation.Rank
+{
+    partial class SemesterRankMotherGroupConfirmForm
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
         {            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.labelX9 = new DevComponents.DotNetBar.LabelX();
             this.labelX8 = new DevComponents.DotNetBar.LabelX();
@@ -41,6 +41,7 @@ namespace SHEvaluation.Rank
             this.colSeatNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colStudentNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colStudentName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colExcludedReason = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colSchoolRank = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colDeptName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colClassRank = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -76,9 +77,9 @@ namespace SHEvaluation.Rank
             this.labelX9.ForeColor = System.Drawing.Color.Black;
             this.labelX9.Location = new System.Drawing.Point(12, 12);
             this.labelX9.Name = "labelX9";
-            this.labelX9.Size = new System.Drawing.Size(69, 24);
+            this.labelX9.Size = new System.Drawing.Size(112, 24);
             this.labelX9.TabIndex = 26;
-            this.labelX9.Text = "學年度：";
+            this.labelX9.Text = "計算學年度：";
             // 
             // labelX8
             // 
@@ -91,11 +92,11 @@ namespace SHEvaluation.Rank
             this.labelX8.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX8.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX8.ForeColor = System.Drawing.Color.Black;
-            this.labelX8.Location = new System.Drawing.Point(165, 12);
+            this.labelX8.Location = new System.Drawing.Point(210, 12);
             this.labelX8.Name = "labelX8";
-            this.labelX8.Size = new System.Drawing.Size(54, 24);
+            this.labelX8.Size = new System.Drawing.Size(90, 24);
             this.labelX8.TabIndex = 27;
-            this.labelX8.Text = "學期：";
+            this.labelX8.Text = "計算學期：";
             // 
             // lbSchoolYear
             // 
@@ -107,7 +108,7 @@ namespace SHEvaluation.Rank
             this.lbSchoolYear.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.lbSchoolYear.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Underline, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbSchoolYear.ForeColor = System.Drawing.Color.Black;
-            this.lbSchoolYear.Location = new System.Drawing.Point(89, 12);
+            this.lbSchoolYear.Location = new System.Drawing.Point(128, 12);
             this.lbSchoolYear.Name = "lbSchoolYear";
             this.lbSchoolYear.Size = new System.Drawing.Size(64, 24);
             this.lbSchoolYear.TabIndex = 29;
@@ -123,7 +124,7 @@ namespace SHEvaluation.Rank
             this.lbSemester.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.lbSemester.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Underline, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lbSemester.ForeColor = System.Drawing.Color.Black;
-            this.lbSemester.Location = new System.Drawing.Point(227, 12);
+            this.lbSemester.Location = new System.Drawing.Point(304, 12);
             this.lbSemester.Name = "lbSemester";
             this.lbSemester.Size = new System.Drawing.Size(40, 24);
             this.lbSemester.TabIndex = 30;
@@ -206,6 +207,7 @@ namespace SHEvaluation.Rank
             this.colStudentNum,
             this.colStudentName,
             this.colSchoolRank,
+            this.colExcludedReason,
             this.colDeptName,
             this.colClassRank,
             this.colRankType1,
@@ -267,6 +269,16 @@ namespace SHEvaluation.Rank
             this.colStudentName.Name = "colStudentName";
             this.colStudentName.ReadOnly = true;
             this.colStudentName.Width = 59;
+            // 
+            // colExcludedReason
+            // 
+            this.colExcludedReason.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.colExcludedReason.HeaderText = "預設原因";
+            this.colExcludedReason.MinimumWidth = 50;
+            this.colExcludedReason.Name = "colExcludedReason";
+            this.colExcludedReason.ReadOnly = true;
+            this.colExcludedReason.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            this.colExcludedReason.Width = 240;
             // 
             // colSchoolRank
             // 
@@ -487,38 +499,39 @@ namespace SHEvaluation.Rank
             this.ResumeLayout(false);
             this.PerformLayout();
 
-        }
-
-        #endregion
-
-        private DevComponents.DotNetBar.LabelX labelX9;
-        private DevComponents.DotNetBar.LabelX labelX8;
-        private DevComponents.DotNetBar.LabelX lbSchoolYear;
-        private DevComponents.DotNetBar.LabelX lbSemester;
-        private DevComponents.DotNetBar.LabelX labelX13;
-        private DevComponents.DotNetBar.ButtonX btnExport;
-        private DevComponents.DotNetBar.ButtonX btnImport;
-        private DevComponents.DotNetBar.ButtonX btnCacluate;
-        private DevComponents.DotNetBar.Controls.DataGridViewX dgvStudentList;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colClass;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colSeatNum;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentNum;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentName;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colSchoolRank;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colDeptName;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colClassRank;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType1;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType2;
-        private DevComponents.DotNetBar.ButtonX btnPrevious;
-        private System.Windows.Forms.PictureBox pbLoading;
-        private System.Windows.Forms.Label _lblSearchCaption;
-        private System.Windows.Forms.TextBox _txtMotherGroupSearch;
-        private System.Windows.Forms.Label _lblMotherGroupSummary;
-        private System.Windows.Forms.DataGridView _dgvRankPopulation;
-        private System.Windows.Forms.DataGridView _dgvGroupCounts;
-        private System.Windows.Forms.Button _btnRestoreParticipation;
-        private System.Windows.Forms.Label _lblAddStudentCaption;
-        private System.Windows.Forms.TextBox _txtAddStudentNumber;
-        private System.Windows.Forms.Button _btnAddHistoryStudent;
-    }
-}
+        }
+
+        #endregion
+
+        private DevComponents.DotNetBar.LabelX labelX9;
+        private DevComponents.DotNetBar.LabelX labelX8;
+        private DevComponents.DotNetBar.LabelX lbSchoolYear;
+        private DevComponents.DotNetBar.LabelX lbSemester;
+        private DevComponents.DotNetBar.LabelX labelX13;
+        private DevComponents.DotNetBar.ButtonX btnExport;
+        private DevComponents.DotNetBar.ButtonX btnImport;
+        private DevComponents.DotNetBar.ButtonX btnCacluate;
+        private DevComponents.DotNetBar.Controls.DataGridViewX dgvStudentList;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colClass;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colSeatNum;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentNum;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colStudentName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colExcludedReason;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colSchoolRank;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colDeptName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colClassRank;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colRankType2;
+        private DevComponents.DotNetBar.ButtonX btnPrevious;
+        private System.Windows.Forms.PictureBox pbLoading;
+        private System.Windows.Forms.Label _lblSearchCaption;
+        private System.Windows.Forms.TextBox _txtMotherGroupSearch;
+        private System.Windows.Forms.Label _lblMotherGroupSummary;
+        private System.Windows.Forms.DataGridView _dgvRankPopulation;
+        private System.Windows.Forms.DataGridView _dgvGroupCounts;
+        private System.Windows.Forms.Button _btnRestoreParticipation;
+        private System.Windows.Forms.Label _lblAddStudentCaption;
+        private System.Windows.Forms.TextBox _txtAddStudentNumber;
+        private System.Windows.Forms.Button _btnAddHistoryStudent;
+    }
+}

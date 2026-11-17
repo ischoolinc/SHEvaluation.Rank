@@ -295,6 +295,14 @@ JSON 欄位對應舊 `StudentSelect`：`student_id` 是 JSON number，姓名與�
 - 回復應用程式版本時，舊程式仍可讀新批次的排名明細與 setting 計算節點；它不會解讀 extension 裡的快照，也不會誤用批次 ID 0。
 - 公布失敗時，由資料庫回復同一句；不另用第二個連線補救已經提交的有效排名切換。不建立預存程序。
 
+## 2026-11-16 學期成績批次
+
+1.0.0.63 複測後，學期排名設定頁不再把定期評量批次當母群來源。`SemesterHistoryBatchCatalog.TryClassifyExam` 只接受「學期成績」。`HistorySnapshotRestore.Load` 原本就拒絕其他考試名稱；`LoadSemester` 改為同一標準，下一步在讀學生前再驗所選批次的期間與類型。排序、快照標示，以及 JSON、XML、`rank_batch_student` 的還原順序不變。
+
+計算期間由歷史與 Excel 共用。目前學生來源仍恢復系統學年期並停用欄位；離開時先記住可編輯期間，切回歷史或 Excel 再顯示回來。歷史年或學期一變，就清掉批次選取。沒有學期成績批次時，左下角顯示「此期間無學期成績批次」並停用下一步。
+
+Excel 空白範本只寫 13 欄表頭，A 欄文字格式。示意與錯誤規則放在填寫說明，不放進活頁簿。確認清單新增唯讀「預設原因」；它讀進入清單時的 `MatchesExcludedCategory`，之後改參與不會清掉這段文字。
+
 ## Open Questions
 
 - `QueryHelper` 不能跨呼叫持有交易，因此停用與啟用固定為一次 `Select` 的單一語句；做不到時停止公布，不降低為逐年級提交。

@@ -47,24 +47,32 @@ namespace SHEvaluation.Rank.MotherGroup
             table.Columns.Add("calculation_description");
             table.Columns.Add("setting");
             table.Columns.Add("extension");
+            table.Rows.Add("285", "114", "2", "學期", Setting("學期成績", "<年級>1</年級><年級>2</年級>"), "[]");
+            table.Rows.Add("277", "114", "2", "定期", Setting("定期評量", "<年級>1</年級>"), "");
+            table.Rows.Add("276", "114", "2", "期中", Setting("期中考", "<年級>1</年級>"), "");
+            table.Rows.Add("275", "114", "2", "期末", Setting("期末考", "<年級>1</年級>"), "");
+            table.Rows.Add("274", "114", "2", "平時", Setting("平時考", "<年級>1</年級>"), "");
+            table.Rows.Add("273", "114", "2", "模擬", Setting("模擬考", "<年級>1</年級>"), "");
+            table.Rows.Add("272", "114", "2", "複習", Setting("複習考", "<年級>1</年級>"), "");
             table.Rows.Add("12", "113", "2", "學期", Setting("學期成績", "<年級>1</年級><年級>2</年級>"), "[]");
             table.Rows.Add("40", "113", "2", "期中", Setting("期中考", "<年級>2</年級>"), "");
             table.Rows.Add("7", "114", "1", "另一期", Setting("學期成績", "<年級>1</年級>"), "");
             table.Rows.Add("3", "113", "2", "繁星", "<Setting><年級>3</年級></Setting>", "");
-            table.Rows.Add("15", "113", "2", "壞", Setting("期末考", "<年級>1</年級>"), "{");
+            table.Rows.Add("15", "113", "2", "壞", Setting("學期成績", "<年級>1</年級>"), "{");
+            List<HistoryRankBatch> currentTerm = SemesterHistoryBatchCatalog.FilterPeriod(SemesterHistoryBatchCatalog.Read(table), "114", "2");
+            Expect(errors, currentTerm.Count == 1 && currentTerm[0].Id == "285" && currentTerm[0].SourceType == "學期成績", "114-2 只留學期成績批次 285，定期評量 272 到 277 不出現");
             List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.FilterPeriod(SemesterHistoryBatchCatalog.Read(table), "113", "2");
             SemesterHistoryBatchCatalog.SortByIdDescending(batches);
-            Expect(errors, batches.Count == 3 && batches[0].Id == "40" && batches[1].Id == "15" && batches[2].Id == "12", "同一歷史期間應含學期成績與定期評量，並依 ID 數字降冪");
-            Expect(errors, batches[0].SourceType == "定期評量" && batches[0].ExamName == "期中考" && batches[0].DisplayText.IndexOf("40｜定期評量｜113學年度第2學期｜期中考｜期中｜年級2｜快照無") == 0, "定期評量應顯示 ID、來源、期間、評量名稱、說明、年級與快照");
-            Expect(errors, batches[1].SnapshotOrigin == HistorySnapshotOrigin.Json && batches[1].DisplayText.IndexOf("快照有(JSON)") >= 0, "損壞的 JSON 仍標成 JSON");
-            Expect(errors, batches[2].GradeYears == "1、2" && batches[2].DisplayText.IndexOf("建立時間") < 0, "年級維持原顯示，且不稱作建立時間");
+            Expect(errors, batches.Count == 2 && batches[0].Id == "15" && batches[1].Id == "12", "同一歷史期間只留學期成績，並依 ID 數字降冪");
+            Expect(errors, batches[0].SourceType == "學期成績" && batches[0].SnapshotOrigin == HistorySnapshotOrigin.Json && batches[0].DisplayText.IndexOf("快照有(JSON)") >= 0, "學期成績的損壞 JSON 仍標成 JSON");
+            Expect(errors, batches[1].GradeYears == "1、2" && batches[1].DisplayText.IndexOf("12｜學期成績｜113學年度第2學期｜學期成績｜") == 0 && batches[1].DisplayText.IndexOf("建立時間") < 0, "學期成績顯示 ID、來源、期間、考試名稱、說明、年級與快照，且不稱作建立時間");
             bool otherPeriod = false;
             foreach (HistoryRankBatch batch in batches)
             {
-                if (batch.Id == "7" || batch.Id == "3")
+                if (batch.Id == "7" || batch.Id == "3" || batch.Id == "40")
                     otherPeriod = true;
             }
-            Expect(errors, !otherPeriod, "其他期間與沒有考試名稱的批次不應留在這次篩選");
+            Expect(errors, !otherPeriod, "其他期間、定期評量與沒有考試名稱的批次不應留在這次篩選");
             return errors;
         }
 
@@ -98,6 +106,9 @@ namespace SHEvaluation.Rank.MotherGroup
             string xml = "<Setting 學年度=\"113\" 學期=\"2\" 考試名稱=\"期中考\"><年級>1</年級><MotherGroupSnapshot version=\"1\"><Source kind=\"history\" historyBatchId=\"50\" /><Student studentId=\"8\" studentNumber=\"S8\" studentName=\"舊生\"><Rank type=\"班排名\" name=\"忠班\" participate=\"true\" /></Student></MotherGroupSnapshot></Setting>";
             HistorySnapshotLoad shared = HistorySnapshotRestore.Load("91", xml, "", new List<TagDefinition>(), new List<StudentTagLink>());
             Expect(errors, !shared.Restored && shared.Message == HistorySnapshotRestore.WrongExamMessage, "共用還原仍只接受考試名稱學期成績");
+            HistorySnapshotLoad rejected = HistorySnapshotRestore.LoadSemester("91", "[]", xml, "", new List<TagDefinition>(), new List<StudentTagLink>());
+            Expect(errors, !rejected.Restored && rejected.Message == HistorySnapshotRestore.UnrecognizedExamMessage, "學期排名下一步不接受定期評量考試名稱");
+            xml = xml.Replace("期中考", "學期成績");
 
             MotherGroupConfirmList jsonList = new MotherGroupConfirmList();
             StudentMotherGroup source = new StudentMotherGroup();
@@ -119,7 +130,7 @@ namespace SHEvaluation.Rank.MotherGroup
 
             StudentMotherGroup studentA = Student("A", "甲生", false);
             StudentMotherGroup studentB = Student("B", "乙生", false);
-            string xmlStudents = XmlSnapshot("期中考", new StudentMotherGroup[] { studentA, studentB });
+            string xmlStudents = XmlSnapshot("學期成績", new StudentMotherGroup[] { studentA, studentB });
             List<TagDefinition> tags = new List<TagDefinition> { new TagDefinition { Id = "ex", Prefix = "不排名", Name = "休學" } };
             List<StudentTagLink> links = new List<StudentTagLink> { new StudentTagLink { StudentId = "B", TagId = "ex", Name = "休學" } };
             HistorySnapshotLoad xmlOnly = HistorySnapshotRestore.LoadSemester("91", "[]", xmlStudents, "不排名", tags, links);

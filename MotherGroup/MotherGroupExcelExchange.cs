@@ -168,6 +168,45 @@ namespace SHEvaluation.Rank.MotherGroup
             return found;
         }
 
+        public const string FillGuideText =
+            "空白範本只有表頭與格式，請從第 2 列填寫，不要改第 1 列欄名，也不要在表內放示意資料。\r\n"
+            + "欄位順序：學號、姓名、學生狀態、年排名母群、班排名母群、科排名母群、類別一母群、類別二母群、年排名參與、班排名參與、科排名參與、類別一參與、類別二參與。\r\n"
+            + "完整示意一列（只顯示在這份說明，不要寫進範本）：001234｜示意學生｜一般｜2年級｜高二甲｜普通科｜類別甲｜類別乙｜參與｜參與｜參與｜不參與｜不參與\r\n"
+            + "\r\n"
+            + "必填是學號、學生狀態，以及五個參與欄。系統以學號＋學生狀態比對 student.student_number 與 student.status，不用姓名比對。\r\n"
+            + "學號如 001234 必須保留前導零。A 欄已設為文字格式，請直接輸入，不要讓 Excel 把學號變成數字。\r\n"
+            + "學生狀態只能填：一般、延修、休學、輟學、畢業或離校、刪除。\r\n"
+            + "五個參與欄都要填「參與」或「不參與」。母群名稱可以空白；類別母群空白時，該項不建立排名。\r\n"
+            + "\r\n"
+            + "整列空白會略過。學號或學生狀態空白、狀態不在上列、參與值不是「參與」或「不參與」、同一學號加同一狀態重複、查無學生、查到多筆，或同一學生出現兩次時，整份檔案都不匯入，並提示 Excel 列號與原因。姓名與學籍不同時，採用學籍姓名並另外提示。";
+
+        public static Workbook CreateBlankTemplate()
+        {
+            Workbook workbook = new Workbook();
+            Worksheet worksheet = workbook.Worksheets[0];
+            worksheet.Name = "母群";
+            for (int column = 0; column < Headers.Length; column++)
+                worksheet.Cells[0, column].PutValue(Headers[column]);
+
+            int styleIndex = workbook.Styles.Add();
+            Style textStyle = workbook.Styles[styleIndex];
+            textStyle.Number = 49;
+            StyleFlag flag = new StyleFlag();
+            flag.NumberFormat = true;
+            worksheet.Cells.ApplyColumnStyle(0, textStyle, flag);
+            worksheet.Cells.SetColumnWidth(0, 16);
+            return workbook;
+        }
+
+        public static void SaveWorkbook(string path, Workbook workbook)
+        {
+            if (string.IsNullOrEmpty(path))
+                throw new ArgumentException("沒有匯出檔案路徑。");
+            if (workbook == null)
+                throw new ArgumentNullException("workbook");
+            workbook.Save(path);
+        }
+
         public static Workbook Create(MotherGroupConfirmList list)
         {
             return Create(list, null);

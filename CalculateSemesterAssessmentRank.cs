@@ -31,9 +31,24 @@ namespace SHEvaluation.Rank
         bool _confirmEventsReady;
         bool _bindingHistoryBatch;
         bool _historySourceEventsReady;
+        bool _applyingCalculationPeriod;
+        readonly EditableCalculationPeriodMemory _editableCalculation = new EditableCalculationPeriodMemory();
         bool _screenLoadQueued;
         bool _screenLoadSettled;
+        bool _screenLoadFailed;
         bool _nextStepRunning;
+        static Func<DataTable> _historyBatchQuery;
+        static Action<string> _historyBatchFailureDialog;
+
+        internal static void SetHistoryBatchQuery(Func<DataTable> query)
+        {
+            _historyBatchQuery = query;
+        }
+
+        internal static void SetHistoryBatchFailureDialog(Action<string> dialog)
+        {
+            _historyBatchFailureDialog = dialog;
+        }
         bool _rankCalculationRunning;
         bool _capturingCalculationEdit;
         bool _calculationUiDisabled;
@@ -56,7 +71,8 @@ namespace SHEvaluation.Rank
         TextBox _txtAddStudentNumber;
         Button _btnAddHistoryStudent;
         const string ScreenLoadReadyText = "說明：班、科、年排名會自動計算。分項成績擇優項目請參考成績計算規則。";
-        const string NoHistoryBatchText = "這個歷史期間沒有可選的歷史批次。";
+        const string NoHistoryBatchText = SemesterRankSourceChrome.NoSemesterBatchText;
+        const string HistoryBatchQueryFailureText = "歷史批次清單讀取失敗。";
         public CalculateSemesterAssessmentRank()
         {
             InitializeComponent();
@@ -68,6 +84,7 @@ namespace SHEvaluation.Rank
             plStudentView.Visible = false;
             btnNext.Enabled = false;
             labelX6.Text = "正在初始化畫面…";
+            ApplySourceVisibility();
         }
 
         protected override void OnShown(EventArgs e)
@@ -144,6 +161,7 @@ namespace SHEvaluation.Rank
                 CalculationPeriodBinder.Apply(_nudCalcSchoolYear, _cboCalcSemester, _cboMotherGroupSource, _nudHistorySchoolYear, _cboHistorySemester, _calculationPeriod);
                 EnsureHistorySourceEvents();
                 ApplyCalculationPeriodEditors();
+                ApplySourceVisibility();
             }
             catch (Exception ex)
             {
@@ -343,6 +361,8 @@ namespace SHEvaluation.Rank
                 _screenLoadErrorTip.SetToolTip(labelX6, "");
             if (enableNext && _screenLoadSettled)
                 btnNext.Enabled = true;
+            if (enableNext)
+                ApplyHistoryNextGate();
         }
 
         private void FinishScreenLoad()
@@ -355,8 +375,8 @@ namespace SHEvaluation.Rank
                 _screenLoadErrorTip.SetToolTip(labelX6, "");
             _nudCalcSchoolYear.Visible = true;
             _cboCalcSemester.Visible = true;
-            _cboHistorySemester.Visible = true;
             btnNext.Enabled = true;
+            ApplyHistoryNextGate();
         }
 
         private void FailScreenLoad(string stage, Exception ex)
@@ -364,6 +384,7 @@ namespace SHEvaluation.Rank
             if (_screenLoadSettled)
                 return;
             _screenLoadSettled = true;
+            _screenLoadFailed = true;
             _TagList = new List<TagConfigRecord>();
             _StudentList = new List<StudentRecord>();
             _GradeYearList = new List<int>();
@@ -379,7 +400,6 @@ namespace SHEvaluation.Rank
             listGradeYear.Items.Clear();
             _nudCalcSchoolYear.Visible = false;
             _cboCalcSemester.Visible = false;
-            _cboHistorySemester.Visible = false;
             btnNext.Enabled = false;
             string reason = ex == null || string.IsNullOrEmpty(ex.Message) ? "未知錯誤" : ex.Message;
             string message = "載入" + stage + "失敗：" + reason;
@@ -434,6 +454,7 @@ namespace SHEvaluation.Rank
             _cboMotherGroupSource.SelectedIndexChanged += delegate
             {
                 ApplyCalculationPeriodEditors();
+                ApplySourceVisibility();
                 if (!IsHistorySourceSelected())
                 {
                     SetHistoryFiltersEnabled(false);
@@ -446,21 +467,24 @@ namespace SHEvaluation.Rank
                     }
                     if (_calculationPeriod != null)
                         _calculationPeriod.ClearHistoryBatch();
+                    ApplyHistoryNextGate();
                     return;
                 }
                 SetHistoryFiltersEnabled(true);
                 try
                 {
-                    LoadHistoryBatches();
+                    LoadHistoryBatches(true);
                 }
                 catch (Exception ex)
                 {
                     ClearFailedHistorySelection();
-                    MessageBox.Show("歷史批次清單讀取失敗。\n" + ex.Message);
+                    ReportHistoryBatchQueryFailure(ex);
                 }
             };
             _nudHistorySchoolYear.ValueChanged += delegate { OnHistoryPeriodChanged(); };
             _cboHistorySemester.SelectedIndexChanged += delegate { OnHistoryPeriodChanged(); };
+            _nudCalcSchoolYear.ValueChanged += delegate { OnEditableCalculationChanged(); };
+            _cboCalcSemester.SelectedIndexChanged += delegate { OnEditableCalculationChanged(); };
             _cboHistoryBatch.SelectedIndexChanged += delegate
             {
                 if (_bindingHistoryBatch || _calculationPeriod == null || _cboHistoryBatch == null)
@@ -469,10 +493,163 @@ namespace SHEvaluation.Rank
                 if (selected == null)
                 {
                     _calculationPeriod.ClearHistoryBatchSelection();
+                    ApplyHistoryNextGate();
                     return;
                 }
                 _calculationPeriod.SelectHistoryBatch(selected.Id);
+                ApplyHistoryNextGate();
             };
+        }
+
+        private string SelectedSourceName()
+        {
+            if (_cboMotherGroupSource == null || _cboMotherGroupSource.SelectedItem == null)
+                return CalculationPeriod.CurrentSourceName;
+            return _cboMotherGroupSource.SelectedItem.ToString();
+        }
+
+        private void ApplySourceVisibility()
+        {
+            string source = SelectedSourceName();
+            bool history = source == CalculationPeriod.HistorySourceName;
+            bool excel = source == CalculationPeriod.ExcelSourceName;
+            bool current = source == CalculationPeriod.CurrentSourceName;
+            SetControlVisible(history, _lblHistoryYearCaption, _nudHistorySchoolYear, _lblHistorySemesterCaption, _cboHistorySemester, _lblHistoryBatchCaption, _cboHistoryBatch);
+            SetControlVisible(excel, _btnDownloadExcelTemplate, _btnExcelFillGuide);
+            SetControlVisible(current, labelX4, cboStudentTag1, labelX5, cboStudentTag2);
+            if (_lblGradeYearHint != null)
+            {
+                if (history)
+                    _lblGradeYearHint.Text = SemesterRankSourceChrome.HistoryGradeHint;
+                else if (excel)
+                    _lblGradeYearHint.Text = SemesterRankSourceChrome.ExcelGradeHint;
+                else
+                    _lblGradeYearHint.Text = SemesterRankSourceChrome.CurrentGradeHint;
+            }
+            if (btnNext != null && !_nextStepRunning)
+                btnNext.Text = excel ? SemesterRankSourceChrome.ExcelNextText : SemesterRankSourceChrome.NextText;
+            LayoutConditionPage();
+            ApplyHistoryNextGate();
+        }
+
+        private static void SetControlVisible(bool visible, params Control[] controls)
+        {
+            if (controls == null)
+                return;
+            foreach (Control control in controls)
+            {
+                if (control != null)
+                    control.Visible = visible;
+            }
+        }
+
+        private void LayoutConditionPage()
+        {
+            if (gpRankPeople == null || btnNext == null)
+                return;
+            int top = _lblCalcPeriodHint != null ? _lblCalcPeriodHint.Bottom + 8 : gpRankPeople.Top;
+            if (_cboHistoryBatch != null && _cboHistoryBatch.Visible)
+                top = _cboHistoryBatch.Bottom + 8;
+            else if (_btnDownloadExcelTemplate != null && _btnDownloadExcelTemplate.Visible)
+                top = _btnDownloadExcelTemplate.Bottom + 8;
+            int height = btnNext.Top - 8 - top;
+            if (height < 160)
+                height = 160;
+            gpRankPeople.SetBounds(gpRankPeople.Left, top, gpRankPeople.Width, height);
+        }
+
+        private bool CanUpdateSourceGate()
+        {
+            return _screenLoadSettled && !_screenLoadFailed && !_nextStepRunning && btnNext != null;
+        }
+
+        private void ApplyHistoryNextGate()
+        {
+            if (!CanUpdateSourceGate())
+                return;
+            if (!IsHistorySourceSelected())
+            {
+                if (labelX6 != null && (labelX6.Text == NoHistoryBatchText || IsHistoryBatchQueryFailure(labelX6.Text)))
+                    labelX6.Text = ScreenLoadReadyText;
+                btnNext.Enabled = true;
+                return;
+            }
+            bool hasBatch = _cboHistoryBatch != null && _cboHistoryBatch.Items.Count > 0;
+            bool selected = _cboHistoryBatch != null && _cboHistoryBatch.SelectedItem is HistoryRankBatch;
+            btnNext.Enabled = hasBatch && selected;
+            if (labelX6 == null)
+                return;
+            if (!hasBatch)
+            {
+                if (!IsHistoryBatchQueryFailure(labelX6.Text))
+                    labelX6.Text = NoHistoryBatchText;
+            }
+            else if (labelX6.Text == NoHistoryBatchText || IsHistoryBatchQueryFailure(labelX6.Text))
+                labelX6.Text = ScreenLoadReadyText;
+        }
+
+        private void OnEditableCalculationChanged()
+        {
+            if (_applyingCalculationPeriod || SelectedSourceName() == CalculationPeriod.CurrentSourceName)
+                return;
+            RememberEditableCalculation();
+        }
+
+        private void RememberEditableCalculation()
+        {
+            if (_nudCalcSchoolYear == null)
+                return;
+            string semester = _cboCalcSemester == null || _cboCalcSemester.SelectedItem == null
+                ? "1"
+                : _cboCalcSemester.SelectedItem.ToString();
+            _editableCalculation.Remember(decimal.ToInt32(_nudCalcSchoolYear.Value).ToString(), semester);
+        }
+
+        private void ShowEditableCalculation()
+        {
+            if (!_editableCalculation.HasValue || _nudCalcSchoolYear == null)
+                return;
+            _applyingCalculationPeriod = true;
+            try
+            {
+                int yearNumber;
+                if (int.TryParse(_editableCalculation.SchoolYear, out yearNumber)
+                    && yearNumber >= _nudCalcSchoolYear.Minimum
+                    && yearNumber <= _nudCalcSchoolYear.Maximum)
+                    _nudCalcSchoolYear.Value = yearNumber;
+                if (_cboCalcSemester != null && _cboCalcSemester.Items.Contains(_editableCalculation.Semester))
+                    _cboCalcSemester.SelectedItem = _editableCalculation.Semester;
+                if (_calculationPeriod != null)
+                    _calculationPeriod.SetCalculationPeriod(_editableCalculation.SchoolYear, _editableCalculation.Semester);
+            }
+            finally
+            {
+                _applyingCalculationPeriod = false;
+            }
+        }
+
+        private void btnDownloadExcelTemplate_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.Title = "下載匯入範本";
+            dialog.Filter = "Excel (*.xlsx)|*.xlsx";
+            dialog.FileName = "學期排名母群匯入範本.xlsx";
+            dialog.OverwritePrompt = true;
+            if (dialog.ShowDialog() != DialogResult.OK)
+                return;
+            try
+            {
+                MotherGroupExcelExchange.SaveWorkbook(dialog.FileName, MotherGroupExcelExchange.CreateBlankTemplate());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("匯入範本儲存失敗。\n" + ex.Message);
+            }
+        }
+
+        private void btnExcelFillGuide_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show(MotherGroupExcelExchange.FillGuideText, "填寫說明");
         }
 
         private void SetHistoryFiltersEnabled(bool enabled)
@@ -490,14 +667,16 @@ namespace SHEvaluation.Rank
             if (_bindingHistoryBatch || !_historySourceEventsReady || !IsHistorySourceSelected())
                 return;
             SyncHistoryPeriodFromControls();
+            if (_calculationPeriod != null)
+                _calculationPeriod.ClearHistoryBatchSelection();
             try
             {
-                LoadHistoryBatches();
+                LoadHistoryBatches(false);
             }
             catch (Exception ex)
             {
                 ClearFailedHistorySelection();
-                MessageBox.Show("歷史批次清單讀取失敗。\n" + ex.Message);
+                ReportHistoryBatchQueryFailure(ex);
             }
         }
 
@@ -522,9 +701,19 @@ namespace SHEvaluation.Rank
         {
             if (_nudCalcSchoolYear == null || _cboCalcSemester == null)
                 return;
-            if (IsCurrentSourceSelected())
+            if (SelectedSourceName() == CalculationPeriod.CurrentSourceName)
             {
-                CalculationPeriodBinder.RestoreSystemPeriod(_nudCalcSchoolYear, _cboCalcSemester, _calculationPeriod, _DefaultSchoolYear, _DefaultSemester);
+                if (_nudCalcSchoolYear.Enabled)
+                    RememberEditableCalculation();
+                _applyingCalculationPeriod = true;
+                try
+                {
+                    CalculationPeriodBinder.RestoreSystemPeriod(_nudCalcSchoolYear, _cboCalcSemester, _calculationPeriod, _DefaultSchoolYear, _DefaultSemester);
+                }
+                finally
+                {
+                    _applyingCalculationPeriod = false;
+                }
                 _nudCalcSchoolYear.Enabled = false;
                 _cboCalcSemester.Enabled = false;
                 return;
@@ -533,6 +722,7 @@ namespace SHEvaluation.Rank
             {
                 _nudCalcSchoolYear.Enabled = true;
                 _cboCalcSemester.Enabled = true;
+                ShowEditableCalculation();
             }
         }
 
@@ -659,12 +849,14 @@ namespace SHEvaluation.Rank
                 && _cboMotherGroupSource.SelectedItem.ToString() == CalculationPeriod.HistorySourceName;
         }
 
-        private void LoadHistoryBatches()
+        private void LoadHistoryBatches(bool keepSelection)
         {
             SyncHistoryPeriodFromControls();
-            string previousId = _calculationPeriod == null ? "" : _calculationPeriod.HistoryBatchId;
-            QueryHelper queryHelper = new QueryHelper();
-            DataTable table = queryHelper.Select(SemesterHistoryBatchCatalog.SelectSql);
+            string previousId = keepSelection && _calculationPeriod != null ? _calculationPeriod.HistoryBatchId : "";
+            // 未設定時走資料庫。表單事件測試才代入批次表，避免連到學校資料庫。
+            DataTable table = _historyBatchQuery != null
+                ? _historyBatchQuery()
+                : new QueryHelper().Select(SemesterHistoryBatchCatalog.SelectSql);
             string filterYear = _nudHistorySchoolYear == null ? "" : decimal.ToInt32(_nudHistorySchoolYear.Value).ToString();
             string filterSemester = _cboHistorySemester == null || _cboHistorySemester.SelectedItem == null ? "" : _cboHistorySemester.SelectedItem.ToString();
             List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.FilterPeriod(SemesterHistoryBatchCatalog.Read(table), filterYear, filterSemester);
@@ -689,13 +881,14 @@ namespace SHEvaluation.Rank
             _cboHistoryBatch.SelectedItem = reselect;
             if (reselect == null && _calculationPeriod != null)
                 _calculationPeriod.ClearHistoryBatchSelection();
-            if (labelX6 != null)
+            if (CanUpdateSourceGate() && labelX6 != null)
             {
                 if (batches.Count == 0)
                     labelX6.Text = NoHistoryBatchText;
-                else if (labelX6.Text == NoHistoryBatchText)
+                else if (labelX6.Text == NoHistoryBatchText || IsHistoryBatchQueryFailure(labelX6.Text))
                     labelX6.Text = ScreenLoadReadyText;
             }
+            ApplyHistoryNextGate();
         }
 
         private void btnNext_Click(object sender, EventArgs e)
@@ -832,6 +1025,13 @@ namespace SHEvaluation.Rank
             {
                 ReleaseNextStep(true);
                 MessageBox.Show("請選擇一筆歷史學期成績排名批次。");
+                return;
+            }
+            string selectedType;
+            if (!SemesterHistoryBatchCatalog.TryClassifyExam(selected.ExamName, out selectedType))
+            {
+                ReleaseNextStep(true);
+                MessageBox.Show(HistorySnapshotRestore.UnrecognizedExamMessage);
                 return;
             }
 
@@ -1156,6 +1356,23 @@ namespace SHEvaluation.Rank
             }
             if (_calculationPeriod != null)
                 _calculationPeriod.ClearHistoryBatchSelection();
+            ApplyHistoryNextGate();
+        }
+
+        private void ReportHistoryBatchQueryFailure(Exception ex)
+        {
+            string message = HistoryBatchQueryFailureText + "\n" + (ex == null ? "" : ex.Message);
+            if (CanUpdateSourceGate() && labelX6 != null)
+                labelX6.Text = message;
+            if (_historyBatchFailureDialog != null)
+                _historyBatchFailureDialog(message);
+            else
+                MessageBox.Show(message);
+        }
+
+        private static bool IsHistoryBatchQueryFailure(string text)
+        {
+            return text != null && text.StartsWith(HistoryBatchQueryFailureText);
         }
 
         internal void btnPrevious_Click(object sender, EventArgs e)
@@ -1723,6 +1940,7 @@ namespace SHEvaluation.Rank
 
         private void CalculateSemesterAssessmentRank_Resize(object sender, EventArgs e)
         {
+            LayoutConditionPage();
             if (pbLoading == null || pbLoading.Parent == null)
                 return;
             pbLoading.Location = new Point(pbLoading.Parent.ClientSize.Width / 2 - 16, pbLoading.Parent.ClientSize.Height / 2 - 16);

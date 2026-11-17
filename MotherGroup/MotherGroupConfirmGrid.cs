@@ -10,6 +10,14 @@ namespace SHEvaluation.Rank.MotherGroup
     {
         public static void Configure(DataGridView grid)
         {
+            DataGridViewColumn designedReason = null;
+            int designedDisplayIndex = 5;
+            if (grid.Columns.Contains("colExcludedReason"))
+            {
+                designedReason = grid.Columns["colExcludedReason"];
+                designedDisplayIndex = designedReason.DisplayIndex;
+                grid.Columns.Remove(designedReason);
+            }
             grid.Columns.Clear();
             grid.AutoGenerateColumns = false;
             grid.AllowUserToAddRows = false;
@@ -32,7 +40,31 @@ namespace SHEvaluation.Rank.MotherGroup
             AddRank(grid, RankKinds.Class, "母群：班排名", "班排名參與");
             AddRank(grid, RankKinds.Tag1, "母群：類別一", "類別一參與");
             AddRank(grid, RankKinds.Tag2, "母群：類別二", "類別二參與");
+            PlaceExcludedReason(grid, designedReason, designedDisplayIndex);
             InstallBoundedAccessibility(grid);
+        }
+
+        private static void PlaceExcludedReason(DataGridView grid, DataGridViewColumn designed, int displayIndex)
+        {
+            DataGridViewColumn column = designed;
+            if (column == null)
+            {
+                column = new DataGridViewTextBoxColumn();
+                column.Name = "colExcludedReason";
+                column.HeaderText = "預設原因";
+                column.Width = 240;
+                column.MinimumWidth = 50;
+                column.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                column.SortMode = DataGridViewColumnSortMode.NotSortable;
+                displayIndex = 5;
+            }
+            column.ReadOnly = true;
+            grid.Columns.Add(column);
+            if (displayIndex < 0)
+                displayIndex = 0;
+            if (displayIndex >= grid.Columns.Count)
+                displayIndex = grid.Columns.Count - 1;
+            column.DisplayIndex = displayIndex;
         }
 
         public const int PopulationHeaderHeight = 24;
@@ -146,11 +178,19 @@ namespace SHEvaluation.Rank.MotherGroup
                 gridRow.Cells["colNumber"].Value = row.Group.StudentNumber ?? "";
                 gridRow.Cells["colName"].Value = row.Group.StudentName ?? "";
                 gridRow.Cells["colConflict"].Value = FormatConflicts(row.Group);
+                gridRow.Cells["colExcludedReason"].Value = ExcludedReason(row.Group);
                 if (HasConflict(row.Group))
                     gridRow.DefaultCellStyle.BackColor = Color.FromArgb(255, 249, 196);
                 foreach (string rankType in RankKinds.All)
                     BindRankCells(gridRow, row.Group.GetWorking(rankType));
             }
+        }
+
+        public static string ExcludedReason(StudentMotherGroup group)
+        {
+            if (group != null && group.MatchesExcludedCategory)
+                return SemesterRankSourceChrome.ExcludedRowHint;
+            return "";
         }
 
         public static string FormatConflicts(StudentMotherGroup group)

@@ -168,6 +168,8 @@
     <Compile Include="MotherGroup\SemesterHistoryPeriodGuard.cs" />
     <Compile Include="MotherGroup\SemesterHistoryStudentParticipation.cs" />
     <Compile Include="MotherGroup\SemesterHistorySourceCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankSourceChrome.cs" />
+    <Compile Include="MotherGroup\SemesterRankRetest1064Check.cs" />
     <Compile Include="MotherGroup\MotherGroupPhase5Task51Check.cs" />
     <Compile Include="MotherGroup\HistorySnapshotRestore.cs" />
     <Compile Include="MotherGroup\HistoryRankRestore.cs" />
