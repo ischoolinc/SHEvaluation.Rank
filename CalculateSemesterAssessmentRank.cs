@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
 using System.Xml;
 using SHEvaluation.Rank.MotherGroup;
 
@@ -1044,6 +1045,7 @@ namespace SHEvaluation.Rank
             }
             _calculationPeriod.RememberHistoryBatch(selected.Id, _calculationPeriod.HistorySchoolYear, _calculationPeriod.HistorySemester);
             string batchId = selected.Id;
+            string failedStep = "";
             string historyYear = _calculationPeriod.HistorySchoolYear;
             string historySemester = _calculationPeriod.HistorySemester;
             // 年級與擇優採計已由下一步共用的 CaptureCalculationScope 依圖1重設。這裡不讀目前班級或年級。
@@ -1079,6 +1081,8 @@ namespace SHEvaluation.Rank
             bool periodRejected = false;
             HistorySnapshotLoad load = null;
             HistoryRankLoad rankLoad = null;
+            HistoryRestoreLog trace = HistoryRestoreLog.Start(batchId);
+            Stopwatch stepWatch = new Stopwatch();
             bkw.ProgressChanged += delegate (object sender, ProgressChangedEventArgs args)
             {
                 string stage = args.UserState as string;
@@ -1092,18 +1096,26 @@ namespace SHEvaluation.Rank
                 {
                     bkw.ReportProgress(0, "正在讀取歷史批次及母群資料...");
                     QueryHelper queryHelper = new QueryHelper();
+                    failedStep = HistoryRestoreLog.PeriodStep;
+                    stepWatch.Restart();
                     DataTable periodTable = queryHelper.Select(SemesterHistoryPeriodGuard.SelectSql(batchId));
+                    trace.Record(failedStep, stepWatch.ElapsedMilliseconds, periodTable == null ? 0 : periodTable.Rows.Count, "");
                     if (!SemesterHistoryPeriodGuard.Matches(periodTable, batchId, historyYear, historySemester))
                     {
                         periodRejected = true;
                         return;
                     }
+                    failedStep = HistoryRestoreLog.SettingStep;
+                    stepWatch.Restart();
                     DataTable table = queryHelper.Select(HistorySnapshotRestore.SelectSettingSql(batchId));
                     string settingXml;
                     string extensionJson;
                     settingFound = HistorySnapshotRestore.TryReadBatch(table, batchId, out settingXml, out extensionJson);
+                    trace.Record(failedStep, stepWatch.ElapsedMilliseconds, table == null ? 0 : table.Rows.Count, "設定字元數=" + (settingXml == null ? 0 : settingXml.Length) + " 延伸字元數=" + (extensionJson == null ? 0 : extensionJson.Length));
                     if (!settingFound)
                         return;
+                    failedStep = HistoryRestoreLog.TagStep;
+                    stepWatch.Restart();
                     List<StudentTagLink> links = new List<StudentTagLink>();
                     foreach (StudentTagRecord tag in StudentTag.SelectAll())
                     {
@@ -1116,17 +1128,33 @@ namespace SHEvaluation.Rank
                             Name = tag.Name
                         });
                     }
+                    trace.Record(failedStep, stepWatch.ElapsedMilliseconds, links.Count, "");
+                    failedStep = HistoryRestoreLog.SettingStep;
+                    stepWatch.Restart();
                     load = HistorySnapshotRestore.LoadSemester(batchId, extensionJson, settingXml, excludedCategory, tagDefinitions, links);
                     if (load.Restored || load.Message != HistorySnapshotRestore.MissingSnapshotMessage)
+                    {
+                        trace.Record(HistoryRestoreLog.StudentStep, stepWatch.ElapsedMilliseconds, 0, load.Restored ? "未查排名學生" : "快照停止");
                         return;
+                    }
+                    failedStep = HistoryRestoreLog.StudentStep;
+                    stepWatch.Restart();
                     bkw.ReportProgress(0, "正在讀取歷史批次及母群資料...");
-                    DataTable rankTable = queryHelper.Select(HistoryRankRestore.SelectBatchStudentSql(batchId));
+                    int pageCount;
+                    DataTable rankTable = HistoryRankRestore.ReadBatchStudentTable(batchId, HistoryRankRestore.BatchStudentPageSize, delegate (string sql) { return queryHelper.Select(sql); }, out pageCount);
+                    trace.Record(failedStep, stepWatch.ElapsedMilliseconds, rankTable == null ? 0 : rankTable.Rows.Count, "頁數=" + pageCount);
                     rankLoad = HistoryRankRestore.ReadBatchStudents(batchId, rankTable, excludedCategory, tagDefinitions, links);
                     SemesterHistoryStudentParticipation.KeepYearDeptClassParticipating(rankLoad);
                 }
                 catch (Exception ex)
                 {
                     bkwException = ex;
+                    rankLoad = null;
+                    trace.Fail(failedStep, stepWatch.ElapsedMilliseconds, ex);
+                }
+                finally
+                {
+                    trace.Write();
                 }
             };
             bkw.RunWorkerCompleted += delegate
@@ -1146,13 +1174,20 @@ namespace SHEvaluation.Rank
                 }
                 if (bkwException != null || !settingFound)
                 {
-                    if (!settingFound)
+                    if (bkwException != null)
+                        ReleaseFailedHistoryPick();
+                    else
                         ClearFailedHistorySelection();
                     ClearLoadedConfirmList();
                     btnPrevious.Enabled = true;
+                    string failure = bkwException == null ? "" : HistoryRestoreLog.FailureMessage(batchId, failedStep, bkwException);
                     ReleaseNextStep(true);
                     if (bkwException != null)
-                        MessageBox.Show("歷史批次設定讀取失敗。\n" + bkwException.Message);
+                    {
+                        if (labelX6 != null)
+                            labelX6.Text = failure;
+                        MessageBox.Show(failure);
+                    }
                     else
                         MessageBox.Show("找不到所選的歷史批次，無法讀取設定。本次不會改用目前學生資料。");
                     return;
@@ -1213,8 +1248,12 @@ namespace SHEvaluation.Rank
             }
             catch (Exception ex)
             {
+                ReleaseFailedHistoryPick();
                 ReleaseNextStep(true);
-                MessageBox.Show("歷史批次設定讀取失敗。\n" + ex.Message);
+                string failure = HistoryRestoreLog.FailureMessage(batchId, failedStep.Length == 0 ? HistoryRestoreLog.PeriodStep : failedStep, ex);
+                if (labelX6 != null)
+                    labelX6.Text = failure;
+                MessageBox.Show(failure);
             }
         }
 
@@ -1343,6 +1382,18 @@ namespace SHEvaluation.Rank
                 _txtMotherGroupSearch.Text = "";
             if (dgvStudentList.Rows.Count > 0)
                 dgvStudentList.Rows.Clear();
+        }
+
+        private void ReleaseFailedHistoryPick()
+        {
+            if (_cboHistoryBatch != null)
+            {
+                _bindingHistoryBatch = true;
+                _cboHistoryBatch.SelectedIndex = -1;
+                _bindingHistoryBatch = false;
+            }
+            if (_calculationPeriod != null)
+                _calculationPeriod.ClearHistoryBatchSelection();
         }
 
         private void ClearFailedHistorySelection()

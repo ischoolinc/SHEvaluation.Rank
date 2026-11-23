@@ -173,6 +173,7 @@
     <Compile Include="MotherGroup\MotherGroupPhase5Task51Check.cs" />
     <Compile Include="MotherGroup\HistorySnapshotRestore.cs" />
     <Compile Include="MotherGroup\HistoryRankRestore.cs" />
+    <Compile Include="MotherGroup\HistoryRestoreLog.cs" />
     <Compile Include="MotherGroup\HistoryCalculationScope.cs" />
     <Compile Include="MotherGroup\MotherGroupPhase5Task54Check.cs" />
     <Compile Include="MotherGroup\HistoryStudentAdd.cs" />

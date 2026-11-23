@@ -381,3 +381,4 @@ $RECYCLE.BIN/
 
 # Extracted tester feedback, screenshots, and local audit evidence
 /test-feedback-*/
+/rank64-review-temp/

@@ -182,8 +182,8 @@ namespace SHEvaluation.Rank.MotherGroup
             int show = source.IndexOf("void ShowConfirmList");
             string history = begin >= 0 && show > begin ? source.Substring(begin, show - begin) : "";
             int snapshot = history.IndexOf("HistorySnapshotRestore.Load");
-            int legacy = history.IndexOf("HistoryRankRestore.SelectBatchStudentSql");
-            Expect(errors, snapshot >= 0 && legacy > snapshot, "沒有 JSON 與 XML 快照時才查排名學生，且仍先嘗試快照");
+            int legacy = history.IndexOf("HistoryRankRestore.ReadBatchStudentTable");
+            Expect(errors, snapshot >= 0 && legacy > snapshot && history.IndexOf("SelectBatchStudentSql") < 0, "沒有 JSON 與 XML 快照時才分頁查排名學生，且仍先嘗試快照");
             Expect(errors, history.IndexOf("CurrentStudentMotherGroupSource") < 0 && history.IndexOf("btnCacluate.Enabled = true") < 0, "還原失敗不應改用目前學生，也不應在此啟用計算按鈕");
             Expect(errors, history.IndexOf("ClearLoadedConfirmList") >= 0, "還原失敗應清空確認清單");
             string gate = File.ReadAllText("MotherGroup\\SemesterRankWriteGate.cs", Encoding.UTF8);

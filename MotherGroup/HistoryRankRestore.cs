@@ -127,6 +127,157 @@ namespace SHEvaluation.Rank.MotherGroup
                 + "\t, rbs.id";
         }
 
+        public const int BatchStudentPageSize = 500;
+
+        public static string SelectBatchStudentIdSql(string batchId)
+        {
+            return "SELECT\n"
+                + "\tcount(rbs.id) AS row_count\n"
+                + "\t, count(DISTINCT rbs.id) AS id_count\n"
+                + "FROM rank_batch_student rbs\n"
+                + "WHERE rbs.ref_batch_id = " + BatchIdText(batchId);
+        }
+
+        public static string SelectBatchStudentPageSql(string batchId, long? afterId, int pageSize)
+        {
+            ValidatePageSize(pageSize);
+            StringBuilder sql = new StringBuilder();
+            sql.Append("SELECT\n");
+            sql.Append("\trbs.id\n");
+            sql.Append("\t, rbs.ref_batch_id\n");
+            sql.Append("\t, rbs.ref_student_id\n");
+            sql.Append("\t, s.student_number\n");
+            sql.Append("\t, s.name AS student_name\n");
+            sql.Append("\t, rbs.grade_year\n");
+            sql.Append("\t, rbs.matrix_grade\n");
+            sql.Append("\t, rbs.matrix_dept\n");
+            sql.Append("\t, rbs.matrix_class\n");
+            sql.Append("\t, rbs.matrix_tag1\n");
+            sql.Append("\t, rbs.matrix_tag2\n");
+            sql.Append("FROM rank_batch_student rbs\n");
+            sql.Append("LEFT JOIN student s\n");
+            sql.Append("\tON s.id = rbs.ref_student_id\n");
+            sql.Append("WHERE rbs.ref_batch_id = ").Append(BatchIdText(batchId)).Append("\n");
+            if (afterId.HasValue)
+            {
+                if (afterId.Value < 0)
+                    throw new ArgumentException("歷史排名學生的 id 游標不是有效的數字。");
+                sql.Append("\tAND rbs.id > ").Append(afterId.Value.ToString()).Append("\n");
+            }
+            sql.Append("ORDER BY rbs.id\n");
+            sql.Append("LIMIT ").Append(pageSize.ToString());
+            return sql.ToString();
+        }
+
+        public static DataTable ReadBatchStudentTable(string batchId, int pageSize, Func<string, DataTable> query, out int pageCount)
+        {
+            pageCount = 0;
+            if (query == null)
+                throw new ArgumentNullException("query");
+            ValidatePageSize(pageSize);
+            DataTable countTable = query(SelectBatchStudentIdSql(batchId));
+            long rowCount;
+            long idCount;
+            if (!TryReadIdCounts(countTable, out rowCount, out idCount))
+                throw new InvalidOperationException("歷史排名學生的筆數無法讀取。");
+            if (rowCount != idCount)
+                throw new InvalidOperationException("歷史排名學生的 id 不是唯一，無法分頁讀取。");
+            if (rowCount == 0)
+                return EmptyBatchStudentTable();
+
+            DataTable all = null;
+            long? after = null;
+            long seen = 0;
+            while (seen < rowCount)
+            {
+                DataTable page = query(SelectBatchStudentPageSql(batchId, after, pageSize));
+                if (page == null)
+                    throw new InvalidOperationException("歷史排名學生分頁沒有回傳。");
+                int count = page.Rows.Count;
+                if (count == 0 || count > pageSize)
+                    throw new InvalidOperationException("歷史排名學生分頁筆數不正確。");
+                if (all == null)
+                    all = page.Clone();
+                long previous = 0;
+                bool hasPrevious = after.HasValue;
+                if (hasPrevious)
+                    previous = after.Value;
+                long last = 0;
+                foreach (DataRow row in page.Rows)
+                {
+                    long id;
+                    if (!TryRowId(row, out id))
+                        throw new InvalidOperationException("歷史排名學生分頁的 id 無法讀取。");
+                    if (hasPrevious && id <= previous)
+                        throw new InvalidOperationException("歷史排名學生分頁的 id 沒有前進。");
+                    hasPrevious = true;
+                    previous = id;
+                    last = id;
+                    all.ImportRow(row);
+                }
+                pageCount++;
+                seen += count;
+                if (seen > rowCount)
+                    throw new InvalidOperationException("歷史排名學生分頁筆數超過該批次總數。");
+                after = last;
+                if (count < pageSize)
+                    break;
+            }
+            if (all == null || seen != rowCount)
+                throw new InvalidOperationException("歷史排名學生分頁筆數與該批次總數不一致。");
+            return all;
+        }
+
+        private static string BatchIdText(string batchId)
+        {
+            long id;
+            if (!long.TryParse(batchId == null ? "" : batchId.Trim(), out id) || id <= 0 || id.ToString() != batchId.Trim())
+                throw new ArgumentException("歷史批次識別不是有效的數字，不查詢排名學生。");
+            return id.ToString();
+        }
+
+        private static void ValidatePageSize(int pageSize)
+        {
+            if (pageSize < 1 || pageSize > 5000)
+                throw new ArgumentException("歷史排名學生的分頁大小不正確。");
+        }
+
+        private static bool TryReadIdCounts(DataTable table, out long rowCount, out long idCount)
+        {
+            rowCount = 0;
+            idCount = 0;
+            if (table == null || table.Rows.Count != 1)
+                return false;
+            if (!table.Columns.Contains("row_count") || !table.Columns.Contains("id_count"))
+                return false;
+            return TryLong(table.Rows[0]["row_count"], out rowCount) && TryLong(table.Rows[0]["id_count"], out idCount);
+        }
+
+        private static bool TryRowId(DataRow row, out long id)
+        {
+            id = 0;
+            if (row == null || row.Table == null || !row.Table.Columns.Contains("id"))
+                return false;
+            return TryLong(row["id"], out id);
+        }
+
+        private static bool TryLong(object value, out long parsed)
+        {
+            parsed = 0;
+            if (value == null || value == DBNull.Value)
+                return false;
+            return long.TryParse(value.ToString().Trim(), out parsed) && parsed >= 0;
+        }
+
+        private static DataTable EmptyBatchStudentTable()
+        {
+            DataTable table = new DataTable();
+            string[] columns = new string[] { "id", "ref_batch_id", "ref_student_id", "student_number", "student_name", "grade_year", "matrix_grade", "matrix_dept", "matrix_class", "matrix_tag1", "matrix_tag2" };
+            foreach (string column in columns)
+                table.Columns.Add(column);
+            return table;
+        }
+
         public static HistoryRankLoad ReadBatchStudents(string selectedBatchId, DataTable table, string excludedCategory, IList<TagDefinition> tagDefinitions, IList<StudentTagLink> studentTags)
         {
             string batchId = selectedBatchId ?? "";

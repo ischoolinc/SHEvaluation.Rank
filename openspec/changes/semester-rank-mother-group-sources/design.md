@@ -153,7 +153,7 @@ JSON 由程式序列化，SQL 沿用單引號跳脫後以 `'...'::jsonb` 寫入�
 
 讀歷史批次的順序是 extension 的 JSON 快照、setting 的 XML 版本 1、然後才是 `rank_batch_student`。JSON 快照存在但格式錯誤、版本不是 1、學生內容無法還原或同名物件重複時，停止並說明原因，不改讀 XML 或排名學生。extension 是 null、空白、`[]` 或沒有這個名稱時，才讀舊 XML。舊 XML 的 `MotherGroupSnapshot version="1"` 解析保留，學生清單就是這份 XML 的完整名單，不改查 `rank_batch_student`，也不用目前學籍補母群名稱。XML 沒有版本 1、兩種快照都不存在時，才讀該批 `rank_batch_student`，不改用目前學生。
 
-`rank_batch_student` 仍是每位學生一列，學期成績寫入年、班、類別一、類別二。兩種快照都不存在時，年、科、班、類別一、類別二的名稱分別讀 `matrix_grade`、`matrix_dept`、`matrix_class`、`matrix_tag1`、`matrix_tag2`。年、科、班的參與改依決策 11，不沿用欄位裡的歷史參與，空白或衝突也不跳出提示。學期成績這條插入沒有寫 `matrix_dept`，所以舊列的科別常是空白；不用 `rank_matrix` 或目前學籍把名稱補回來。
+`rank_batch_student` 的學期成績插入讀 `score_list`，沒有先對學生去重，所以同一學生可以有多列。兩種快照都不存在時，年、科、班、類別一、類別二的名稱分別讀 `matrix_grade`、`matrix_dept`、`matrix_class`、`matrix_tag1`、`matrix_tag2`。2026-11-17 起，這個讀取先確認所選批次的 `id` 唯一，再以 `id` 游標分頁；全部頁合成一份後才做既有的依學生合併。年、科、班的參與改依決策 11，不沿用欄位裡的歷史參與，空白或衝突也不跳出提示。學期成績這條插入沒有寫 `matrix_dept`，所以舊列的科別常是空白；不用 `rank_matrix` 或目前學籍把名稱補回來。
 
 學校擇優設定照舊另存，與批次 setting 分開。
 
@@ -302,6 +302,12 @@ JSON 欄位對應舊 `StudentSelect`：`student_id` 是 JSON number，姓名與�
 計算期間由歷史與 Excel 共用。目前學生來源仍恢復系統學年期並停用欄位；離開時先記住可編輯期間，切回歷史或 Excel 再顯示回來。歷史年或學期一變，就清掉批次選取。沒有學期成績批次時，左下角顯示「此期間無學期成績批次」並停用下一步。
 
 Excel 空白範本只寫 13 欄表頭，A 欄文字格式。示意與錯誤規則放在填寫說明，不放進活頁簿。確認清單新增唯讀「預設原因」；它讀進入清單時的 `MatchesExcludedCategory`，之後改參與不會清掉這段文字。
+
+## 2026-11-17 無快照分頁
+
+1.0.0.64 的「歷史批次設定讀取失敗」把期間核對、設定與快照、`StudentTag.SelectAll()`、`LoadSemester`、`SelectBatchStudentSql` 包在同一個例外裡。批次 285 走完前三段與快照還原就返回，而且確認頁有 1,363 人；91 與 283 沒有快照，才會執行最後那段整表查詢並出現 `Java heap space`。設定與標籤不是這次的失敗點，所以不改 `StudentTag.SelectAll()`，也不截斷 `setting` 或 `extension`。
+
+分頁只發生在無快照分支。先送一筆 `count(id)` 與 `count(DISTINCT id)`，兩者不同就停止。相同才以 `WHERE ref_batch_id = 所選批次 AND id > 上一頁最後的 id ORDER BY id LIMIT 500` 讀取母群欄位。500 是產品頁面大小；測試可以改成 1 列來驗證跨頁合併。某一頁失敗時丟掉已累積的列，不呼叫合併，也不開啟確認頁。下一步的紀錄分成期間核對、批次設定與快照、學生標籤、歷史學生，只留批次 ID、步驟、耗時、筆數、設定與延伸內容的字元數，以及例外文字。
 
 ## Open Questions
 
