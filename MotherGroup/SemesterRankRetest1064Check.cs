@@ -27,6 +27,7 @@ namespace SHEvaluation.Rank.MotherGroup
                 errors.AddRange(CheckDesignerReasonColumn());
                 errors.AddRange(CheckSourceSwitchEvents());
                 errors.AddRange(CheckHistoryQueryFailure());
+                errors.AddRange(CheckHistoryLoadFailureClearedOnReselect());
                 if (errors.Count == 0)
                 {
                     Console.WriteLine("semester-rank-retest-1064: ok");
@@ -508,6 +509,112 @@ namespace SHEvaluation.Rank.MotherGroup
                     form.Dispose();
             }
             return errors;
+        }
+
+        private static List<string> CheckHistoryLoadFailureClearedOnReselect()
+        {
+            List<string> errors = new List<string>();
+            CalculateSemesterAssessmentRank form = null;
+            try
+            {
+                form = new CalculateSemesterAssessmentRank();
+                SetField(form, "_DefaultSchoolYear", "114");
+                SetField(form, "_DefaultSemester", "2");
+                CalculationPeriod period = CalculationPeriod.CreateDefault("114", "2");
+                SetField(form, "_calculationPeriod", period);
+                NumericUpDown calcYear = (NumericUpDown)GetField(form, "_nudCalcSchoolYear");
+                ComboBox calcSemester = (ComboBox)GetField(form, "_cboCalcSemester");
+                ComboBox source = (ComboBox)GetField(form, "_cboMotherGroupSource");
+                NumericUpDown historyYear = (NumericUpDown)GetField(form, "_nudHistorySchoolYear");
+                ComboBox historySemester = (ComboBox)GetField(form, "_cboHistorySemester");
+                ComboBox batches = (ComboBox)GetField(form, "_cboHistoryBatch");
+                CalculationPeriodBinder.Apply(calcYear, calcSemester, source, historyYear, historySemester, period);
+                SetField(form, "_screenLoadSettled", true);
+                SetField(form, "_screenLoadFailed", false);
+                SetField(form, "_nextStepRunning", false);
+                form.GetType().GetMethod("EnsureHistorySourceEvents", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, null);
+                Control next = (Control)GetField(form, "btnNext");
+                Control status = (Control)GetField(form, "labelX6");
+                status.Text = ReadyText;
+                next.Enabled = true;
+                bool failQuery = false;
+                string shown = "";
+                DataTable listed = BatchTable();
+                listed.Rows.Add("283", "114", "2", "學期成績", Setting("114", "2", "學期成績"), "");
+                SetHistoryQuery(delegate
+                {
+                    if (failQuery)
+                        throw new InvalidOperationException("連線中斷");
+                    return listed;
+                });
+                SetHistoryFailureDialog(delegate(string message) { shown = message; });
+                source.SelectedItem = CalculationPeriod.HistorySourceName;
+                int batch285 = IndexOfBatch(batches, "285");
+                int batch283 = IndexOfBatch(batches, "283");
+                Expect(errors, batch285 >= 0 && batch283 >= 0 && batches.SelectedIndex < 0 && !next.Enabled, "283 與 285 都在清單時，尚未選取應停用下一步");
+
+                string failure = HistoryRestoreLog.FailureMessage("283", HistoryRestoreLog.StudentStep, new InvalidOperationException("Java heap space"));
+                status.Text = failure;
+                next.Enabled = false;
+                Expect(errors, status.Text.IndexOf("283") >= 0 && status.Text.IndexOf(HistoryRestoreLog.StudentStep) >= 0 && status.Text.IndexOf("Java heap space") >= 0 && !next.Enabled, "283 載入失敗後、尚未重選時，仍顯示批次、失敗步驟與原因，下一步停用");
+
+                batches.SelectedIndex = batch285;
+                Expect(errors, status.Text == ReadyText && next.Enabled && period.HistoryBatchId == "285", "選到 285 當下應清除舊的歷史母群載入錯誤，並啟用下一步");
+                Console.WriteLine("observed reselect-285: enabled=" + next.Enabled + " batchId=" + period.HistoryBatchId + " label=" + status.Text);
+
+                status.Text = failure;
+                next.Enabled = false;
+                batches.SelectedIndex = -1;
+                Expect(errors, status.Text == failure && !next.Enabled && period.HistoryBatchId == "", "取消選取時保留 283 的載入錯誤，下一步停用");
+
+                string[] progress = new string[]
+                {
+                    "正在讀取歷史批次及母群資料...",
+                    "正在統計歷史排名學生...",
+                    "正在讀取歷史排名學生（第 1 / 3 頁）",
+                    "正在合併歷史排名學生..."
+                };
+                int progressIndex = batch283;
+                foreach (string stage in progress)
+                {
+                    status.Text = stage;
+                    batches.SelectedIndex = progressIndex;
+                    Expect(errors, status.Text == stage && next.Enabled, "選取批次時不應清掉載入進度：" + stage);
+                    progressIndex = progressIndex == batch283 ? batch285 : batch283;
+                }
+
+                failQuery = true;
+                historySemester.SelectedItem = "1";
+                Expect(errors, batches.Items.Count == 0 && !next.Enabled && status.Text.IndexOf("歷史批次清單讀取失敗。") == 0 && status.Text.IndexOf("連線中斷") >= 0 && status.Text != SemesterRankSourceChrome.NoSemesterBatchText, "歷史批次清單查詢失敗仍顯示失敗訊息，而不是無批次提示");
+                Expect(errors, shown == "歷史批次清單讀取失敗。\n連線中斷", "查詢失敗對話框仍說明讀取失敗與原因");
+                failQuery = false;
+                historyYear.Value = 113;
+                Expect(errors, batches.Items.Count == 0 && !next.Enabled && status.Text == SemesterRankSourceChrome.NoSemesterBatchText, "查詢成功但沒有批次時，仍顯示無批次提示並停用下一步");
+                Console.WriteLine("observed after-reselect-gates: queryLabelKept=true emptyLabel=" + status.Text + " enabled=" + next.Enabled);
+            }
+            catch (Exception ex)
+            {
+                errors.Add("歷史母群載入錯誤清除失敗：" + ex.GetType().Name + " " + ex.Message);
+            }
+            finally
+            {
+                SetHistoryQuery(null);
+                SetHistoryFailureDialog(null);
+                if (form != null)
+                    form.Dispose();
+            }
+            return errors;
+        }
+
+        private static int IndexOfBatch(ComboBox batches, string id)
+        {
+            for (int i = 0; i < batches.Items.Count; i++)
+            {
+                HistoryRankBatch batch = batches.Items[i] as HistoryRankBatch;
+                if (batch != null && batch.Id == id)
+                    return i;
+            }
+            return -1;
         }
 
         private static DataTable EmptyBatchTable()

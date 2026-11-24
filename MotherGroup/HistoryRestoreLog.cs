@@ -36,16 +36,31 @@ namespace SHEvaluation.Rank.MotherGroup
             Append(step, elapsedMs, 0, "", error);
         }
 
+        public void RecordStudentRead(long queryMs, long mergeMs, int pages, int rowCount)
+        {
+            _text.Append("步驟=").Append(StudentStep).Append("\n");
+            _text.Append("查詢耗時毫秒=").Append(queryMs.ToString()).Append("\n");
+            _text.Append("合併耗時毫秒=").Append(mergeMs.ToString()).Append("\n");
+            _text.Append("頁數=").Append(pages.ToString()).Append("\n");
+            _text.Append("回傳筆數=").Append(rowCount.ToString()).Append("\n");
+            _text.Append("例外=（沒有）\n");
+        }
+
         public string Text()
         {
             return _text.ToString();
         }
 
-        public static string FailureMessage(string batchId, string step, Exception ex)
+        public static string FailureMessage(string batchId, string step, string reason)
         {
             return "歷史批次 " + SafeBatchId(batchId) + " 的" + (step ?? "") + "讀取失敗。\n"
-                + (ex == null ? "" : ex.Message)
+                + (reason ?? "")
                 + "\n本次不會進入確認清單，也不會開始排名計算。";
+        }
+
+        public static string FailureMessage(string batchId, string step, Exception ex)
+        {
+            return FailureMessage(batchId, step, ex == null ? "" : ex.Message);
         }
 
         public void Write()

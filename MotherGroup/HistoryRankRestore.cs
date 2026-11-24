@@ -138,44 +138,90 @@ namespace SHEvaluation.Rank.MotherGroup
                 + "WHERE rbs.ref_batch_id = " + BatchIdText(batchId);
         }
 
-        public static string SelectBatchStudentPageSql(string batchId, long? afterId, int pageSize)
+        public static string SelectBatchStudentGroupCountSql(string batchId)
+        {
+            string idText = BatchIdText(batchId);
+            return "SELECT count(*) AS group_count\n"
+                + "FROM (\n"
+                + "\tSELECT 1\n"
+                + BatchStudentFromSql(idText)
+                + "\tGROUP BY\n"
+                + "\t\t" + CollapsedKeySql() + "\n"
+                + ") AS collapsed";
+        }
+
+        public static string SelectBatchStudentPageSql(string batchId, long? afterCursor, int pageSize)
         {
             ValidatePageSize(pageSize);
+            if (afterCursor.HasValue && afterCursor.Value < 0)
+                throw new ArgumentException("歷史排名學生的 id 游標不是有效的數字。");
+            string idText = BatchIdText(batchId);
+            string keys = CollapsedKeySql();
             StringBuilder sql = new StringBuilder();
             sql.Append("SELECT\n");
-            sql.Append("\trbs.id\n");
-            sql.Append("\t, rbs.ref_batch_id\n");
-            sql.Append("\t, rbs.ref_student_id\n");
-            sql.Append("\t, s.student_number\n");
-            sql.Append("\t, s.name AS student_name\n");
-            sql.Append("\t, rbs.grade_year\n");
-            sql.Append("\t, rbs.matrix_grade\n");
-            sql.Append("\t, rbs.matrix_dept\n");
-            sql.Append("\t, rbs.matrix_class\n");
-            sql.Append("\t, rbs.matrix_tag1\n");
-            sql.Append("\t, rbs.matrix_tag2\n");
-            sql.Append("FROM rank_batch_student rbs\n");
-            sql.Append("LEFT JOIN student s\n");
-            sql.Append("\tON s.id = rbs.ref_student_id\n");
-            sql.Append("WHERE rbs.ref_batch_id = ").Append(BatchIdText(batchId)).Append("\n");
-            if (afterId.HasValue)
-            {
-                if (afterId.Value < 0)
-                    throw new ArgumentException("歷史排名學生的 id 游標不是有效的數字。");
-                sql.Append("\tAND rbs.id > ").Append(afterId.Value.ToString()).Append("\n");
-            }
-            sql.Append("ORDER BY rbs.id\n");
+            sql.Append("\tcollapsed.id\n");
+            sql.Append("\t, collapsed.ref_batch_id\n");
+            sql.Append("\t, collapsed.ref_student_id\n");
+            sql.Append("\t, collapsed.student_number\n");
+            sql.Append("\t, collapsed.student_name\n");
+            sql.Append("\t, collapsed.grade_year\n");
+            sql.Append("\t, collapsed.matrix_grade\n");
+            sql.Append("\t, collapsed.matrix_dept\n");
+            sql.Append("\t, collapsed.matrix_class\n");
+            sql.Append("\t, collapsed.matrix_tag1\n");
+            sql.Append("\t, collapsed.matrix_tag2\n");
+            sql.Append("\t, collapsed.cursor_id\n");
+            sql.Append("FROM (\n");
+            sql.Append("\tSELECT DISTINCT ON (\n");
+            sql.Append("\t\t").Append(keys).Append("\n");
+            sql.Append("\t)\n");
+            sql.Append("\t\trbs.id\n");
+            sql.Append("\t\t, rbs.ref_batch_id\n");
+            sql.Append("\t\t, rbs.ref_student_id\n");
+            sql.Append("\t\t, coalesce(s.student_number, '') AS student_number\n");
+            sql.Append("\t\t, coalesce(s.name, '') AS student_name\n");
+            sql.Append("\t\t, rbs.grade_year\n");
+            sql.Append("\t\t, ").Append(CleanColumnSql("rbs.matrix_grade")).Append(" AS matrix_grade\n");
+            sql.Append("\t\t, ").Append(CleanColumnSql("rbs.matrix_dept")).Append(" AS matrix_dept\n");
+            sql.Append("\t\t, ").Append(CleanColumnSql("rbs.matrix_class")).Append(" AS matrix_class\n");
+            sql.Append("\t\t, ").Append(CleanColumnSql("rbs.matrix_tag1")).Append(" AS matrix_tag1\n");
+            sql.Append("\t\t, ").Append(CleanColumnSql("rbs.matrix_tag2")).Append(" AS matrix_tag2\n");
+            sql.Append("\t\t, MIN(rbs.id) OVER (\n");
+            sql.Append("\t\t\tPARTITION BY\n");
+            sql.Append("\t\t\t\t").Append(keys).Append("\n");
+            sql.Append("\t\t) AS cursor_id\n");
+            sql.Append("\t").Append(BatchStudentFromSql(idText));
+            sql.Append("\tORDER BY\n");
+            sql.Append("\t\t").Append(keys).Append("\n");
+            sql.Append("\t\t, ").Append(GradeSortSql("rbs.grade_year")).Append("\n");
+            sql.Append("\t\t, rbs.id\n");
+            sql.Append(") AS collapsed\n");
+            if (afterCursor.HasValue)
+                sql.Append("WHERE collapsed.cursor_id > ").Append(afterCursor.Value.ToString()).Append("\n");
+            sql.Append("ORDER BY collapsed.cursor_id\n");
             sql.Append("LIMIT ").Append(pageSize.ToString());
             return sql.ToString();
         }
 
         public static DataTable ReadBatchStudentTable(string batchId, int pageSize, Func<string, DataTable> query, out int pageCount)
         {
+            bool discarded;
+            return ReadBatchStudentTable(batchId, pageSize, query, null, null, out pageCount, out discarded);
+        }
+
+        public static DataTable ReadBatchStudentTable(string batchId, int pageSize, Func<string, DataTable> query, Func<bool> stillCurrent, Action<int, int> pageAccepted, out int pageCount, out bool discarded)
+        {
             pageCount = 0;
+            discarded = false;
             if (query == null)
                 throw new ArgumentNullException("query");
             ValidatePageSize(pageSize);
             DataTable countTable = query(SelectBatchStudentIdSql(batchId));
+            if (StopAfterQuery(stillCurrent))
+            {
+                discarded = true;
+                return null;
+            }
             long rowCount;
             long idCount;
             if (!TryReadIdCounts(countTable, out rowCount, out idCount))
@@ -185,12 +231,35 @@ namespace SHEvaluation.Rank.MotherGroup
             if (rowCount == 0)
                 return EmptyBatchStudentTable();
 
+            DataTable groupTable = query(SelectBatchStudentGroupCountSql(batchId));
+            if (StopAfterQuery(stillCurrent))
+            {
+                discarded = true;
+                return null;
+            }
+            long groupCount;
+            if (!TryReadGroupCount(groupTable, out groupCount))
+                throw new InvalidOperationException("歷史排名學生的合併筆數無法讀取。");
+            if (groupCount <= 0 || groupCount > rowCount)
+                throw new InvalidOperationException("歷史排名學生的合併筆數不正確。");
+
+            int totalPages = (int)((groupCount + pageSize - 1) / pageSize);
             DataTable all = null;
             long? after = null;
             long seen = 0;
-            while (seen < rowCount)
+            while (seen < groupCount)
             {
+                if (StopAfterQuery(stillCurrent))
+                {
+                    discarded = true;
+                    return null;
+                }
                 DataTable page = query(SelectBatchStudentPageSql(batchId, after, pageSize));
+                if (StopAfterQuery(stillCurrent))
+                {
+                    discarded = true;
+                    return null;
+                }
                 if (page == null)
                     throw new InvalidOperationException("歷史排名學生分頁沒有回傳。");
                 int count = page.Rows.Count;
@@ -208,24 +277,64 @@ namespace SHEvaluation.Rank.MotherGroup
                     long id;
                     if (!TryRowId(row, out id))
                         throw new InvalidOperationException("歷史排名學生分頁的 id 無法讀取。");
-                    if (hasPrevious && id <= previous)
-                        throw new InvalidOperationException("歷史排名學生分頁的 id 沒有前進。");
+                    long cursor;
+                    if (!TryCursor(row, out cursor))
+                        throw new InvalidOperationException("歷史排名學生分頁的游標無法讀取。");
+                    if (hasPrevious && cursor <= previous)
+                        throw new InvalidOperationException("歷史排名學生分頁的游標沒有前進。");
                     hasPrevious = true;
-                    previous = id;
-                    last = id;
+                    previous = cursor;
+                    last = cursor;
                     all.ImportRow(row);
                 }
                 pageCount++;
                 seen += count;
-                if (seen > rowCount)
-                    throw new InvalidOperationException("歷史排名學生分頁筆數超過該批次總數。");
+                if (seen > groupCount)
+                    throw new InvalidOperationException("歷史排名學生分頁筆數超過合併後筆數。");
                 after = last;
+                if (pageAccepted != null)
+                    pageAccepted(pageCount, totalPages);
                 if (count < pageSize)
                     break;
             }
-            if (all == null || seen != rowCount)
-                throw new InvalidOperationException("歷史排名學生分頁筆數與該批次總數不一致。");
+            if (all == null || seen != groupCount)
+                throw new InvalidOperationException("歷史排名學生分頁筆數與合併後筆數不一致。");
             return all;
+        }
+
+        private static bool StopAfterQuery(Func<bool> stillCurrent)
+        {
+            return stillCurrent != null && !stillCurrent();
+        }
+
+        private static string BatchStudentFromSql(string idText)
+        {
+            return "\tFROM rank_batch_student rbs\n"
+                + "\tLEFT JOIN student s\n"
+                + "\t\tON s.id = rbs.ref_student_id\n"
+                + "\tWHERE rbs.ref_batch_id = " + idText + "\n";
+        }
+
+        private static string CollapsedKeySql()
+        {
+            return "rbs.ref_student_id\n"
+                + "\t\t, coalesce(s.student_number, '')\n"
+                + "\t\t, coalesce(s.name, '')\n"
+                + "\t\t, " + CleanColumnSql("rbs.matrix_grade") + "\n"
+                + "\t\t, " + CleanColumnSql("rbs.matrix_dept") + "\n"
+                + "\t\t, " + CleanColumnSql("rbs.matrix_class") + "\n"
+                + "\t\t, " + CleanColumnSql("rbs.matrix_tag1") + "\n"
+                + "\t\t, " + CleanColumnSql("rbs.matrix_tag2");
+        }
+
+        private static string CleanColumnSql(string column)
+        {
+            return "CASE WHEN " + column + " IS NULL OR btrim(" + column + "::text) = '' THEN '' ELSE " + column + "::text END";
+        }
+
+        private static string GradeSortSql(string column)
+        {
+            return "CASE WHEN btrim(coalesce(" + column + "::text, '')) ~ '^[+-]?[0-9]{1,18}$' THEN btrim(" + column + "::text)::bigint ELSE 9223372036854775807 END";
         }
 
         private static string BatchIdText(string batchId)
@@ -253,12 +362,28 @@ namespace SHEvaluation.Rank.MotherGroup
             return TryLong(table.Rows[0]["row_count"], out rowCount) && TryLong(table.Rows[0]["id_count"], out idCount);
         }
 
+        private static bool TryReadGroupCount(DataTable table, out long groupCount)
+        {
+            groupCount = 0;
+            if (table == null || table.Rows.Count != 1 || !table.Columns.Contains("group_count"))
+                return false;
+            return TryLong(table.Rows[0]["group_count"], out groupCount) && groupCount >= 0;
+        }
+
         private static bool TryRowId(DataRow row, out long id)
         {
             id = 0;
             if (row == null || row.Table == null || !row.Table.Columns.Contains("id"))
                 return false;
             return TryLong(row["id"], out id);
+        }
+
+        private static bool TryCursor(DataRow row, out long cursor)
+        {
+            cursor = 0;
+            if (row == null || row.Table == null || !row.Table.Columns.Contains("cursor_id"))
+                return false;
+            return TryLong(row["cursor_id"], out cursor);
         }
 
         private static bool TryLong(object value, out long parsed)
