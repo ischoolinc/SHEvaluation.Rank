@@ -66,7 +66,10 @@ namespace SHEvaluation.Rank.MotherGroup
             return "即將計算學期成績固定排名。\n\n"
                 + "計算學年度：" + schoolYear + "\n"
                 + "計算學期：" + semester + "\n"
-                + "母群來源：" + sourceName + "\n\n"       
+                + "母群來源：" + sourceName + "\n\n"
+                + "本次會停用" + schoolYear + "學年度第" + semester + "學期、" + gradeList + "的有效學期成績排名。\n"
+                + "定期評量與技職繁星的有效排名不會停用。\n"
+                + "擇優設定會先寫入學校組態，排名語句失敗時不會自動回復。\n\n"
                 + "確定要繼續計算嗎？";
         }
 

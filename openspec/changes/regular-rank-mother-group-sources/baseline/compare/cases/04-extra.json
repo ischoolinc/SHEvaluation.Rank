@@ -1,0 +1,20 @@
+{
+  "name": "多出",
+  "expect": {
+    "passed": false,
+    "baselineCount": 1,
+    "candidateCount": 2,
+    "equalPairs": 1,
+    "missing": 0,
+    "extra": 1,
+    "valueDifferences": 0,
+    "nullDifferences": 0
+  },
+  "baseline": [
+    { "student_id": 101 }
+  ],
+  "candidate": [
+    { "student_id": 101 },
+    { "student_id": 103 }
+  ]
+}

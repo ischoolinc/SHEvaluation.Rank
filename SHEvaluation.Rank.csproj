@@ -37,6 +37,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Accessibility" />
+    <Reference Include="FISCA.DSAClient"><HintPath>Library\FISCA.DSAClient.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="FISCA.Authentication"><SpecificVersion>False</SpecificVersion><HintPath>..\fisca\Libraries\FISCA.Authentication.dll</HintPath><Private>False</Private></Reference>
     <Reference Include="Aspose.Cells_201402, Version=7.7.1.0, Culture=neutral, PublicKeyToken=716fcc553a201e56, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Library\Aspose.Cells_201402.dll</HintPath>
@@ -147,6 +150,50 @@
       <DependentUpon>Manual.cs</DependentUpon>
     </Compile>
     <Compile Include="MotherGroup\RankSlot.cs" />
+    <Compile Include="RegularRank\RegularRankExcelSource.cs" />
+    <Compile Include="RegularRank\RegularRankHistorySource.cs" />
+    <Compile Include="RegularRank\RegularRankFormulaSql.cs" />
+    <Compile Include="RegularRank\RegularRankCandidateSql.cs" />
+    <Compile Include="RegularRank\RegularRankResultVerification.cs" />
+    <Compile Include="RegularRank\RegularRankAtomicPublishSql.cs" />
+    <Compile Include="RegularRank\RegularRankPublicationService.cs" />
+    <Compile Include="RegularRank\RegularRankMatrixInsertSql.cs" />
+    <Compile Include="RegularRank\RegularRankCandidateSqlCheck.cs" />
+    <Compile Include="RegularRank\RegularRankDatabaseContract.cs" />
+    <Compile Include="RegularRank\RegularRankHistorySourceCheck.cs" />
+    <Compile Include="RegularRank\RegularRankExcelSourceCheck.cs" />
+    <Compile Include="MotherGroup\SemesterMatrixRankHangCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankRetrievalHangCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankRetrievalCheck.cs" />
+    <Compile Include="DAO\SemesterAssessmentRankQuery.cs" />
+    <Compile Include="DAO\RegularAssessmentRankQuery.cs" />
+    <Compile Include="RegularRank\RegularRankPublishExecutor.cs" />
+    <Compile Include="RegularRank\RegularRankPublishPipelineCheck.cs" />
+    <Compile Include="RegularRank\RegularRankRetrievalCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankField687Diag.cs" />
+    <Compile Include="MotherGroup\SemesterRankMatrixDiagCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankMatrixDiagSql.cs" />
+    <Compile Include="MotherGroup\SemesterRankFormulaSql.cs" />
+    <Compile Include="MotherGroup\SemesterRankFailureReport.cs" />
+    <Compile Include="MotherGroup\SemesterRankPublishTransport.cs" />
+    <Compile Include="RegularRank\RegularRankCalculationContext.cs" />
+    <Compile Include="RegularRank\RegularRankCalculationContextCheck.cs" />
+    <Compile Include="RegularRank\RegularRankPeriodSourceEditor.cs" />
+    <Compile Include="RegularRank\RegularRankPeriodSourceEditorCheck.cs" />
+    <Compile Include="RegularRank\RegularRankCurrentStudentSource.cs" />
+    <Compile Include="RegularRank\RegularRankSubjectCatalog.cs" />
+    <Compile Include="RegularRank\RegularRankSnapshotDocument.cs" />
+    <Compile Include="RegularRank\RegularRankCalculationEntry.cs" />
+    <Compile Include="RegularRank\RegularRankParticipationGate.cs" />
+    <Compile Include="RegularRank\RegularRankPublishPlan.cs" />
+    <Compile Include="RegularRank\RegularRankMotherGroupConfirmForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="RegularRank\RegularRankMotherGroupConfirmForm.Designer.cs">
+      <DependentUpon>RegularRankMotherGroupConfirmForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="RegularRank\RegularRankOperationCheck.cs" />
+    <Compile Include="RegularRank\RegularRankDesignerStructureCheck.cs" />
     <Compile Include="MotherGroup\StudentMotherGroup.cs" />
     <Compile Include="MotherGroup\CurrentStudentMotherGroupBuilder.cs" />
     <Compile Include="MotherGroup\CurrentStudentMotherGroupSource.cs" />
@@ -156,9 +203,16 @@
     <Compile Include="MotherGroup\CalculationPeriod.cs" />
     <Compile Include="MotherGroup\CalculationPeriodBinder.cs" />
     <Compile Include="MotherGroup\SemesterHistoryBatchCatalog.cs" />
+    <Compile Include="MotherGroup\MotherGroupConfirmGridAccessibilityCheck.cs" />
+    <Compile Include="MotherGroup\SemesterHistorySourceCheck.cs" />
+    <Compile Include="MotherGroup\SemesterRankSourceChrome.cs" />
+    <Compile Include="MotherGroup\SemesterRankRetest1064Check.cs" />
+    <Compile Include="MotherGroup\SemesterHistoryStudentParticipation.cs" />
+    <Compile Include="MotherGroup\SemesterHistoryPeriodGuard.cs" />
     <Compile Include="MotherGroup\MotherGroupPhase5Task51Check.cs" />
     <Compile Include="MotherGroup\HistorySnapshotRestore.cs" />
     <Compile Include="MotherGroup\HistoryRankRestore.cs" />
+    <Compile Include="MotherGroup\HistoryRestoreLog.cs" />
     <Compile Include="MotherGroup\HistoryCalculationScope.cs" />
     <Compile Include="MotherGroup\MotherGroupPhase5Task54Check.cs" />
     <Compile Include="MotherGroup\HistoryStudentAdd.cs" />
@@ -325,6 +379,9 @@
     <Compile Include="UDT\udtRegistrationDept.cs" />
     <Compile Include="UDT\udtRegistrationSubjectNew.cs" />
     <Compile Include="UDT\udtRegistrationSubject.cs" />
+    <EmbeddedResource Include="RegularRank\RegularRankMotherGroupConfirmForm.resx">
+      <DependentUpon>RegularRankMotherGroupConfirmForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="CalculateRegularAssessmentRank.resx">
       <DependentUpon>CalculateRegularAssessmentRank.cs</DependentUpon>
     </EmbeddedResource>

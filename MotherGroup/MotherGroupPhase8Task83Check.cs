@@ -128,7 +128,7 @@ namespace SHEvaluation.Rank.MotherGroup
             int open = excelBody.IndexOf("MotherGroupExcelExchange.Open");
             Expect(errors, dialog >= 0 && dialog < worker && open > worker && excelBody.IndexOf("ReleaseNextStep(true)") >= 0 && excelBody.IndexOf("ShowConfirmList") > excelBody.IndexOf("!validation.IsValid"), "Excel 選檔留在畫面執行緒，解析在背景，失敗要恢復下一步");
             string historyBody = history >= 0 ? form.Substring(history, form.IndexOf("void ShowConfirmList") - history) : "";
-            Expect(errors, historyBody.IndexOf("HistorySnapshotRestore.Load") >= 0 && historyBody.IndexOf("HistoryRankRestore.SelectBatchStudentSql") > historyBody.IndexOf("HistorySnapshotRestore.Load"), "歷史還原順序維持 JSON、XML，然後排名學生");
+            Expect(errors, historyBody.IndexOf("HistorySnapshotRestore.Load") >= 0 && historyBody.IndexOf("HistoryRankRestore.ReadBatchStudentTable") > historyBody.IndexOf("HistorySnapshotRestore.Load") && historyBody.IndexOf("SelectBatchStudentSql") < 0, "歷史還原順序維持 JSON、XML，然後分頁讀排名學生");
             Expect(errors, CountOf(historyBody, "ReleaseNextStep(true)") >= 4 && historyBody.IndexOf("RunWorkerCompleted") >= 0, "歷史完成事件的失敗分支都要恢復下一步");
             int confirm = form.IndexOf("void ShowConfirmList");
             int previous = form.IndexOf("void btnPrevious_Click");

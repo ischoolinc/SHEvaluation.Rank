@@ -20,6 +20,7 @@ namespace SHEvaluation.Rank.MotherGroup
                 errors.AddRange(CheckRestoreOrder());
                 errors.AddRange(CheckCatalog());
                 errors.AddRange(CheckBatchStudents());
+                errors.AddRange(CheckBatchStudentPages());
                 errors.AddRange(CheckPublish());
                 if (errors.Count == 0)
                 {
@@ -195,6 +196,177 @@ namespace SHEvaluation.Rank.MotherGroup
             return errors;
         }
 
+        private static List<string> CheckBatchStudentPages()
+        {
+            List<string> errors = new List<string>();
+            string first = HistoryRankRestore.SelectBatchStudentPageSql("91", null, 1);
+            string next = HistoryRankRestore.SelectBatchStudentPageSql("91", 10, 1);
+            string count = HistoryRankRestore.SelectBatchStudentIdSql("283");
+            string groups = HistoryRankRestore.SelectBatchStudentGroupCountSql("91");
+            Expect(errors, first.IndexOf("WHERE rbs.ref_batch_id = 91") >= 0 && first.IndexOf("DISTINCT ON") >= 0 && first.IndexOf("ORDER BY collapsed.cursor_id") >= 0 && first.IndexOf("LIMIT 1") >= 0 && first.IndexOf("cursor_id >") < 0 && first.IndexOf("matrix_grade") >= 0 && first.IndexOf("matrix_dept") >= 0 && first.IndexOf("matrix_class") >= 0 && first.IndexOf("matrix_tag1") >= 0 && first.IndexOf("matrix_tag2") >= 0 && first.IndexOf("THEN ''") >= 0 && first.IndexOf("MAX(") < 0, "分頁應在資料庫合併等價列，空白名稱仍留在群組鍵，並以觀察群最小 id 分頁");
+            Expect(errors, next.IndexOf("collapsed.cursor_id > 10") >= 0 && next.IndexOf("LIMIT 1") >= 0 && next.IndexOf("ORDER BY collapsed.cursor_id") >= 0 && next.IndexOf("ORDER BY rbs.grade_year") < 0 && next.IndexOf("9223372036854775807") >= 0, "下一頁用觀察群最小 id 當游標，年級只用來選代表列");
+            Expect(errors, count.IndexOf("count(DISTINCT rbs.id)") >= 0 && count.IndexOf("WHERE rbs.ref_batch_id = 283") >= 0 && count.IndexOf("matrix_grade") < 0, "應先確認所選批次的 id 唯一");
+            Expect(errors, groups.IndexOf("AS group_count") >= 0 && groups.IndexOf("WHERE rbs.ref_batch_id = 91") >= 0 && groups.IndexOf("GROUP BY") >= 0 && groups.IndexOf("LIMIT") < 0 && groups.IndexOf("matrix_dept") >= 0, "合併筆數要與分頁使用同一觀察群");
+            Expect(errors, first.IndexOf(';') < 0 && first.IndexOf("INSERT") < 0 && next.IndexOf("UPDATE") < 0 && count.IndexOf("DELETE") < 0 && groups.IndexOf("DELETE") < 0, "分頁查詢應是唯讀單句");
+            bool rejected = false;
+            try
+            {
+                HistoryRankRestore.SelectBatchStudentPageSql("91 OR 1=1", null, 1);
+            }
+            catch (ArgumentException)
+            {
+                rejected = true;
+            }
+            Expect(errors, rejected, "分頁查詢不接受不合法的批次識別");
+
+            int pageCalls = 0;
+            int pageCount;
+            DataTable merged = HistoryRankRestore.ReadBatchStudentTable("91", 1, delegate (string sql)
+            {
+                if (sql.IndexOf("count(DISTINCT") >= 0)
+                    return CountTable("2", "2");
+                if (sql.IndexOf("AS group_count") >= 0)
+                    return GroupCountTable("2");
+                pageCalls++;
+                if (pageCalls == 1)
+                    return PageRow("10", "91", "5", "500", "甲", "1", "1年級", "商科", "忠班", "", "", "10");
+                return PageRow("20", "91", "5", "500", "甲", "1", "1年級", "商科", "孝班", "", "", "20");
+            }, out pageCount);
+            HistoryRankLoad load = HistoryRankRestore.ReadBatchStudents("91", merged, "", new List<TagDefinition>(), new List<StudentTagLink>());
+            SemesterHistoryStudentParticipation.KeepYearDeptClassParticipating(load);
+            Expect(errors, pageCalls == 2 && pageCount == 2 && load.Restored && load.Students.Count == 1 && load.Students[0].StudentId == "5", "跨頁的同一學生應在全部頁讀完後合成一列");
+            RankSlot classSlot = load.Students[0].GetWorking(RankKinds.Class);
+            Expect(errors, classSlot.GroupName.Length == 0 && classSlot.ConflictNames != null && classSlot.ConflictNames.Contains("忠班") && classSlot.ConflictNames.Contains("孝班") && classSlot.Participate, "跨頁班名衝突應保留兩個名稱並沿用無 JSON 的參與預設");
+
+            bool sawPage = false;
+            bool failed = false;
+            DataTable partial = null;
+            try
+            {
+                partial = HistoryRankRestore.ReadBatchStudentTable("283", 1, delegate (string sql)
+                {
+                    if (sql.IndexOf("count(DISTINCT") >= 0)
+                        return CountTable("2", "2");
+                    if (sql.IndexOf("AS group_count") >= 0)
+                        return GroupCountTable("2");
+                    if (sql.IndexOf("cursor_id >") >= 0)
+                        throw new InvalidOperationException("Java heap space");
+                    sawPage = true;
+                    return PageRow("1", "283", "8", "800", "乙", "1", "1年級", "", "高一甲", "", "", "1");
+                }, out pageCount);
+            }
+            catch (InvalidOperationException ex)
+            {
+                failed = ex.Message == "Java heap space";
+            }
+            Expect(errors, sawPage && failed && partial == null, "中途失敗應捨棄已讀頁，不回傳部分母群");
+            string message = HistoryRestoreLog.FailureMessage("283", HistoryRestoreLog.StudentStep, new InvalidOperationException("Java heap space"));
+            Expect(errors, message.IndexOf("283") >= 0 && message.IndexOf(HistoryRestoreLog.StudentStep) >= 0 && message.IndexOf("確認清單") >= 0 && message.IndexOf("乙") < 0, "失敗訊息應有批次與步驟，且不含學生資料");
+
+            bool paged = false;
+            DataTable none = HistoryRankRestore.ReadBatchStudentTable("91", 1, delegate (string sql)
+            {
+                if (sql.IndexOf("LIMIT") >= 0)
+                    paged = true;
+                return CountTable("0", "0");
+            }, out pageCount);
+            Expect(errors, !paged && none.Rows.Count == 0 && pageCount == 0, "沒有排名學生時不送出分頁查詢");
+
+            bool uniqueStopped = false;
+            try
+            {
+                HistoryRankRestore.ReadBatchStudentTable("91", 1, delegate (string sql)
+                {
+                    if (sql.IndexOf("LIMIT") >= 0)
+                        uniqueStopped = true;
+                    return CountTable("2", "1");
+                }, out pageCount);
+            }
+            catch (InvalidOperationException ex)
+            {
+                uniqueStopped = !uniqueStopped && ex.Message.IndexOf("不是唯一") >= 0;
+            }
+            Expect(errors, uniqueStopped, "id 不唯一時應停止，不以它當游標");
+
+            int sentPages = 0;
+            bool discarded = false;
+            DataTable kept = HistoryRankRestore.ReadBatchStudentTable("283", 1, delegate (string sql)
+            {
+                if (sql.IndexOf("count(DISTINCT") >= 0)
+                    return CountTable("2", "2");
+                if (sql.IndexOf("AS group_count") >= 0)
+                    return GroupCountTable("2");
+                sentPages++;
+                return PageRow("4", "283", "8", "800", "乙", "1", "1年級", "", "高一甲", "", "", "4");
+            }, delegate { return sentPages < 1; }, null, out pageCount, out discarded);
+            Expect(errors, discarded && kept == null && sentPages == 1, "已送出的查詢返回後應停止後續分頁並丟棄結果");
+
+            DataTable ordered = new DataTable();
+            foreach (string column in new string[] { "id", "ref_batch_id", "ref_student_id", "student_number", "student_name", "grade_year", "matrix_grade", "matrix_dept", "matrix_class", "matrix_tag1", "matrix_tag2", "cursor_id" })
+                ordered.Columns.Add(column);
+            ordered.Rows.Add("30", "91", "5", "500", "甲", "2", "2年級", "", "忠班", "", "", "5");
+            ordered.Rows.Add("4", "91", "5", "500", "甲", "1", "1年級", "普通科", "孝班", "", "", "9");
+            ordered.Rows.Add("10", "91", "8", "800", "乙", "1", "1年級", "普通科", "高一甲", "", "", "2");
+            HistoryRankLoad orderedLoad = HistoryRankRestore.ReadBatchStudents("91", ordered, "", new List<TagDefinition>(), new List<StudentTagLink>());
+            SemesterHistoryStudentParticipation.KeepYearDeptClassParticipating(orderedLoad);
+            Expect(errors, orderedLoad.Restored && orderedLoad.Students.Count == 2 && orderedLoad.Students[0].StudentId == "5" && orderedLoad.Students[1].StudentId == "8", "學生順序仍用代表列的年級與 id，不用分頁游標");
+            RankSlot dept = orderedLoad.Students[0].GetWorking(RankKinds.Department);
+            Expect(errors, dept.GroupName.Length == 0 && dept.ConflictNames != null && dept.ConflictNames.Contains("") && dept.ConflictNames.Contains("普通科") && dept.Participate, "空白與非空白科別同時留下，年科班仍預設參與");
+
+            HistoryRestoreLog log = HistoryRestoreLog.Start("91");
+            log.Record(HistoryRestoreLog.PeriodStep, 3, 1, "");
+            log.Record(HistoryRestoreLog.SettingStep, 4, 1, "設定字元數=12 延伸字元數=0");
+            log.Fail(HistoryRestoreLog.StudentStep, 9, new InvalidOperationException("Java heap space"));
+            string text = log.Text();
+            Expect(errors, text.IndexOf("批次識別=91") >= 0 && text.IndexOf("步驟=" + HistoryRestoreLog.PeriodStep) >= 0 && text.IndexOf("步驟=" + HistoryRestoreLog.SettingStep) >= 0 && text.IndexOf("步驟=" + HistoryRestoreLog.TagStep) < 0 && text.IndexOf("步驟=" + HistoryRestoreLog.StudentStep) >= 0 && text.IndexOf("回傳筆數=1") >= 0 && text.IndexOf("Java heap space") >= 0 && text.IndexOf("學生姓名") < 0, "應分開記錄已完成步驟與失敗步驟");
+            HistoryRestoreLog split = HistoryRestoreLog.Start("283");
+            split.RecordStudentRead(1200, 40, 3, 1371);
+            string splitText = split.Text();
+            Expect(errors, splitText.IndexOf("步驟=" + HistoryRestoreLog.StudentStep) >= 0 && splitText.IndexOf("查詢耗時毫秒=1200") >= 0 && splitText.IndexOf("合併耗時毫秒=40") >= 0 && splitText.IndexOf("頁數=3") >= 0 && splitText.IndexOf("回傳筆數=1371") >= 0 && splitText.IndexOf("學號") < 0, "歷史學生應分開記錄查詢、合併、頁數與回傳筆數");
+
+            string form = File.ReadAllText("CalculateSemesterAssessmentRank.cs", Encoding.UTF8);
+            int begin = form.IndexOf("void BeginHistorySnapshotRestore");
+            int show = form.IndexOf("void ShowConfirmList");
+            string history = begin >= 0 && show > begin ? form.Substring(begin, show - begin) : "";
+            Expect(errors, history.IndexOf("HistoryRestoreLog.PeriodStep") >= 0 && history.IndexOf("HistoryRestoreLog.SettingStep") > history.IndexOf("HistoryRestoreLog.PeriodStep") && history.IndexOf("HistoryRestoreLog.TagStep") > history.IndexOf("HistoryRestoreLog.SettingStep") && history.IndexOf("HistoryRestoreLog.StudentStep") > history.IndexOf("HistoryRestoreLog.TagStep"), "四個讀取步驟都要分開記錄");
+            Expect(errors, history.IndexOf("ReleaseFailedHistoryPick") > history.IndexOf("ReadBatchStudentTable") && history.IndexOf("FailureMessage") > history.IndexOf("ReleaseFailedHistoryPick"), "分頁失敗應清除選取並顯示批次與步驟");
+            Expect(errors, history.IndexOf("ClearFailedHistorySelection") < 0 && history.IndexOf("IsHistoryLoadCurrent") >= 0 && history.IndexOf("RecordStudentRead") > history.IndexOf("ReadBatchStudents") && form.IndexOf("void OnFormClosing") >= 0 && form.IndexOf("_settingsPageClosed") >= 0, "關閉設定頁應使當次載入失效，且找不到設定時不清空整份清單");
+            int guard = history.IndexOf("IsHistoryLoadCurrent(generation)");
+            Expect(errors, guard >= 0 && history.IndexOf("PublishConfirmRequest", guard) > guard && history.LastIndexOf("ShowConfirmList") > history.IndexOf("PublishConfirmRequest", guard), "快照成功與無快照成功都要先確認仍是當次載入");
+            int frozen = history.IndexOf("PublishConfirmRequest(_frozenHistoryRequest)");
+            Expect(errors, history.IndexOf("_frozenHistoryRequest = FreezeConfirmRequest()") >= 0 && history.IndexOf("LockHistoryLoadInputs()") > history.IndexOf("_frozenHistoryRequest = FreezeConfirmRequest()") && history.IndexOf("LockHistoryLoadInputs()") < history.IndexOf("RunWorkerAsync") && frozen > guard && history.IndexOf("PublishConfirmRequest(_frozenHistoryRequest)", frozen + 1) > frozen, "載入開始應鎖定條件，兩條成功路徑使用同一份確認請求");
+            string periodFailure = HistoryRestoreLog.FailureMessage("283", HistoryRestoreLog.PeriodStep, "所選批次的學年度、學期與畫面上的歷史期間不一致，不會進入確認清單，也不會讀取學生。");
+            Expect(errors, periodFailure.IndexOf("283") >= 0 && periodFailure.IndexOf(HistoryRestoreLog.PeriodStep) >= 0 && periodFailure.IndexOf("歷史期間不一致") >= 0, "期間不符的訊息應包含批次與步驟");
+            return errors;
+        }
+
+        private static DataTable CountTable(string rowCount, string idCount)
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add("row_count");
+            table.Columns.Add("id_count");
+            table.Rows.Add(rowCount, idCount);
+            return table;
+        }
+
+        private static DataTable GroupCountTable(string groupCount)
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add("group_count");
+            table.Rows.Add(groupCount);
+            return table;
+        }
+
+        private static DataTable PageRow(string id, string batchId, string studentId, string studentNumber, string studentName, string gradeYear, string yearName, string deptName, string className, string tag1, string tag2, string cursorId)
+        {
+            DataTable table = new DataTable();
+            string[] columns = new string[] { "id", "ref_batch_id", "ref_student_id", "student_number", "student_name", "grade_year", "matrix_grade", "matrix_dept", "matrix_class", "matrix_tag1", "matrix_tag2", "cursor_id" };
+            foreach (string column in columns)
+                table.Columns.Add(column);
+            table.Rows.Add(id, batchId, studentId, studentNumber, studentName, gradeYear, yearName, deptName, className, tag1, tag2, cursorId);
+            return table;
+        }
+
         private static List<string> CheckPublish()
         {
             List<string> errors = new List<string>();
@@ -241,15 +413,13 @@ namespace SHEvaluation.Rank.MotherGroup
 
         private static string Formula(List<string> errors)
         {
-            string source = File.ReadAllText("CalculateSemesterAssessmentRank.cs", Encoding.UTF8);
-            int start = source.IndexOf(", subject_score AS");
-            int end = source.IndexOf("SELECT count(*) FROM score_list");
-            if (start < 0 || end <= start)
+            string formula = SemesterRankFormulaSql.BuildOriginOnly();
+            if (formula.IndexOf(", subject_score AS") < 0 || formula.IndexOf("SELECT count(*) FROM score_list") < 0)
             {
-                errors.Add("應能從表單取出排名公式");
+                errors.Add("應能從共用公式組句取得排名公式");
                 return "";
             }
-            return source.Substring(start, end - start) + "SELECT count(*) FROM score_list";
+            return formula;
         }
 
         private static MotherGroupConfirmList ListOf(params StudentMotherGroup[] students)

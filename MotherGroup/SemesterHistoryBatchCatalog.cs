@@ -19,6 +19,8 @@ namespace SHEvaluation.Rank.MotherGroup
         public string Semester { get; private set; }
         public string Description { get; private set; }
         public string GradeYears { get; private set; }
+        public string ExamName { get; private set; }
+        public string SourceType { get; private set; }
         public bool HasVersion1Snapshot { get; private set; }
         public HistorySnapshotOrigin SnapshotOrigin { get; private set; }
         public string DisplayText { get; private set; }
@@ -28,7 +30,7 @@ namespace SHEvaluation.Rank.MotherGroup
             return DisplayText;
         }
 
-        internal static HistoryRankBatch Create(string id, string schoolYear, string semester, string description, string gradeYears, bool hasVersion1Snapshot, HistorySnapshotOrigin snapshotOrigin)
+        internal static HistoryRankBatch Create(string id, string schoolYear, string semester, string description, string gradeYears, bool hasVersion1Snapshot, HistorySnapshotOrigin snapshotOrigin, string examName, string sourceType)
         {
             HistoryRankBatch batch = new HistoryRankBatch();
             batch.Id = id;
@@ -36,11 +38,15 @@ namespace SHEvaluation.Rank.MotherGroup
             batch.Semester = semester ?? "";
             batch.Description = description ?? "";
             batch.GradeYears = gradeYears ?? "";
+            batch.ExamName = examName ?? "";
+            batch.SourceType = sourceType ?? "";
             batch.HasVersion1Snapshot = hasVersion1Snapshot;
             batch.SnapshotOrigin = snapshotOrigin;
             string snapshotText = snapshotOrigin == HistorySnapshotOrigin.Json ? "有(JSON)" : snapshotOrigin == HistorySnapshotOrigin.Xml ? "有(XML)" : "無";
             batch.DisplayText = batch.Id
+                + "｜" + batch.SourceType
                 + "｜" + batch.SchoolYear + "學年度第" + batch.Semester + "學期"
+                + "｜" + batch.ExamName
                 + "｜" + batch.Description
                 + "｜年級" + batch.GradeYears
                 + "｜快照" + snapshotText;
@@ -92,7 +98,33 @@ namespace SHEvaluation.Rank.MotherGroup
         {
             if (batches == null)
                 return;
+            // 依 rank_batch.id 數字由大到小。資料表沒有建立時間欄位，這個順序不是建立時間。
             batches.Sort(CompareIdDescending);
+        }
+
+        public static List<HistoryRankBatch> FilterPeriod(IList<HistoryRankBatch> batches, string schoolYear, string semester)
+        {
+            List<HistoryRankBatch> matched = new List<HistoryRankBatch>();
+            if (batches == null)
+                return matched;
+            string year = schoolYear == null ? "" : schoolYear.Trim();
+            string term = semester == null ? "" : semester.Trim();
+            foreach (HistoryRankBatch batch in batches)
+            {
+                if (batch != null && batch.SchoolYear == year && batch.Semester == term)
+                    matched.Add(batch);
+            }
+            return matched;
+        }
+
+        public static bool TryClassifyExam(string examName, out string sourceType)
+        {
+            sourceType = "";
+            string name = examName == null ? "" : examName.Trim();
+            if (name != "學期成績")
+                return false;
+            sourceType = "學期成績";
+            return true;
         }
 
         private static int CompareIdDescending(HistoryRankBatch left, HistoryRankBatch right)
@@ -121,7 +153,9 @@ namespace SHEvaluation.Rank.MotherGroup
                 return null;
             string grades;
             bool xmlSnapshot;
-            if (!TryReadSetting(settingXml, out grades, out xmlSnapshot))
+            string examName;
+            string sourceType;
+            if (!TryReadSetting(settingXml, out grades, out xmlSnapshot, out examName, out sourceType))
                 return null;
             MotherGroupExtensionMark mark = MotherGroupSnapshotJson.Describe(extensionJson);
             HistorySnapshotOrigin origin = HistorySnapshotOrigin.None;
@@ -130,13 +164,15 @@ namespace SHEvaluation.Rank.MotherGroup
             else if (xmlSnapshot)
                 origin = HistorySnapshotOrigin.Xml;
             bool hasVersion1 = origin == HistorySnapshotOrigin.Xml || (origin == HistorySnapshotOrigin.Json && mark.AnyVersion1);
-            return HistoryRankBatch.Create(id.Trim(), schoolYear, semester, description, grades, hasVersion1, origin);
+            return HistoryRankBatch.Create(id.Trim(), schoolYear, semester, description, grades, hasVersion1, origin, examName, sourceType);
         }
 
-        private static bool TryReadSetting(string settingXml, out string gradeYears, out bool hasVersion1Snapshot)
+        private static bool TryReadSetting(string settingXml, out string gradeYears, out bool hasVersion1Snapshot, out string examName, out string sourceType)
         {
             gradeYears = "";
             hasVersion1Snapshot = false;
+            examName = "";
+            sourceType = "";
             if (string.IsNullOrWhiteSpace(settingXml))
                 return false;
 
@@ -153,7 +189,10 @@ namespace SHEvaluation.Rank.MotherGroup
             XmlElement setting = document.DocumentElement;
             if (setting == null || setting.Name != "Setting")
                 return false;
-            if (setting.GetAttribute("考試名稱") != "學期成績")
+            examName = setting.GetAttribute("考試名稱");
+            if (examName != null)
+                examName = examName.Trim();
+            if (!TryClassifyExam(examName, out sourceType))
                 return false;
 
             List<string> grades = new List<string>();

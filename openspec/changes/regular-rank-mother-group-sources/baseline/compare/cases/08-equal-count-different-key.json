@@ -1,0 +1,19 @@
+{
+  "name": "筆數相同但鍵不同",
+  "expect": {
+    "passed": false,
+    "baselineCount": 1,
+    "candidateCount": 1,
+    "equalPairs": 0,
+    "missing": 1,
+    "extra": 1,
+    "valueDifferences": 0,
+    "nullDifferences": 0
+  },
+  "baseline": [
+    { "student_id": 101 }
+  ],
+  "candidate": [
+    { "student_id": 102 }
+  ]
+}

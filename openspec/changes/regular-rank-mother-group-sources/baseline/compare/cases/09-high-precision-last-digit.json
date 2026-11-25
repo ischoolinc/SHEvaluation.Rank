@@ -1,0 +1,26 @@
+{
+  "name": "高精度末位不同",
+  "expect": {
+    "passed": false,
+    "baselineCount": 1,
+    "candidateCount": 1,
+    "equalPairs": 0,
+    "missing": 0,
+    "extra": 0,
+    "valueDifferences": 1,
+    "nullDifferences": 0,
+    "valueField": "score"
+  },
+  "baseline": [
+    {
+      "student_id": 101,
+      "score": 90.12345678901234567890123456781
+    }
+  ],
+  "candidate": [
+    {
+      "student_id": 101,
+      "score": 90.12345678901234567890123456782
+    }
+  ]
+}

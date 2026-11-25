@@ -1,0 +1,21 @@
+{
+  "name": "相同結果",
+  "expect": {
+    "passed": true,
+    "baselineCount": 2,
+    "candidateCount": 2,
+    "equalPairs": 2,
+    "missing": 0,
+    "extra": 0,
+    "valueDifferences": 0,
+    "nullDifferences": 0
+  },
+  "baseline": [
+    { "student_id": 101 },
+    { "student_id": 102, "score": 80, "rank": 2, "pr": 50, "percentile": 51 }
+  ],
+  "candidate": [
+    { "student_id": 101 },
+    { "student_id": 102, "score": 80, "rank": 2, "pr": 50, "percentile": 51 }
+  ]
+}

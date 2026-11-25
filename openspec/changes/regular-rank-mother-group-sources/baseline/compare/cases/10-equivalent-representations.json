@@ -1,0 +1,42 @@
+{
+  "name": "等值不同表示法",
+  "expect": {
+    "passed": true,
+    "baselineCount": 7,
+    "candidateCount": 7,
+    "equalPairs": 7,
+    "missing": 0,
+    "extra": 0,
+    "valueDifferences": 0,
+    "nullDifferences": 0,
+    "duplicateBaseline": 2,
+    "duplicateCandidate": 2
+  },
+  "baseline": [
+    { "student_id": 101 },
+    { "student_id": 102, "score": 90.1 },
+    { "student_id": 103, "score": 0 },
+    { "student_id": 104, "score": -12.5 },
+    { "student_id": 105 },
+    { "student_id": 201, "score": 90 },
+    { "student_id": 201, "score": 90.0 }
+  ],
+  "candidate": [
+    {
+      "student_id": 101,
+      "score": 90.0,
+      "rank": 1.0,
+      "pr": 0.00,
+      "percentile": 1.000,
+      "matrix_count": 10.0,
+      "avg": 80.00,
+      "pr_88": 88.0
+    },
+    { "student_id": 102, "score": 90.10 },
+    { "student_id": 103, "score": 0.0 },
+    { "student_id": 104, "score": -12.50 },
+    { "student_id": 105.0, "score": 90.0 },
+    { "student_id": 201, "score": 90.00 },
+    { "student_id": 201, "score": 90.000 }
+  ]
+}

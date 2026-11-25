@@ -149,14 +149,14 @@ namespace SHEvaluation.Rank.MotherGroup
 
         private static string Formula(string source, List<string> errors)
         {
-            int start = source.IndexOf(", subject_score AS");
-            int end = source.IndexOf("SELECT count(*) FROM score_list");
-            if (start < 0 || end <= start)
+            string formula = SemesterRankFormulaSql.BuildOriginOnly();
+            if (formula.IndexOf(", subject_score AS") < 0 || formula.IndexOf("SELECT count(*) FROM score_list") < 0)
             {
-                errors.Add("應能從表單取出排名公式");
+                errors.Add("應能從共用公式組句取得排名公式");
                 return "";
             }
-            return source.Substring(start, end - start) + "SELECT count(*) FROM score_list";
+            Expect(errors, source.IndexOf("SemesterRankFormulaSql.Build(gradeSelectCopy)") >= 0, "產品畫面應改呼叫共用公式組句");
+            return formula;
         }
 
         private static string Between(string text, string start, string end)

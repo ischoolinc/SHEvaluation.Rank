@@ -1,32 +1,32 @@
-﻿namespace SHEvaluation.Rank
-{
-    partial class CalculateSemesterAssessmentRank
-    {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
-        private System.ComponentModel.IContainer components = null;
-
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-
-        #region Windows Form Designer generated code
-
-        /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
-        /// </summary>
-        private void InitializeComponent()
+﻿namespace SHEvaluation.Rank
+{
+    partial class CalculateSemesterAssessmentRank
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
         {            this.plBasicInfSelect = new DevComponents.DotNetBar.PanelEx();
             this._cboHistoryBatch = new System.Windows.Forms.ComboBox();
             this._lblHistoryBatchCaption = new System.Windows.Forms.Label();
@@ -56,6 +56,12 @@
             this.cboStudentFilter = new DevComponents.DotNetBar.Controls.ComboBoxEx();
             this.labelX3 = new DevComponents.DotNetBar.LabelX();
             this.labelX2 = new DevComponents.DotNetBar.LabelX();
+            this._lblCalcPeriodHint = new System.Windows.Forms.Label();
+            this._btnDownloadExcelTemplate = new DevComponents.DotNetBar.ButtonX();
+            this._btnExcelFillGuide = new DevComponents.DotNetBar.ButtonX();
+            this._lblExcludedCategoryHint = new System.Windows.Forms.Label();
+            this._lblGradeYearCaption = new System.Windows.Forms.Label();
+            this._lblGradeYearHint = new System.Windows.Forms.Label();
             this.plBasicInfSelect.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this._nudHistorySchoolYear)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this._nudCalcSchoolYear)).BeginInit();
@@ -67,6 +73,9 @@
             // 
             this.plBasicInfSelect.CanvasColor = System.Drawing.SystemColors.Control;
             this.plBasicInfSelect.ColorSchemeStyle = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
+            this.plBasicInfSelect.Controls.Add(this._btnExcelFillGuide);
+            this.plBasicInfSelect.Controls.Add(this._btnDownloadExcelTemplate);
+            this.plBasicInfSelect.Controls.Add(this._lblCalcPeriodHint);
             this.plBasicInfSelect.Controls.Add(this._cboHistoryBatch);
             this.plBasicInfSelect.Controls.Add(this._lblHistoryBatchCaption);
             this.plBasicInfSelect.Controls.Add(this._cboHistorySemester);
@@ -103,7 +112,7 @@
             this._cboHistoryBatch.DropDownWidth = 720;
             this._cboHistoryBatch.Enabled = false;
             this._cboHistoryBatch.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._cboHistoryBatch.Location = new System.Drawing.Point(118, 84);
+            this._cboHistoryBatch.Location = new System.Drawing.Point(118, 100);
             this._cboHistoryBatch.Name = "_cboHistoryBatch";
             this._cboHistoryBatch.Size = new System.Drawing.Size(735, 27);
             this._cboHistoryBatch.TabIndex = 26;
@@ -112,7 +121,7 @@
             // 
             this._lblHistoryBatchCaption.BackColor = System.Drawing.Color.Transparent;
             this._lblHistoryBatchCaption.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._lblHistoryBatchCaption.Location = new System.Drawing.Point(12, 85);
+            this._lblHistoryBatchCaption.Location = new System.Drawing.Point(12, 101);
             this._lblHistoryBatchCaption.Name = "_lblHistoryBatchCaption";
             this._lblHistoryBatchCaption.Size = new System.Drawing.Size(100, 24);
             this._lblHistoryBatchCaption.TabIndex = 25;
@@ -123,7 +132,7 @@
             this._cboHistorySemester.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this._cboHistorySemester.Enabled = false;
             this._cboHistorySemester.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._cboHistorySemester.Location = new System.Drawing.Point(384, 48);
+            this._cboHistorySemester.Location = new System.Drawing.Point(384, 68);
             this._cboHistorySemester.Name = "_cboHistorySemester";
             this._cboHistorySemester.Size = new System.Drawing.Size(56, 27);
             this._cboHistorySemester.TabIndex = 24;
@@ -132,7 +141,7 @@
             // 
             this._lblHistorySemesterCaption.BackColor = System.Drawing.Color.Transparent;
             this._lblHistorySemesterCaption.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._lblHistorySemesterCaption.Location = new System.Drawing.Point(254, 49);
+            this._lblHistorySemesterCaption.Location = new System.Drawing.Point(254, 69);
             this._lblHistorySemesterCaption.Name = "_lblHistorySemesterCaption";
             this._lblHistorySemesterCaption.Size = new System.Drawing.Size(124, 24);
             this._lblHistorySemesterCaption.TabIndex = 23;
@@ -142,7 +151,7 @@
             // 
             this._nudHistorySchoolYear.Enabled = false;
             this._nudHistorySchoolYear.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._nudHistorySchoolYear.Location = new System.Drawing.Point(166, 48);
+            this._nudHistorySchoolYear.Location = new System.Drawing.Point(166, 68);
             this._nudHistorySchoolYear.Name = "_nudHistorySchoolYear";
             this._nudHistorySchoolYear.Size = new System.Drawing.Size(72, 27);
             this._nudHistorySchoolYear.TabIndex = 22;
@@ -151,7 +160,7 @@
             // 
             this._lblHistoryYearCaption.BackColor = System.Drawing.Color.Transparent;
             this._lblHistoryYearCaption.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._lblHistoryYearCaption.Location = new System.Drawing.Point(12, 49);
+            this._lblHistoryYearCaption.Location = new System.Drawing.Point(12, 69);
             this._lblHistoryYearCaption.Name = "_lblHistoryYearCaption";
             this._lblHistoryYearCaption.Size = new System.Drawing.Size(147, 24);
             this._lblHistoryYearCaption.TabIndex = 21;
@@ -163,7 +172,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this._cboMotherGroupSource.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this._cboMotherGroupSource.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._cboMotherGroupSource.Location = new System.Drawing.Point(419, 11);
+            this._cboMotherGroupSource.Location = new System.Drawing.Point(500, 11);
             this._cboMotherGroupSource.Name = "_cboMotherGroupSource";
             this._cboMotherGroupSource.Size = new System.Drawing.Size(220, 27);
             this._cboMotherGroupSource.TabIndex = 20;
@@ -172,7 +181,7 @@
             // 
             this._lblSourceCaption.BackColor = System.Drawing.Color.Transparent;
             this._lblSourceCaption.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._lblSourceCaption.Location = new System.Drawing.Point(322, 12);
+            this._lblSourceCaption.Location = new System.Drawing.Point(400, 12);
             this._lblSourceCaption.Name = "_lblSourceCaption";
             this._lblSourceCaption.Size = new System.Drawing.Size(100, 24);
             this._lblSourceCaption.TabIndex = 19;
@@ -182,7 +191,7 @@
             // 
             this._cboCalcSemester.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this._cboCalcSemester.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._cboCalcSemester.Location = new System.Drawing.Point(242, 11);
+            this._cboCalcSemester.Location = new System.Drawing.Point(300, 11);
             this._cboCalcSemester.Name = "_cboCalcSemester";
             this._cboCalcSemester.Size = new System.Drawing.Size(56, 27);
             this._cboCalcSemester.TabIndex = 18;
@@ -190,7 +199,7 @@
             // _nudCalcSchoolYear
             // 
             this._nudCalcSchoolYear.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this._nudCalcSchoolYear.Location = new System.Drawing.Point(89, 11);
+            this._nudCalcSchoolYear.Location = new System.Drawing.Point(124, 11);
             this._nudCalcSchoolYear.Name = "_nudCalcSchoolYear";
             this._nudCalcSchoolYear.Size = new System.Drawing.Size(72, 27);
             this._nudCalcSchoolYear.TabIndex = 17;
@@ -218,9 +227,9 @@
             this.btnNext.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
             this.btnNext.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.btnNext.ForeColor = System.Drawing.Color.Black;
-            this.btnNext.Location = new System.Drawing.Point(778, 434);
+            this.btnNext.Location = new System.Drawing.Point(700, 434);
             this.btnNext.Name = "btnNext";
-            this.btnNext.Size = new System.Drawing.Size(75, 25);
+            this.btnNext.Size = new System.Drawing.Size(153, 25);
             this.btnNext.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.btnNext.TabIndex = 15;
             this.btnNext.Text = "下一步";
@@ -239,9 +248,9 @@
             this.labelX1.ForeColor = System.Drawing.Color.Black;
             this.labelX1.Location = new System.Drawing.Point(12, 12);
             this.labelX1.Name = "labelX1";
-            this.labelX1.Size = new System.Drawing.Size(69, 24);
+            this.labelX1.Size = new System.Drawing.Size(112, 24);
             this.labelX1.TabIndex = 8;
-            this.labelX1.Text = "學年度：";
+            this.labelX1.Text = "計算學年度：";
             // 
             // gpRankPeople
             // 
@@ -251,6 +260,9 @@
             this.gpRankPeople.BackColor = System.Drawing.Color.Transparent;
             this.gpRankPeople.CanvasColor = System.Drawing.SystemColors.Control;
             this.gpRankPeople.ColorSchemeStyle = DevComponents.DotNetBar.eDotNetBarStyle.Office2007;
+            this.gpRankPeople.Controls.Add(this._lblGradeYearHint);
+            this.gpRankPeople.Controls.Add(this._lblGradeYearCaption);
+            this.gpRankPeople.Controls.Add(this._lblExcludedCategoryHint);
             this.gpRankPeople.Controls.Add(this.groupPanel26);
             this.gpRankPeople.Controls.Add(this.listGradeYear);
             this.gpRankPeople.Controls.Add(this.cboStudentTag2);
@@ -261,9 +273,9 @@
             this.gpRankPeople.Controls.Add(this.labelX3);
             this.gpRankPeople.DrawTitleBox = false;
             this.gpRankPeople.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.gpRankPeople.Location = new System.Drawing.Point(12, 116);
+            this.gpRankPeople.Location = new System.Drawing.Point(12, 136);
             this.gpRankPeople.Name = "gpRankPeople";
-            this.gpRankPeople.Size = new System.Drawing.Size(841, 310);
+            this.gpRankPeople.Size = new System.Drawing.Size(841, 290);
             // 
             // 
             // 
@@ -447,9 +459,9 @@
             this.listGradeYear.Border.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.listGradeYear.CheckBoxes = true;
             this.listGradeYear.HideSelection = false;
-            this.listGradeYear.Location = new System.Drawing.Point(13, 137);
+            this.listGradeYear.Location = new System.Drawing.Point(13, 168);
             this.listGradeYear.Name = "listGradeYear";
-            this.listGradeYear.Size = new System.Drawing.Size(810, 198);
+            this.listGradeYear.Size = new System.Drawing.Size(810, 110);
             this.listGradeYear.TabIndex = 7;
             this.listGradeYear.UseCompatibleStateImageBehavior = false;
             this.listGradeYear.View = System.Windows.Forms.View.List;
@@ -463,7 +475,7 @@
             this.cboStudentTag2.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentTag2.FormattingEnabled = true;
             this.cboStudentTag2.ItemHeight = 21;
-            this.cboStudentTag2.Location = new System.Drawing.Point(111, 93);
+            this.cboStudentTag2.Location = new System.Drawing.Point(111, 108);
             this.cboStudentTag2.Name = "cboStudentTag2";
             this.cboStudentTag2.Size = new System.Drawing.Size(279, 27);
             this.cboStudentTag2.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -481,7 +493,7 @@
             this.labelX5.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX5.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX5.ForeColor = System.Drawing.Color.Black;
-            this.labelX5.Location = new System.Drawing.Point(13, 95);
+            this.labelX5.Location = new System.Drawing.Point(13, 110);
             this.labelX5.Name = "labelX5";
             this.labelX5.Size = new System.Drawing.Size(100, 24);
             this.labelX5.TabIndex = 5;
@@ -495,7 +507,7 @@
             this.cboStudentTag1.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.cboStudentTag1.FormattingEnabled = true;
             this.cboStudentTag1.ItemHeight = 21;
-            this.cboStudentTag1.Location = new System.Drawing.Point(111, 52);
+            this.cboStudentTag1.Location = new System.Drawing.Point(111, 74);
             this.cboStudentTag1.Name = "cboStudentTag1";
             this.cboStudentTag1.Size = new System.Drawing.Size(279, 27);
             this.cboStudentTag1.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -513,7 +525,7 @@
             this.labelX4.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX4.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX4.ForeColor = System.Drawing.Color.Black;
-            this.labelX4.Location = new System.Drawing.Point(13, 54);
+            this.labelX4.Location = new System.Drawing.Point(13, 76);
             this.labelX4.Name = "labelX4";
             this.labelX4.Size = new System.Drawing.Size(100, 24);
             this.labelX4.TabIndex = 3;
@@ -562,11 +574,77 @@
             this.labelX2.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX2.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.labelX2.ForeColor = System.Drawing.Color.Black;
-            this.labelX2.Location = new System.Drawing.Point(188, 12);
+            this.labelX2.Location = new System.Drawing.Point(206, 12);
             this.labelX2.Name = "labelX2";
-            this.labelX2.Size = new System.Drawing.Size(54, 24);
+            this.labelX2.Size = new System.Drawing.Size(90, 24);
             this.labelX2.TabIndex = 10;
-            this.labelX2.Text = "學期：";
+            this.labelX2.Text = "計算學期：";
+            // 
+            // _lblCalcPeriodHint
+            // 
+            this._lblCalcPeriodHint.BackColor = System.Drawing.Color.Transparent;
+            this._lblCalcPeriodHint.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this._lblCalcPeriodHint.Location = new System.Drawing.Point(12, 40);
+            this._lblCalcPeriodHint.Name = "_lblCalcPeriodHint";
+            this._lblCalcPeriodHint.Size = new System.Drawing.Size(420, 24);
+            this._lblCalcPeriodHint.TabIndex = 27;
+            this._lblCalcPeriodHint.Text = "此期間用於讀取學期成績與產生排名。";
+            // 
+            // _btnDownloadExcelTemplate
+            // 
+            this._btnDownloadExcelTemplate.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this._btnDownloadExcelTemplate.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this._btnDownloadExcelTemplate.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this._btnDownloadExcelTemplate.Location = new System.Drawing.Point(12, 68);
+            this._btnDownloadExcelTemplate.Name = "_btnDownloadExcelTemplate";
+            this._btnDownloadExcelTemplate.Size = new System.Drawing.Size(140, 28);
+            this._btnDownloadExcelTemplate.TabIndex = 28;
+            this._btnDownloadExcelTemplate.Text = "下載匯入範本";
+            this._btnDownloadExcelTemplate.Visible = false;
+            this._btnDownloadExcelTemplate.Click += new System.EventHandler(this.btnDownloadExcelTemplate_Click);
+            // 
+            // _btnExcelFillGuide
+            // 
+            this._btnExcelFillGuide.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
+            this._btnExcelFillGuide.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
+            this._btnExcelFillGuide.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this._btnExcelFillGuide.Location = new System.Drawing.Point(160, 68);
+            this._btnExcelFillGuide.Name = "_btnExcelFillGuide";
+            this._btnExcelFillGuide.Size = new System.Drawing.Size(110, 28);
+            this._btnExcelFillGuide.TabIndex = 29;
+            this._btnExcelFillGuide.Text = "填寫說明";
+            this._btnExcelFillGuide.Visible = false;
+            this._btnExcelFillGuide.Click += new System.EventHandler(this.btnExcelFillGuide_Click);
+            // 
+            // _lblExcludedCategoryHint
+            // 
+            this._lblExcludedCategoryHint.BackColor = System.Drawing.Color.Transparent;
+            this._lblExcludedCategoryHint.Font = new System.Drawing.Font("Microsoft JhengHei", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this._lblExcludedCategoryHint.Location = new System.Drawing.Point(13, 40);
+            this._lblExcludedCategoryHint.Name = "_lblExcludedCategoryHint";
+            this._lblExcludedCategoryHint.Size = new System.Drawing.Size(460, 32);
+            this._lblExcludedCategoryHint.TabIndex = 30;
+            this._lblExcludedCategoryHint.Text = "符合這個類別的學生，五項排名預設不參與，可在確認頁調整";
+            // 
+            // _lblGradeYearCaption
+            // 
+            this._lblGradeYearCaption.BackColor = System.Drawing.Color.Transparent;
+            this._lblGradeYearCaption.Font = new System.Drawing.Font("Microsoft JhengHei", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this._lblGradeYearCaption.Location = new System.Drawing.Point(13, 142);
+            this._lblGradeYearCaption.Name = "_lblGradeYearCaption";
+            this._lblGradeYearCaption.Size = new System.Drawing.Size(84, 24);
+            this._lblGradeYearCaption.TabIndex = 31;
+            this._lblGradeYearCaption.Text = "計算年級";
+            // 
+            // _lblGradeYearHint
+            // 
+            this._lblGradeYearHint.BackColor = System.Drawing.Color.Transparent;
+            this._lblGradeYearHint.Font = new System.Drawing.Font("Microsoft JhengHei", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this._lblGradeYearHint.Location = new System.Drawing.Point(100, 144);
+            this._lblGradeYearHint.Name = "_lblGradeYearHint";
+            this._lblGradeYearHint.Size = new System.Drawing.Size(720, 22);
+            this._lblGradeYearHint.TabIndex = 32;
+            this._lblGradeYearHint.Text = "依學生目前班級的年級篩選";
             // 
             // CalculateSemesterAssessmentRank
             // 
@@ -589,38 +667,44 @@
             this.groupPanel26.PerformLayout();
             this.ResumeLayout(false);
 
-        }
-
-        #endregion
-
-        private DevComponents.DotNetBar.PanelEx plBasicInfSelect;
-        private DevComponents.DotNetBar.ButtonX btnNext;
-        private DevComponents.DotNetBar.LabelX labelX1;
-        private DevComponents.DotNetBar.Controls.GroupPanel gpRankPeople;
-        private DevComponents.DotNetBar.Controls.ListViewEx listGradeYear;
-        private DevComponents.DotNetBar.Controls.ComboBoxEx cboStudentTag2;
-        private DevComponents.DotNetBar.LabelX labelX5;
-        private DevComponents.DotNetBar.Controls.ComboBoxEx cboStudentTag1;
-        private DevComponents.DotNetBar.LabelX labelX4;
-        private DevComponents.DotNetBar.Controls.ComboBoxEx cboStudentFilter;
-        private DevComponents.DotNetBar.LabelX labelX3;
-        private DevComponents.DotNetBar.LabelX labelX2;
-        private DevComponents.DotNetBar.Controls.GroupPanel groupPanel26;
-        private DevComponents.DotNetBar.Controls.CheckBoxX chbSYAdj;
-        private DevComponents.DotNetBar.Controls.CheckBoxX chbHandAdj;
-        private DevComponents.DotNetBar.Controls.CheckBoxX chbRetake;
-        private DevComponents.DotNetBar.Controls.CheckBoxX chbMakeUp;
-        private DevComponents.DotNetBar.Controls.CheckBoxX checkBoxX16;
-        private DevComponents.DotNetBar.LabelX labelX6;
-        private System.Windows.Forms.NumericUpDown _nudCalcSchoolYear;
-        private System.Windows.Forms.ComboBox _cboCalcSemester;
-        private System.Windows.Forms.Label _lblSourceCaption;
-        private System.Windows.Forms.ComboBox _cboMotherGroupSource;
-        private System.Windows.Forms.Label _lblHistoryYearCaption;
-        private System.Windows.Forms.NumericUpDown _nudHistorySchoolYear;
-        private System.Windows.Forms.Label _lblHistorySemesterCaption;
-        private System.Windows.Forms.ComboBox _cboHistorySemester;
-        private System.Windows.Forms.Label _lblHistoryBatchCaption;
-        private System.Windows.Forms.ComboBox _cboHistoryBatch;
-    }
-}
+        }
+
+        #endregion
+
+        private DevComponents.DotNetBar.PanelEx plBasicInfSelect;
+        private DevComponents.DotNetBar.ButtonX btnNext;
+        private DevComponents.DotNetBar.LabelX labelX1;
+        private DevComponents.DotNetBar.Controls.GroupPanel gpRankPeople;
+        private DevComponents.DotNetBar.Controls.ListViewEx listGradeYear;
+        private DevComponents.DotNetBar.Controls.ComboBoxEx cboStudentTag2;
+        private DevComponents.DotNetBar.LabelX labelX5;
+        private DevComponents.DotNetBar.Controls.ComboBoxEx cboStudentTag1;
+        private DevComponents.DotNetBar.LabelX labelX4;
+        private DevComponents.DotNetBar.Controls.ComboBoxEx cboStudentFilter;
+        private DevComponents.DotNetBar.LabelX labelX3;
+        private DevComponents.DotNetBar.LabelX labelX2;
+        private DevComponents.DotNetBar.Controls.GroupPanel groupPanel26;
+        private DevComponents.DotNetBar.Controls.CheckBoxX chbSYAdj;
+        private DevComponents.DotNetBar.Controls.CheckBoxX chbHandAdj;
+        private DevComponents.DotNetBar.Controls.CheckBoxX chbRetake;
+        private DevComponents.DotNetBar.Controls.CheckBoxX chbMakeUp;
+        private DevComponents.DotNetBar.Controls.CheckBoxX checkBoxX16;
+        private DevComponents.DotNetBar.LabelX labelX6;
+        private System.Windows.Forms.NumericUpDown _nudCalcSchoolYear;
+        private System.Windows.Forms.ComboBox _cboCalcSemester;
+        private System.Windows.Forms.Label _lblSourceCaption;
+        private System.Windows.Forms.ComboBox _cboMotherGroupSource;
+        private System.Windows.Forms.Label _lblHistoryYearCaption;
+        private System.Windows.Forms.NumericUpDown _nudHistorySchoolYear;
+        private System.Windows.Forms.Label _lblHistorySemesterCaption;
+        private System.Windows.Forms.ComboBox _cboHistorySemester;
+        private System.Windows.Forms.Label _lblHistoryBatchCaption;
+        private System.Windows.Forms.ComboBox _cboHistoryBatch;
+        private System.Windows.Forms.Label _lblCalcPeriodHint;
+        private DevComponents.DotNetBar.ButtonX _btnDownloadExcelTemplate;
+        private DevComponents.DotNetBar.ButtonX _btnExcelFillGuide;
+        private System.Windows.Forms.Label _lblExcludedCategoryHint;
+        private System.Windows.Forms.Label _lblGradeYearCaption;
+        private System.Windows.Forms.Label _lblGradeYearHint;
+    }
+}

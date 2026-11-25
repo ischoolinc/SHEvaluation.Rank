@@ -39,17 +39,7 @@ namespace SHEvaluation.Rank
         private void RegularRankSelec_Load(object sender, EventArgs e)
         {
             #region 要塞進前4個ComboBox的資料的sql字串
-            string queryFilter = @"
-SELECT 
-    rank_matrix.school_year
-	, rank_matrix.semester
-    , SUBSTRING(rank_matrix.item_type, 1, position('/' in rank_matrix.item_type) - 1) as score_type
-	, SUBSTRING(rank_matrix.item_type, position('/' in rank_matrix.item_type) + 1, LENGTH(rank_matrix.item_type)) as score_category
-FROM 
-    rank_matrix 
-WHERE 
-    rank_matrix.is_alive = true
-	AND SUBSTRING(rank_matrix.item_type, 1, position('/' in rank_matrix.item_type) - 1) = '定期評量'";
+            string queryFilter = RegularAssessmentRankQuery.AliveFilterOptionsSql();
             #endregion
 
             QueryHelper queryHelper = new QueryHelper();
@@ -200,54 +190,9 @@ WHERE
                             foreach (string rkType in rankTypeList)
                             {
                                 #region 要顯示的資料的sql字串
-                                string queryString = @"
-SELECT 
-    *
-FROM
-(
-    SELECT 
-        rank_matrix.id AS rank_matrix_id 
-        , SUBSTRING(rank_matrix.item_type, 1, position('/' in rank_matrix.item_type) - 1) AS score_type
-        , SUBSTRING(rank_matrix.item_type, position('/' in rank_matrix.item_type) + 1, LENGTH(rank_matrix.item_type)) AS score_category 
-        , exam.exam_name 
-        , rank_matrix.item_name 
-        , rank_matrix.rank_type 
-        , rank_matrix.rank_name 
-        , class.class_name 
-        , student.seat_no 
-        , student.student_number
-        , student.name AS student_name
-        , rank_detail.score
-        , rank_detail.rank
-        , rank_detail.pr
-        , rank_detail.percentile
-        , rank_matrix.school_year
-        , rank_matrix.semester 
-        , rank_matrix.create_time
-        , rank_detail.ref_student_id
-        , rank_matrix.grade_year
-        , rank_matrix.item_type
-    FROM rank_matrix 
-        LEFT OUTER JOIN 
-            rank_detail ON rank_detail.ref_matrix_id = rank_matrix.id 
-        LEFT OUTER JOIN 
-            student ON student.id = rank_detail.ref_student_id 
-        LEFT OUTER JOIN 
-            class ON class.id = student.ref_class_id 
-        LEFT OUTER JOIN 
-            exam ON exam.id=rank_matrix.ref_exam_id
-    WHERE 
-        rank_matrix.is_alive = true
-    ORDER BY rank_matrix.rank_type
-        , rank_matrix.rank_name
-        , rank_detail.rank
-        , rank_matrix.create_time DESC
-) AS Rank_Table
-WHERE  
-    school_year = " + _LoadSchoolYear + @"
-    And semester = " + _LoadSemester + @"
-    And score_type = '" + _LoadScoreType + @"'
-    And score_category = '" + _LoadScoreCategory + "' AND item_type LIKE '定期評量%'" + " AND grade_year = '" + gr + "' AND rank_type='" + rkType + "'";
+                                string queryString = RegularAssessmentRankQuery.DetailSql(_LoadSchoolYear, _LoadSemester, _LoadScoreCategory, gr, rkType);
+                                if (_LoadScoreType != RegularAssessmentRankQuery.ScoreType)
+                                    throw new InvalidOperationException("定期排名檢索不可載入非定期成績類型。");
                                 #endregion
 
 

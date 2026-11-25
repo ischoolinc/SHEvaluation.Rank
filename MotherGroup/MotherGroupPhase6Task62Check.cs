@@ -22,6 +22,7 @@ namespace SHEvaluation.Rank.MotherGroup
                 errors.AddRange(CheckStatusIdentity());
                 errors.AddRange(CheckExistingListUntouched());
                 errors.AddRange(CheckSqlAndBinding());
+                errors.AddRange(CheckDisplayedRowNumbers());
                 if (!SemesterRankWriteGate.CanWriteRankTables())
                     errors.Add("SemesterRankWriteGate 應允許寫入");
                 if (errors.Count == 0)
@@ -252,6 +253,49 @@ namespace SHEvaluation.Rank.MotherGroup
             Expect(errors, gate.IndexOf("return true;") >= 0 && gate.IndexOf("return false;") < 0, "SemesterRankWriteGate 應回傳 true");
             string import = File.ReadAllText("MotherGroup\\MotherGroupExcelImport.cs", Encoding.UTF8);
             Expect(errors, import.IndexOf("INSERT") < 0 && import.IndexOf("UPDATE") < 0 && import.IndexOf("DELETE") < 0, "匯入驗證不應寫入資料庫");
+            return errors;
+        }
+
+        private static List<string> CheckDisplayedRowNumbers()
+        {
+            List<string> errors = new List<string>();
+            StudentMotherGroup first = Student("90001", "甲", "1年級", "忠班", "普通科", "", "", true, true, true, false, false);
+            StudentMotherGroup second = Student("90002", "乙", "1年級", "忠班", "普通科", "", "", true, true, true, false, false);
+            Workbook missingRows = RoundTrip(first, second);
+            MotherGroupExcelValidation missing = MotherGroupExcelImport.Validate(missingRows, Lookup());
+            string missingText = MotherGroupExcelApply.IssueText(missing);
+            Expect(errors, !missing.IsValid && missing.Students.Count == 0, "查無學生時不建立可套用清單");
+            Expect(errors, missingText.IndexOf("第 2 列") >= 0 && missingText.IndexOf("第 3 列") >= 0 && missingText.IndexOf("90001") >= 0 && missingText.IndexOf("90002") >= 0 && missingText.IndexOf("一般") >= 0, "查無學生的每一列都要有列號、學號與狀態");
+            Expect(errors, missingText.IndexOf("第 0 列") < 0 && Count(missingText, "第 2 列") == 1 && Count(missingText, "第 3 列") == 1, "列號不可重複，也不可出現第 0 列");
+            bool applied = false;
+            try
+            {
+                MotherGroupExcelApply.CreateGroups(missing, "", new List<TagDefinition>(), new List<StudentTagLink>());
+                applied = true;
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            Expect(errors, !applied, "驗證失敗時不得套用匯入結果");
+
+            MotherGroupExcelValidation many = MotherGroupExcelImport.Validate(ValidWorkbook(), Lookup(Row("91", "00123", "甲", 1), Row("92", "00123", "乙", 1)));
+            string manyText = MotherGroupExcelApply.IssueText(many);
+            Expect(errors, !many.IsValid && many.Students.Count == 0 && manyText.IndexOf("第 2 列") >= 0 && manyText.IndexOf("對應多位學生") >= 0 && manyText.IndexOf("00123") >= 0 && Count(manyText, "第 2 列") == 1, "對應多位學生要顯示列號且不重複");
+
+            MotherGroupExcelValidation noId = MotherGroupExcelImport.Validate(ValidWorkbook(), Lookup(Row("", "00123", "甲", 1)));
+            string noIdText = MotherGroupExcelApply.IssueText(noId);
+            Expect(errors, !noId.IsValid && noId.Students.Count == 0 && noIdText.IndexOf("第 2 列") >= 0 && noIdText.IndexOf("沒有識別") >= 0 && noIdText.IndexOf("00123") >= 0, "缺少學生識別要顯示列號、學號與狀態");
+
+            Workbook other = new Workbook();
+            other.Worksheets[0].Name = "其他";
+            string fileText = MotherGroupExcelApply.IssueText(MotherGroupExcelImport.Validate(other, Lookup()));
+            Expect(errors, fileText.IndexOf("第 0 列") < 0 && fileText.IndexOf("母群") >= 0, "沒有資料列的檔案錯誤不顯示第 0 列");
+
+            Workbook badParticipation = RoundTrip(first);
+            badParticipation.Worksheets[0].Cells[1, 8].PutValue("可能");
+            MotherGroupExcelValidation participation = MotherGroupExcelImport.Validate(badParticipation, Lookup(Row("1", "90001", "甲", 1)));
+            string participationText = MotherGroupExcelApply.IssueText(participation);
+            Expect(errors, participationText.IndexOf("第 2 列") >= 0 && Count(participationText, "第 2 列") == 1, "已含列號的訊息不要再加一次");
             return errors;
         }
 

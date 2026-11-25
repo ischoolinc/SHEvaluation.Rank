@@ -1,0 +1,22 @@
+{
+  "name": "重複次數不同",
+  "expect": {
+    "passed": false,
+    "baselineCount": 2,
+    "candidateCount": 1,
+    "equalPairs": 1,
+    "missing": 1,
+    "extra": 0,
+    "valueDifferences": 0,
+    "nullDifferences": 0,
+    "duplicateBaseline": 2,
+    "duplicateCandidate": 1
+  },
+  "baseline": [
+    { "student_id": 101 },
+    { "student_id": 101 }
+  ],
+  "candidate": [
+    { "student_id": 101 }
+  ]
+}

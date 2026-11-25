@@ -341,3 +341,49 @@ ASALocalRun/
 /Stage*.md
 /Stage*.sql
 /*操作說明.md
+
+# Generated local agent workflow (OpenSpec artifacts remain versioned)
+/.agents/
+
+# Windows folder metadata
+[Dd]esktop.ini
+[Tt]humbs.db
+$RECYCLE.BIN/
+
+# Local credentials and machine-specific overrides
+.env
+.env.*
+!.env.example
+!.env.sample
+*.local.config
+
+# Diagnostic output and temporary patch/backup files
+*.dmp
+*.hdmp
+*.etl
+*.bak
+*.orig
+*.rej
+
+# Local student exports: keep fixtures under their dedicated source directories
+/*.xlsx
+/*.xls
+/*.csv
+/*.tsv
+/exports/
+/test-output/
+
+# Local semester-rank verification notes and environment-specific audit scripts
+/Rank[0-9]*_*.md
+/Rank_[0-9]*_*.md
+/Rank_[0-9]*_*.sql
+/排名計算_下一階段核對.md
+
+# Local regular-rank database probes and test publish SQL
+/regular_rank_probe_do.sql
+/regular_rank_probe_serializable.sql
+/regular_rank_publish_114_2_exam5_grade3.sql
+
+# Extracted tester feedback, screenshots, and local audit evidence
+/test-feedback-*/
+/rank64-review-temp/

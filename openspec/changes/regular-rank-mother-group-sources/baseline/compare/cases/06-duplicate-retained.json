@@ -1,0 +1,23 @@
+{
+  "name": "重複次數一致",
+  "expect": {
+    "passed": true,
+    "baselineCount": 2,
+    "candidateCount": 2,
+    "equalPairs": 2,
+    "missing": 0,
+    "extra": 0,
+    "valueDifferences": 0,
+    "nullDifferences": 0,
+    "duplicateBaseline": 2,
+    "duplicateCandidate": 2
+  },
+  "baseline": [
+    { "student_id": 101 },
+    { "student_id": 101 }
+  ],
+  "candidate": [
+    { "student_id": 101 },
+    { "student_id": 101 }
+  ]
+}

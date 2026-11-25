@@ -12,6 +12,9 @@ using K12.Data;
 using FISCA.Data;
 using FISCA.Presentation;
 using System.Xml;
+using System.Globalization;
+using SHEvaluation.Rank.MotherGroup;
+using SHEvaluation.Rank.RegularRank;
 
 namespace SHEvaluation.Rank
 {
@@ -22,17 +25,32 @@ namespace SHEvaluation.Rank
         List<ExamRecord> _ExamList = new List<ExamRecord>();
         List<TagConfigRecord> _TagConfigRecord = new List<TagConfigRecord>();
         List<StudentRecord> _StudentRecord = new List<StudentRecord>();
-        List<CheckBox> _CheckBoxList = new List<CheckBox>();
         List<StudentRecord> _FilterStudentList = new List<StudentRecord>();
 
         XmlElement _ConfigElement = null;
         List<string> _FilteredSubject = new List<string>();
         List<string> _Tag1FilteredSubject = new List<string>();
         List<string> _Tag2FilteredSubject = new List<string>();
+        RegularRankCalculationContext _rankContext;
+        List<RegularRankExamChoice> _targetExamChoices = new List<RegularRankExamChoice>();
+        List<RegularRankExamChoice> _sourceExamChoices = new List<RegularRankExamChoice>();
+        bool _suspendRankEditors;
+        bool _rankSubjectEventsAttached;
+        List<ConfirmStudentRow> _loadedRows = new List<ConfirmStudentRow>();
+        RegularRankMotherGroupConfirmForm _motherGroupConfirmForm;
+        bool _motherGroupLoadRunning;
+        int _loadGeneration;
+        internal string PublicationValidationError { get; private set; }
+        internal int PopulationGeneration { get { return _loadGeneration; } }
+        string _historyCatalogPeriod = "";
+        Dictionary<string, RegularRankHistoryBatch> _historyBatches = new Dictionary<string, RegularRankHistoryBatch>();
 
         public CalculateRegularAssessmentRank()
         {
             InitializeComponent();
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+                return;
+            cboSourceBatch.SelectedIndexChanged += HistoryBatchChanged;
             try
             {
                 _DefaultSchoolYear = K12.Data.School.DefaultSchoolYear;
@@ -78,11 +96,15 @@ namespace SHEvaluation.Rank
 
         private void CacluateRegularAssessmentRank_Load(object sender, EventArgs e)
         {
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime || (Site != null && Site.DesignMode))
+                return;
+
             #region 讓Form回到起始狀態
             plSetting.Visible = true;
-            plStudentView.Visible = false;
-            this.CalculateRegularAssessmentRank_Resize(null, null);
             #endregion
+
+            _suspendRankEditors = true;
+            _rankContext = RegularRankCalculationContext.CreateDefault(_DefaultSchoolYear, _DefaultSemester);
 
             #region 篩選學生資料
             _StudentRecord = _StudentRecord.Where(
@@ -104,22 +126,18 @@ namespace SHEvaluation.Rank
                 checkBox.Text = "" + gradeList[i] + "年級";
                 checkBox.UseVisualStyleBackColor = true;
                 checkBox.Checked = true;
-                checkBox.CheckedChanged += reloadSubject;
+                checkBox.CheckedChanged += RegularPeriodSourceChanged;
                 flowLayoutPanel1.Controls.Add(checkBox);
             }
             #endregion
 
             #region 填資料進ComboBox
-            //因為目前只提供計算預設學年度學期的排名，所以暫時先註解起來
-            //cboSchoolYear.Items.Clear();
-            //cboSemester.Items.Clear();
             cboExamType.Items.Clear();
+            cboSourceExam.Items.Clear();
             cboStudentFilter.Items.Clear();
             cboStudentTag1.Items.Clear();
             cboStudentTag2.Items.Clear();
-
-            lbCalcSchoolYear.Text = _DefaultSchoolYear;
-            lbCalcSemester.Text = _DefaultSemester;
+            BindRankPeriodEditors();
             //cboSchoolYear.Items.Add(_DefaultSchoolYear);//加入預設的學年度
             //cboSemester.Items.Add(_DefaultSemester);//加入預設的學年度
             //foreach (DataRow row in _SchoolYearTable.Rows)
@@ -196,301 +214,1043 @@ namespace SHEvaluation.Rank
             cboStudentTag1.SelectedIndex = cboStudentTag1Index;
             cboStudentTag2.SelectedIndex = cboStudentTag2Index;
 
-            foreach (var item in _ExamList.Select(x => x.Name).Distinct())
+            _targetExamChoices = new List<RegularRankExamChoice>();
+            _sourceExamChoices = new List<RegularRankExamChoice>();
+            if (!_rankSubjectEventsAttached)
             {
-                int index = cboExamType.Items.Add(item);
-                if (_ConfigElement != null && _ConfigElement.GetAttribute("考試名稱") == item)
-                    cboExamTypeIndex = index;
+                lvCalcSubject.ItemChecked += RankSubjectItemChecked;
+                lvCalcSubjectTag1.ItemChecked += RankSubjectItemChecked;
+                lvCalcSubjectTag2.ItemChecked += RankSubjectItemChecked;
+                _rankSubjectEventsAttached = true;
             }
+            foreach (ExamRecord item in _ExamList)
+            {
+                if (item == null)
+                    continue;
+                RegularRankExamChoice choice = new RegularRankExamChoice();
+                choice.Id = item.ID;
+                choice.Name = item.Name ?? "";
+                _targetExamChoices.Add(choice);
+                RegularRankExamChoice sourceChoice = new RegularRankExamChoice();
+                sourceChoice.Id = item.ID;
+                sourceChoice.Name = item.Name ?? "";
+                _sourceExamChoices.Add(sourceChoice);
+            }
+            IList<RegularRankExamListItem> targetItems = RegularRankPeriodSourceEditor.BuildExamItems(_targetExamChoices);
+            IList<RegularRankExamListItem> sourceItems = RegularRankPeriodSourceEditor.BuildExamItems(_sourceExamChoices);
+            foreach (RegularRankExamListItem item in targetItems)
+                cboExamType.Items.Add(item);
+            foreach (RegularRankExamListItem item in sourceItems)
+                cboSourceExam.Items.Add(item);
+            string savedExamName = _ConfigElement == null ? "" : _ConfigElement.GetAttribute("考試名稱");
+            cboExamTypeIndex = RegularRankPeriodSourceEditor.IndexOfUniqueName(targetItems, savedExamName);
+            if (cboExamTypeIndex < 0 && targetItems.Count == 1)
+                cboExamTypeIndex = 0;
             cboExamType.SelectedIndex = cboExamTypeIndex;
+            _suspendRankEditors = false;
+            RefreshRankPeriodSource(false);
             #endregion
+        }
+
+        private void BindRankPeriodEditors()
+        {
+            lblSystemPeriod.Text = "系統期間：" + (_DefaultSchoolYear ?? "") + "-" + (_DefaultSemester ?? "");
+            lblCurrentSourceNote.Text = RegularRankPeriodSourceEditor.CurrentSourceNote;
+            int yearNumber;
+            if (int.TryParse(_rankContext.TargetSchoolYear, NumberStyles.None, CultureInfo.InvariantCulture, out yearNumber))
+            {
+                if (yearNumber < nudTargetSchoolYear.Minimum)
+                    yearNumber = decimal.ToInt32(nudTargetSchoolYear.Minimum);
+                if (yearNumber > nudTargetSchoolYear.Maximum)
+                    yearNumber = decimal.ToInt32(nudTargetSchoolYear.Maximum);
+                nudTargetSchoolYear.Value = yearNumber;
+                nudSourceSchoolYear.Value = yearNumber;
+            }
+            if (cboTargetSemester.Items.Contains(_rankContext.TargetSemester))
+                cboTargetSemester.SelectedItem = _rankContext.TargetSemester;
+            if (cboSourceSemester.Items.Contains(_rankContext.TargetSemester))
+                cboSourceSemester.SelectedItem = _rankContext.TargetSemester;
+            else if (cboSourceSemester.Items.Count > 0)
+                cboSourceSemester.SelectedIndex = 0;
+            if (cboMotherGroupSource.Items.Count > 0)
+                cboMotherGroupSource.SelectedIndex = 0;
+        }
+
+        private void RegularPeriodSourceChanged(object sender, EventArgs e)
+        {
+            if (_suspendRankEditors || _rankContext == null)
+                return;
+            if (_motherGroupLoadRunning)
+                _loadGeneration++;
+            RefreshRankPeriodSource(false);
+        }
+
+        private void btnLoadMotherGroup_Click(object sender, EventArgs e)
+        {
+            if (_motherGroupLoadRunning)
+            {
+                lblRankStatus.Text = "母群與科目正在載入，請稍候。";
+                return;
+            }
+            RegularRankSourceKind kind;
+            string ignored;
+            if (!RegularRankPeriodSourceEditor.TryReadSource(cboMotherGroupSource.Text, out kind, out ignored))
+                kind = RegularRankSourceKind.Current;
+            string historyPeriod = nudSourceSchoolYear.Value.ToString(CultureInfo.InvariantCulture) + "-" + cboSourceSemester.Text;
+            if (kind == RegularRankSourceKind.History && (_historyCatalogPeriod != historyPeriod || cboSourceBatch.SelectedItem == null))
+            {
+                LoadHistoryCatalog(historyPeriod);
+                return;
+            }
+            byte[] excelContent = null;
+            if (kind == RegularRankSourceKind.Excel)
+            {
+                using (OpenFileDialog dialog = new OpenFileDialog())
+                {
+                    dialog.Title = "選擇定期評量排名母群";
+                    dialog.Filter = "Excel (*.xlsx;*.xls)|*.xlsx;*.xls";
+                    if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                    try
+                    {
+                        excelContent = System.IO.File.ReadAllBytes(dialog.FileName);
+                        using (System.Security.Cryptography.SHA256 hash = System.Security.Cryptography.SHA256.Create())
+                            txtExcelIdentity.Text = dialog.SafeFileName + "｜" + BitConverter.ToString(hash.ComputeHash(excelContent)).Replace("-", "");
+                    }
+                    catch (Exception ex)
+                    {
+                        lblRankStatus.Text = "Excel 讀取失敗：" + ex.Message;
+                        return;
+                    }
+                }
+            }
+            string applyError = RefreshRankPeriodSource(false);
+            if (applyError.Length > 0) return;
+            RegularRankHistoryBatch history = null;
+            RegularRankBatchListItem selectedBatch = cboSourceBatch.SelectedItem as RegularRankBatchListItem;
+            if (kind == RegularRankSourceKind.History && (selectedBatch == null || !_historyBatches.TryGetValue(selectedBatch.Id, out history)))
+            { lblRankStatus.Text = "請重新載入歷史批次。"; return; }
+            if (history != null && (history.Exam == null || !history.Exam.Resolved || history.Exam.ExamId != _rankContext.SourceExamId))
+            { lblRankStatus.Text = "來源考試與批次不符，請重新選擇歷史批次。"; return; }
+
+            _loadGeneration++;
+            int generation = _loadGeneration;
+            RegularRankCalculationEntry.SetTestEvidence(null);
+            _loadedRows = new List<ConfirmStudentRow>();
+            _rankContext.MarkSubjectLoadFailed();
+            ClearRankSubjectLists();
+            _motherGroupLoadRunning = true;
+            btnNext.Enabled = false;
+            List<StudentRecord> students = new List<StudentRecord>(_StudentRecord);
+            List<TagConfigRecord> tags = new List<TagConfigRecord>(_TagConfigRecord);
+            List<int> grades = ReadSelectedGradeYears();
+            string excluded = cboStudentFilter.Text;
+            string tag1 = cboStudentTag1.Text;
+            string tag2 = cboStudentTag2.Text;
+            string schoolYear = _rankContext.TargetSchoolYear;
+            string semester = _rankContext.TargetSemester;
+            string examId = _rankContext.TargetExamId;
+            lblRankStatus.Text = "正在載入母群與目標期間科目。";
+
+            BackgroundWorker worker = new BackgroundWorker();
+            RegularRankLoadOutcome outcome = new RegularRankLoadOutcome();
+            worker.DoWork += delegate
+            {
+                outcome = kind != RegularRankSourceKind.Current
+                    ? LoadExcelPopulation(excelContent, tags, grades, excluded, schoolYear, semester, examId, history)
+                    : LoadCurrentPopulation(students, tags, grades, excluded, tag1, tag2, schoolYear, semester, examId);
+                if (outcome.Error.Length == 0)
+                {
+                    try { outcome.DatabaseEvidence = RegularRankPublicationService.VerifyTestDatabase(new QueryHelper()); }
+                    catch (Exception ex) { outcome.ValidationError = "排名發布檢查未通過：" + RegularRankPublicationService.ValidationFailure(ex); }
+                }
+            };
+            worker.RunWorkerCompleted += delegate
+            {
+                _motherGroupLoadRunning = false;
+                if (IsDisposed)
+                    return;
+                if (generation != _loadGeneration)
+                {
+                    _loadedRows = new List<ConfirmStudentRow>();
+                    _rankContext.MarkSubjectLoadFailed();
+                    ClearRankSubjectLists();
+                    btnNext.Enabled = false;
+                    lblRankStatus.Text = "載入期間條件已變更，這次結果沒有採用。請重新載入。";
+                    return;
+                }
+                ApplyLoadOutcome(outcome);
+                if (outcome != null && outcome.Error.Length == 0 && outcome.ValidationError.Length > 0)
+                    lblRankStatus.Text += "；" + outcome.ValidationError;
+                if (outcome != null && outcome.Error.Length == 0 && outcome.Warning.Length > 0)
+                    MessageBox.Show(this, outcome.Warning, "來源載入提醒");
+            };
+            worker.RunWorkerAsync();
+        }
+
+        private void RejectDeferredSource()
+        {
+            _loadedRows = new List<ConfirmStudentRow>();
+            if (_rankContext != null)
+                _rankContext.MarkSubjectLoadFailed();
+            ClearRankSubjectLists();
+            btnNext.Enabled = false;
+            lblRankStatus.Text = RegularRankPeriodSourceEditor.DeferredSourceMessage;
+        }
+
+        private static RegularRankLoadOutcome LoadExcelPopulation(byte[] content,
+            List<TagConfigRecord> tags, List<int> grades, string excluded,
+            string schoolYear, string semester, string examId, RegularRankHistoryBatch history)
+        {
+            RegularRankLoadOutcome outcome = new RegularRankLoadOutcome();
+            try
+            {
+                List<TagDefinition> definitions = new List<TagDefinition>();
+                foreach (TagConfigRecord tag in tags)
+                    definitions.Add(new TagDefinition { Id = tag.ID, Prefix = tag.Prefix, Name = tag.Name });
+                List<StudentTagLink> links = new List<StudentTagLink>();
+                foreach (StudentTagRecord tag in StudentTag.SelectAll())
+                    links.Add(new StudentTagLink { StudentId = tag.RefStudentID, TagId = tag.RefTagID, Name = tag.Name });
+                QueryHelper query = new QueryHelper();
+                if (history != null)
+                {
+                    DataTable latest = query.Select(HistorySnapshotRestore.SelectSettingSql(history.Id));
+                    string xml, extension;
+                    if (!HistorySnapshotRestore.TryReadBatch(latest, history.Id, out xml, out extension)
+                        || xml != history.Setting || extension != history.Extension)
+                        throw new InvalidOperationException("歷史批次已變更，請重新載入批次目錄。");
+                    outcome.Rows = RegularRankHistorySource.Restore(history, delegate(string sql) { return query.Select(sql); },
+                        excluded, definitions, links, out outcome.Warning);
+                }
+                else using (System.IO.MemoryStream stream = new System.IO.MemoryStream(content, false))
+                    outcome.Rows = RegularRankExcelSource.Load(new Aspose.Cells.Workbook(stream),
+                        delegate(string sql) { return query.Select(sql); }, excluded, definitions, links, out outcome.Warning);
+                List<string> ids = new List<string>();
+                foreach (ConfirmStudentRow row in outcome.Rows)
+                {
+                    int grade;
+                    if (SemesterRankSql.TryParseGradeYear(row.Group.GetWorking(RankKinds.Year).GroupName, out grade)
+                        && grades.Contains(grade)) ids.Add(row.Group.StudentId);
+                }
+                string subjectSql, error;
+                if (!RegularRankSubjectCatalog.TryCreate(schoolYear, semester, examId, ids, out subjectSql, out error))
+                    throw new InvalidOperationException(error);
+                outcome.Subjects = new List<string>();
+                foreach (DataRow row in query.Select(subjectSql).Rows)
+                {
+                    string name = ("" + row["subject"]).Trim();
+                    if (name.Length > 0 && !outcome.Subjects.Contains(name)) outcome.Subjects.Add(name);
+                }
+            }
+            catch (Exception ex) { outcome.Error = "Excel 母群或科目載入失敗：" + ex.Message; }
+            return outcome;
+        }
+
+        private void LoadHistoryCatalog(string period)
+        {
+            _motherGroupLoadRunning = true;
+            btnNext.Enabled = false;
+            int generation = ++_loadGeneration;
+            string year = nudSourceSchoolYear.Value.ToString(CultureInfo.InvariantCulture);
+            string term = cboSourceSemester.Text;
+            List<RegularRankExamChoice> exams = new List<RegularRankExamChoice>(_sourceExamChoices);
+            List<RegularRankHistoryBatch> batches = null;
+            BackgroundWorker worker = new BackgroundWorker();
+            lblRankStatus.Text = "正在查詢歷史批次目錄。";
+            worker.DoWork += delegate { batches = RegularRankHistorySource.ReadCatalog(new QueryHelper().Select(RegularRankHistorySource.CatalogSql(year, term)), exams); };
+            worker.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
+            {
+                _motherGroupLoadRunning = false;
+                if (IsDisposed || generation != _loadGeneration) return;
+                _suspendRankEditors = true;
+                cboSourceBatch.Items.Clear();
+                _historyBatches.Clear();
+                _historyCatalogPeriod = "";
+                if (e.Error == null && batches != null)
+                {
+                    foreach (RegularRankHistoryBatch batch in batches)
+                    {
+                        _historyBatches.Add(batch.Id, batch);
+                        cboSourceBatch.Items.Add(new RegularRankBatchListItem(batch.Id, batch.ToString()));
+                    }
+                    _historyCatalogPeriod = period;
+                }
+                _suspendRankEditors = false;
+                FitSourceBatchDropDown();
+                lblRankStatus.Text = e.Error != null ? "歷史目錄載入失敗：" + e.Error.Message
+                    : "找到 " + cboSourceBatch.Items.Count + " 個定期批次，請選批次後再按載入。";
+                ApplyNextButtonState("");
+            };
+            worker.RunWorkerAsync();
+        }
+
+        private void HistoryBatchChanged(object sender, EventArgs e)
+        {
+            if (_suspendRankEditors) return;
+            RegularRankBatchListItem item = cboSourceBatch.SelectedItem as RegularRankBatchListItem;
+            RegularRankHistoryBatch batch;
+            if (item == null || !_historyBatches.TryGetValue(item.Id, out batch)) return;
+            _suspendRankEditors = true;
+            cboSourceExam.SelectedIndex = -1;
+            if (batch.Exam != null && batch.Exam.Resolved)
+                for (int i = 0; i < cboSourceExam.Items.Count; i++)
+                    if (((RegularRankExamListItem)cboSourceExam.Items[i]).Id == batch.Exam.ExamId) { cboSourceExam.SelectedIndex = i; break; }
+            _suspendRankEditors = false;
+            RefreshRankPeriodSource(false);
+            if (batch.Error.Length > 0) lblRankStatus.Text = batch.Error;
+        }
+
+        private static RegularRankLoadOutcome LoadCurrentPopulation(
+            List<StudentRecord> students,
+            List<TagConfigRecord> tags,
+            List<int> grades,
+            string excluded,
+            string tag1,
+            string tag2,
+            string schoolYear,
+            string semester,
+            string examId)
+        {
+            RegularRankLoadOutcome outcome = new RegularRankLoadOutcome();
+            try
+            {
+                List<CurrentStudentRow> rows = new List<CurrentStudentRow>();
+                Dictionary<string, string> seats = new Dictionary<string, string>();
+                foreach (StudentRecord student in students)
+                {
+                    if (student == null)
+                        continue;
+                    int? gradeYear = null;
+                    string className = "";
+                    if (student.Class != null)
+                    {
+                        gradeYear = student.Class.GradeYear;
+                        className = student.Class.Name;
+                    }
+                    int? status = null;
+                    if (student.Status == StudentRecord.StudentStatus.一般)
+                        status = 1;
+                    else if (student.Status == StudentRecord.StudentStatus.延修)
+                        status = RegularRankCurrentStudentSource.ExtendedStatus;
+                    rows.Add(new CurrentStudentRow
+                    {
+                        StudentId = student.ID,
+                        StudentNumber = student.StudentNumber,
+                        StudentName = student.Name,
+                        IsRegular = student.Status == StudentRecord.StudentStatus.一般,
+                        StatusValue = status,
+                        RefClassId = student.RefClassID,
+                        GradeYear = gradeYear,
+                        ClassName = className
+                    });
+                    if (!string.IsNullOrEmpty(student.ID))
+                        seats[student.ID] = Convert.ToString(student.SeatNo) ?? "";
+                }
+
+                List<TagDefinition> definitions = new List<TagDefinition>();
+                foreach (TagConfigRecord tag in tags)
+                {
+                    if (tag == null)
+                        continue;
+                    definitions.Add(new TagDefinition { Id = tag.ID, Prefix = tag.Prefix, Name = tag.Name });
+                }
+                List<StudentTagLink> links = new List<StudentTagLink>();
+                foreach (StudentTagRecord tag in StudentTag.SelectAll())
+                {
+                    if (tag == null)
+                        continue;
+                    links.Add(new StudentTagLink { StudentId = tag.RefStudentID, TagId = tag.RefTagID, Name = tag.Name });
+                }
+
+                List<string> eligibleIds = new List<string>();
+                foreach (CurrentStudentRow row in rows)
+                {
+                    if (!RegularRankCurrentStudentSource.IsEligible(row) || grades == null || !grades.Contains(row.GradeYear.Value))
+                        continue;
+                    eligibleIds.Add(row.StudentId);
+                }
+                Dictionary<string, string> deptNames = new Dictionary<string, string>();
+                if (eligibleIds.Count > 0)
+                {
+                    string deptSql = CurrentStudentDeptQuery.Create(eligibleIds);
+                    foreach (string studentId in eligibleIds)
+                    {
+                        long ignoredId;
+                        if (!long.TryParse(studentId, out ignoredId) || ignoredId <= 0)
+                        {
+                            outcome.Error = "學生識別不是正整數，不能查科別。";
+                            return outcome;
+                        }
+                    }
+                    DataTable table = new QueryHelper().Select(deptSql);
+                    foreach (DataRow dataRow in table.Rows)
+                        deptNames["" + dataRow["student_id"]] = "" + dataRow["deptname"];
+                }
+
+                List<ConfirmStudentRow> confirmRows;
+                string buildError = RegularRankCurrentStudentSource.Build(
+                    rows, seats, definitions, links, grades, excluded, tag1, tag2, deptNames, out confirmRows);
+                if (buildError.Length > 0)
+                {
+                    outcome.Error = buildError;
+                    return outcome;
+                }
+
+                List<string> studentIds = new List<string>();
+                foreach (ConfirmStudentRow row in confirmRows)
+                    studentIds.Add(row.Group.StudentId);
+                string subjectSql;
+                string subjectError;
+                if (!RegularRankSubjectCatalog.TryCreate(schoolYear, semester, examId, studentIds, out subjectSql, out subjectError))
+                {
+                    outcome.Error = subjectError;
+                    return outcome;
+                }
+                DataTable subjects = new QueryHelper().Select(subjectSql);
+                outcome.Rows = confirmRows;
+                outcome.Subjects = new List<string>();
+                foreach (DataRow dataRow in subjects.Rows)
+                {
+                    string name = ("" + dataRow["subject"]).Trim();
+                    if (name.Length > 0 && !outcome.Subjects.Contains(name))
+                        outcome.Subjects.Add(name);
+                }
+            }
+            catch (Exception ex)
+            {
+                outcome.Error = "母群或科目查詢失敗：" + ex.Message;
+            }
+            return outcome;
+        }
+
+        private void ApplyLoadOutcome(RegularRankLoadOutcome outcome)
+        {
+            PublicationValidationError = outcome == null ? "尚未完成發布檢查。" : outcome.ValidationError;
+            RegularRankCalculationEntry.SetTestEvidence(outcome == null ? null : outcome.DatabaseEvidence);
+            if (outcome == null || outcome.Error.Length > 0 || outcome.Rows == null)
+            {
+                _loadedRows = new List<ConfirmStudentRow>();
+                _rankContext.MarkSubjectLoadFailed();
+                ClearRankSubjectLists();
+                ApplyNextButtonState("");
+                lblRankStatus.Text = outcome == null || outcome.Error.Length == 0 ? "母群或科目查詢失敗，不能用上一份名單。" : outcome.Error;
+                return;
+            }
+
+            string marked = _rankContext.MarkMotherGroupLoaded();
+            if (marked.Length > 0)
+            {
+                _loadedRows = new List<ConfirmStudentRow>();
+                _rankContext.MarkSubjectLoadFailed();
+                ClearRankSubjectLists();
+                ApplyNextButtonState("");
+                lblRankStatus.Text = marked;
+                return;
+            }
+
+            string applied = _rankContext.ApplySubjectCandidates(
+                outcome.Subjects, outcome.Subjects, outcome.Subjects,
+                _FilteredSubject, _Tag1FilteredSubject, _Tag2FilteredSubject);
+            _loadedRows = outcome.Rows;
+            ShowRankSubjectLists();
+            string changes = RegularRankPeriodSourceEditor.DescribeSubjectChanges(_rankContext);
+            if (applied.Length > 0)
+            {
+                ApplyNextButtonState("");
+                lblRankStatus.Text = applied;
+                return;
+            }
+            if (outcome.Rows.Count == 0)
+            {
+                ApplyNextButtonState("");
+                lblRankStatus.Text = "已載入" + LoadedSourceLabel() + " 0 人。沒有學生，不能進入下一步。";
+                return;
+            }
+            ApplyNextButtonState("");
+            lblRankStatus.Text = "已載入" + LoadedSourceLabel() + " " + outcome.Rows.Count + " 人、科目 " + outcome.Subjects.Count + " 科。可按下一步。"
+                + (changes.Length > 0 ? changes : "");
+        }
+
+        private string LoadedSourceLabel()
+        {
+            if (_rankContext == null)
+                return "母群";
+            if (_rankContext.SourceKind == RegularRankSourceKind.Excel)
+                return " Excel";
+            return RegularRankPeriodSourceEditor.SourceText(_rankContext.SourceKind);
+        }
+
+        private void ShowRankSubjectLists()
+        {
+            _suspendRankEditors = true;
+            FillRankSubjects(lvCalcSubject, _rankContext.GeneralSubjects);
+            FillRankSubjects(lvCalcSubjectTag1, _rankContext.Tag1Subjects);
+            FillRankSubjects(lvCalcSubjectTag2, _rankContext.Tag2Subjects);
+            _suspendRankEditors = false;
+        }
+
+        private static void FillRankSubjects(ListView listView, RegularRankSubjectGroup group)
+        {
+            listView.Items.Clear();
+            if (group == null)
+                return;
+            foreach (string name in group.Available)
+            {
+                ListViewItem item = listView.Items.Add(name);
+                item.Checked = group.Checked.Contains(name);
+            }
+        }
+
+        private string RefreshRankPeriodSource(bool keepSubjectLists)
+        {
+            if (_rankContext == null)
+                return "沒有計算條件。";
+            string error = RegularRankPeriodSourceEditor.Apply(_rankContext, ReadRankPeriodSelection());
+            ApplyRankPeriodEnablement();
+            if (_rankContext.LoadState != RegularRankLoadState.Loaded)
+                _loadedRows = new List<ConfirmStudentRow>();
+            if (!keepSubjectLists && (_rankContext.LoadState != RegularRankLoadState.Loaded || !_rankContext.SubjectsUsable))
+                ClearRankSubjectLists();
+            string changes = RegularRankPeriodSourceEditor.DescribeSubjectChanges(_rankContext);
+            string requestError = _rankContext.CanCreateRequest();
+            bool pendingConfirm = requestError == "尚未確認三組科目。";
+            RegularRankSourceKind sourceKind;
+            string sourceError;
+            bool deferredSource = RegularRankPeriodSourceEditor.TryReadSource(cboMotherGroupSource.Text, out sourceKind, out sourceError)
+                && sourceKind == RegularRankSourceKind.History && cboSourceBatch.SelectedItem == null;
+            ApplyNextButtonState(error);
+            if (deferredSource)
+                lblRankStatus.Text = RegularRankPeriodSourceEditor.DeferredSourceMessage;
+            else if (error.Length > 0)
+                lblRankStatus.Text = error;
+            else if (changes.Length > 0)
+                lblRankStatus.Text = changes;
+            else if (!pendingConfirm)
+                lblRankStatus.Text = requestError;
+            return error;
+        }
+
+        private void RankSubjectItemChecked(object sender, ItemCheckedEventArgs e)
+        {
+            if (_suspendRankEditors || _rankContext == null)
+                return;
+            if (_rankContext.LoadState != RegularRankLoadState.Loaded || !_rankContext.SubjectsUsable)
+                return;
+            string error = _rankContext.SetCheckedSubjects(RegularRankSubjectSet.General, ReadCheckedSubjects(lvCalcSubject));
+            if (error.Length == 0)
+                error = _rankContext.SetCheckedSubjects(RegularRankSubjectSet.Tag1, ReadCheckedSubjects(lvCalcSubjectTag1));
+            if (error.Length == 0)
+                error = _rankContext.SetCheckedSubjects(RegularRankSubjectSet.Tag2, ReadCheckedSubjects(lvCalcSubjectTag2));
+            string changes = RegularRankPeriodSourceEditor.DescribeSubjectChanges(_rankContext);
+            if (error.Length > 0)
+                lblRankStatus.Text = error;
+            else if (changes.Length > 0)
+                lblRankStatus.Text = changes;
+            ApplyNextButtonState(error);
+        }
+
+        private RegularRankPeriodSourceSelection ReadRankPeriodSelection()
+        {
+            RegularRankPeriodSourceSelection selection = new RegularRankPeriodSourceSelection();
+            selection.TargetSchoolYear = decimal.ToInt32(nudTargetSchoolYear.Value).ToString(CultureInfo.InvariantCulture);
+            selection.TargetSemester = cboTargetSemester.SelectedItem == null ? "" : cboTargetSemester.SelectedItem.ToString();
+            RegularRankExamListItem targetExam = cboExamType.SelectedItem as RegularRankExamListItem;
+            selection.TargetExamId = targetExam == null ? "" : targetExam.Id;
+            selection.TargetExamName = targetExam == null ? "" : targetExam.Name;
+            selection.TargetExamChoices = _targetExamChoices;
+            selection.SourceText = cboMotherGroupSource.Text;
+            selection.SourceSchoolYear = decimal.ToInt32(nudSourceSchoolYear.Value).ToString(CultureInfo.InvariantCulture);
+            selection.SourceSemester = cboSourceSemester.SelectedItem == null ? "" : cboSourceSemester.SelectedItem.ToString();
+            RegularRankBatchListItem batch = cboSourceBatch.SelectedItem as RegularRankBatchListItem;
+            selection.SourceBatchId = batch == null ? "" : batch.Id;
+            RegularRankExamListItem sourceExam = cboSourceExam.SelectedItem as RegularRankExamListItem;
+            selection.SourceExamId = sourceExam == null ? "" : sourceExam.Id;
+            selection.SourceExamName = sourceExam == null ? "" : sourceExam.Name;
+            selection.SourceExamChoices = _sourceExamChoices;
+            selection.ExcelIdentity = txtExcelIdentity.Text;
+            selection.GradeYears = ReadSelectedGradeYears();
+            selection.ExcludedCategory = cboStudentFilter.Text;
+            selection.RankTag1 = cboStudentTag1.Text;
+            selection.RankTag2 = cboStudentTag2.Text;
+            return selection;
+        }
+
+        private List<int> ReadSelectedGradeYears()
+        {
+            List<int> grades = new List<int>();
+            foreach (CheckBox checkBox in flowLayoutPanel1.Controls.OfType<CheckBox>())
+            {
+                if (!checkBox.Checked)
+                    continue;
+                int gradeYear;
+                if (int.TryParse(checkBox.Text.Trim('年', '級'), NumberStyles.None, CultureInfo.InvariantCulture, out gradeYear))
+                    grades.Add(gradeYear);
+            }
+            return grades;
+        }
+
+        private void ApplyRankPeriodEnablement()
+        {
+            RegularRankSourceKind kind;
+            string ignored;
+            if (!RegularRankPeriodSourceEditor.TryReadSource(cboMotherGroupSource.Text, out kind, out ignored))
+                kind = RegularRankSourceKind.Current;
+            RegularRankPeriodSourceEnablement enablement = RegularRankPeriodSourceEnablement.For(kind);
+            _suspendRankEditors = true;
+            nudTargetSchoolYear.Enabled = enablement.TargetSchoolYear;
+            cboTargetSemester.Enabled = enablement.TargetSemester;
+            nudSourceSchoolYear.Enabled = enablement.SourceSchoolYear;
+            cboSourceSemester.Enabled = enablement.SourceSemester;
+            cboSourceExam.Enabled = enablement.SourceExam;
+            cboSourceBatch.Enabled = enablement.SourceBatch;
+            txtExcelIdentity.Enabled = enablement.ExcelIdentity;
+            lblCurrentSourceNote.Visible = enablement.CurrentSourceNote;
+            _suspendRankEditors = false;
+        }
+
+        private void ClearRankSubjectLists()
+        {
+            _suspendRankEditors = true;
+            lvCalcSubject.Items.Clear();
+            lvCalcSubjectTag1.Items.Clear();
+            lvCalcSubjectTag2.Items.Clear();
+            _suspendRankEditors = false;
+        }
+
+        private static List<string> ReadCheckedSubjects(ListView listView)
+        {
+            List<string> names = new List<string>();
+            foreach (ListViewItem item in listView.Items)
+            {
+                if (item.Checked)
+                    names.Add(item.Text);
+            }
+            return names;
         }
 
         private void reloadSubject(object eander, EventArgs e)
         {
-
-            lvCalcSubject.Items.Clear();
-            lvCalcSubjectTag1.Items.Clear();
-            lvCalcSubjectTag2.Items.Clear();
-            #region 取得科目
-            List<string> gradeList = new List<string>();
-            gradeList.Add("" + int.MinValue);
-            foreach (CheckBox checkBox in flowLayoutPanel1.Controls.OfType<CheckBox>())
-            {
-                if (checkBox.Checked == true)
-                {
-                    gradeList.Add(checkBox.Text.Trim('年', '級'));
-                }
-            }
-            var examID = "-1";
-            foreach (var item in _ExamList)
-            {
-                if (item.Name == "" + cboExamType.SelectedItem)
-                    examID = item.ID;
-            }
-            var subjectTable = new QueryHelper().Select(@"
-
-SELECT
-	subject
-FROM (
-	SELECT
-		subject
-		, row_number() OVER () as subject_order
-	FROM (
-		SELECT DISTINCT
-			course.credit
-			, course.period
-			, course.subject
-		FROM
-			student
-			INNER JOIN class
-				ON class.id = student.ref_class_id
-				AND class.grade_year IN (" + string.Join(", ", gradeList) + @")
-			INNER JOIN sc_attend
-				ON sc_attend.ref_student_id = student.id
-			INNER JOIN course
-				ON course.id = sc_attend.ref_course_id
-				AND course.school_year = " + _DefaultSchoolYear + @"
-				AND course.semester = " + _DefaultSemester + @"
-			INNER JOIN sce_take
-				ON sce_take.ref_sc_attend_id = sc_attend.id
-				AND sce_take.ref_exam_id = " + examID + @"
-		ORDER BY
-			course.credit DESC
-			, course.period DESC
-			, course.subject
-	) AS s
-) AS s
-GROUP BY
-	subject
-ORDER BY
-	MIN(subject_order)");
-            #endregion
-            foreach (DataRow row in subjectTable.Rows)
-            {
-                lvCalcSubject.Items.Add("" + row["subject"]).Checked = !_FilteredSubject.Contains("" + row["subject"]);
-                lvCalcSubjectTag1.Items.Add("" + row["subject"]).Checked = !_Tag1FilteredSubject.Contains("" + row["subject"]);
-                lvCalcSubjectTag2.Items.Add("" + row["subject"]).Checked = !_Tag2FilteredSubject.Contains("" + row["subject"]);
-            }
+            lblRankStatus.Text = "請使用「載入／更新母群及科目」。科目只依目標期間、目標 exam ID 與目前母群查詢，不再使用系統期間或同名考試的最後一筆。";
+            btnNext.Enabled = false;
         }
 
         private void btnNext_Click(object sender, EventArgs e)
         {
-            plSetting.Visible = false;
-            plStudentView.Visible = true;
-            lbExam.Text = cboExamType.Text;
-
-            //因為目前只提供計算預設學年度學期的排名，所以暫時先註解起來
-            lbSchoolYear.Text = lbCalcSchoolYear.Text; //cboSemester.Text;
-            lbSemester.Text = lbCalcSemester.Text; //cboSchoolYear.Text;
-
-            #region 依據勾選的項目動態產生CheckBox
-            int checkBoxCount = 0;
-            foreach (CheckBox checkBox in flowLayoutPanel1.Controls.OfType<CheckBox>())
+            if (_motherGroupLoadRunning)
             {
-                if (checkBox.Checked == true)
-                {
-                    CheckBox newCheckBox = new CheckBox();
-                    newCheckBox.Location = new System.Drawing.Point(65 + (97 * (checkBoxCount % 4)), 44 + (27 * (checkBoxCount / 4)));//第一個checkBox的位置X=65, y=44，兩個checkBox的X差距97，兩個checkBox的Y差距27
-                    newCheckBox.Name = "new" + checkBox.Name;
-                    newCheckBox.Size = new System.Drawing.Size(91, 21);
-                    newCheckBox.TabIndex = 26 + checkBoxCount;
-                    newCheckBox.Text = checkBox.Text;
-                    newCheckBox.UseVisualStyleBackColor = true;
-                    newCheckBox.Enabled = false;
-                    newCheckBox.Checked = true;
-                    newCheckBox.Visible = false;//因為不需要且_CheckBoxList後面用的到，所以保留此功能但不顯示
+                lblRankStatus.Text = "母群與科目正在載入，請稍候。";
+                btnNext.Enabled = false;
+                return;
+            }
+            string blocked = RefreshRankPeriodSource(true);
+            if (blocked.Length > 0 || !NextStepReady(blocked))
+            {
+                btnNext.Enabled = false;
+                if (blocked.Length == 0)
+                    lblRankStatus.Text = NextStepBlockedMessage();
+                return;
+            }
 
-                    plStudentView.Controls.Add(newCheckBox);
-                    _CheckBoxList.Add(newCheckBox);
-                    checkBoxCount++;
+            string error = ApplyCheckedSubjectsFromLists();
+            if (error.Length == 0)
+                error = _rankContext.ConfirmSubjects();
+            if (error.Length == 0)
+                error = _rankContext.CanCreateRequest();
+            if (error.Length > 0)
+            {
+                lblRankStatus.Text = error;
+                btnNext.Enabled = false;
+                return;
+            }
+
+            OpenMotherGroupConfirm();
+        }
+
+        private string ApplyCheckedSubjectsFromLists()
+        {
+            string error = _rankContext.SetCheckedSubjects(RegularRankSubjectSet.General, ReadCheckedSubjects(lvCalcSubject));
+            if (error.Length == 0)
+                error = _rankContext.SetCheckedSubjects(RegularRankSubjectSet.Tag1, ReadCheckedSubjects(lvCalcSubjectTag1));
+            if (error.Length == 0)
+                error = _rankContext.SetCheckedSubjects(RegularRankSubjectSet.Tag2, ReadCheckedSubjects(lvCalcSubjectTag2));
+            return error;
+        }
+
+        private void ApplyNextButtonState(string applyError)
+        {
+            btnNext.Enabled = NextStepReady(applyError);
+        }
+
+        private bool NextStepReady(string applyError)
+        {
+            if (_motherGroupLoadRunning || _rankContext == null)
+                return false;
+            if (applyError != null && applyError.Length > 0)
+                return false;
+            if (_rankContext.LoadState != RegularRankLoadState.Loaded || !_rankContext.SubjectsUsable)
+                return false;
+            if (_loadedRows == null || _loadedRows.Count == 0)
+                return false;
+            if ((_rankContext.TargetExamId ?? "").Length == 0)
+                return false;
+            if (_rankContext.GradeYears == null || _rankContext.GradeYears.Count == 0)
+                return false;
+            RegularRankSourceKind screenKind;
+            string screenError;
+            if (!RegularRankPeriodSourceEditor.TryReadSource(cboMotherGroupSource.Text, out screenKind, out screenError))
+                return false;
+            if (screenKind != _rankContext.SourceKind)
+                return false;
+            if (screenKind == RegularRankSourceKind.History)
+            {
+                RegularRankBatchListItem batch = cboSourceBatch.SelectedItem as RegularRankBatchListItem;
+                if (batch == null || batch.Id != (_rankContext.SourceBatchId ?? ""))
+                    return false;
+                if ((_rankContext.SourceExamId ?? "").Length == 0
+                    || (_rankContext.SourceSchoolYear ?? "").Length == 0
+                    || (_rankContext.SourceSemester ?? "").Length == 0)
+                    return false;
+            }
+            if (screenKind == RegularRankSourceKind.Excel && (_rankContext.ExcelIdentity ?? "").Length == 0)
+                return false;
+            return true;
+        }
+
+        private string NextStepBlockedMessage()
+        {
+            if (_rankContext == null)
+                return "沒有計算條件。";
+            if (_motherGroupLoadRunning)
+                return "母群與科目正在載入，請稍候。";
+            if (_rankContext.LoadState == RegularRankLoadState.Failed)
+                return "科目載入失敗，不能用上一份科目搭配新條件。";
+            if (_rankContext.LoadState != RegularRankLoadState.Loaded)
+                return "條件已變更，必須重新載入母群與科目。";
+            if (_loadedRows == null || _loadedRows.Count == 0)
+                return "尚未載入學生母群。";
+            if (!_rankContext.SubjectsUsable)
+                return "沒有可用科目，不能進入確認。";
+            return "目標或來源條件尚未完成，不能進入下一步。";
+        }
+
+        private void FitSourceBatchDropDown()
+        {
+            List<string> displays = new List<string>();
+            foreach (object item in cboSourceBatch.Items)
+                displays.Add(item == null ? "" : item.ToString());
+            int dpi = cboSourceBatch.DeviceDpi;
+            cboSourceBatch.DropDownWidth = SourceBatchDropDownWidth(
+                cboSourceBatch.Font,
+                displays,
+                cboSourceBatch.Width,
+                dpi,
+                SourceBatchAvailableDropDownWidth(dpi));
+        }
+
+        private int SourceBatchAvailableDropDownWidth(int dpi)
+        {
+            Screen screen = Screen.FromControl(cboSourceBatch);
+            if (screen == null)
+                return 0;
+            int margin = Scale96(8, dpi);
+            int room = screen.WorkingArea.Width - margin;
+            try
+            {
+                Point origin = cboSourceBatch.PointToScreen(Point.Empty);
+                int beside = screen.WorkingArea.Right - origin.X - margin;
+                if (beside > 0)
+                    room = beside;
+            }
+            catch (Exception)
+            {
+                return Math.Max(0, room);
+            }
+            return Math.Max(0, room);
+        }
+
+        internal static int SourceBatchDropDownWidth(Font font, IList<string> displays, int controlWidth, int dpi, int availableWidth)
+        {
+            if (dpi < 96)
+                dpi = 96;
+            int baseline = Scale96(300, dpi);
+            int textWidth = 0;
+            if (font != null && displays != null)
+            {
+                foreach (string display in displays)
+                {
+                    Size size = TextRenderer.MeasureText(
+                        display ?? "",
+                        font,
+                        new Size(short.MaxValue, short.MaxValue),
+                        TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+                    if (size.Width > textWidth)
+                        textWidth = size.Width;
                 }
             }
-            #endregion
+            int side = Scale96(8, dpi);
+            int width = baseline;
+            int measured = textWidth + SystemInformation.VerticalScrollBarWidth + side + side;
+            if (measured > width)
+                width = measured;
+            if (controlWidth > width)
+                width = controlWidth;
+            if (availableWidth > 0 && width > availableWidth)
+                width = availableWidth;
+            if (width < 1)
+                width = baseline;
+            return width;
+        }
 
-            #region 讀取學生清單
-            _FilterStudentList = new List<StudentRecord>();
-            string studentFilter = cboStudentFilter.Text.Trim('[', ']');
-            string studentTag1 = cboStudentTag1.Text.Trim('[', ']');
-            string studentTag2 = cboStudentTag2.Text.Trim('[', ']');
-            Exception bkwException = null;
-            DataTable deptDataTable = new DataTable();
-            BackgroundWorker bkw = new BackgroundWorker();
-            bkw.WorkerReportsProgress = true;
+        private static int Scale96(int pixels, int dpi)
+        {
+            if (dpi < 96)
+                dpi = 96;
+            return (pixels * dpi + 48) / 96;
+        }
 
-            btnPrevious.Enabled = false;
-
-            bkw.ProgressChanged += delegate (object s1, ProgressChangedEventArgs e1)
+        private void OpenMotherGroupConfirm()
+        {
+            RegularRankSourceKind kind;
+            string ignored;
+            if (!RegularRankPeriodSourceEditor.TryReadSource(cboMotherGroupSource.Text, out kind, out ignored))
             {
-                MotherForm.SetStatusBarMessage("資料載入中", e1.ProgressPercentage);
-            };
+                RejectDeferredSource();
+                return;
+            }
+            if (_loadedRows == null || _loadedRows.Count == 0)
+            {
+                lblRankStatus.Text = "尚未載入學生母群。";
+                btnNext.Enabled = false;
+                return;
+            }
+            RegularRankConfirmRequest request;
+            try
+            {
+                request = _rankContext.CreateRequest();
+            }
+            catch (InvalidOperationException ex)
+            {
+                lblRankStatus.Text = ex.Message;
+                btnNext.Enabled = false;
+                return;
+            }
+            if (_motherGroupConfirmForm == null || _motherGroupConfirmForm.IsDisposed)
+                _motherGroupConfirmForm = new RegularRankMotherGroupConfirmForm(this);
+            _motherGroupConfirmForm.ShowStudents(request, _loadedRows);
+            if (_motherGroupConfirmForm.Owner != this)
+                _motherGroupConfirmForm.Owner = this;
+            Enabled = false;
+            if (!_motherGroupConfirmForm.Visible)
+                _motherGroupConfirmForm.Show(this);
+            _motherGroupConfirmForm.BringToFront();
+            _motherGroupConfirmForm.Activate();
+        }
 
-            bkw.DoWork += delegate
+        internal void ReturnFromMotherGroupConfirm()
+        {
+            if (_motherGroupConfirmForm != null && !_motherGroupConfirmForm.IsDisposed)
+                _motherGroupConfirmForm.HideForHost();
+            Enabled = true;
+            if (!Visible)
+                Show();
+            BringToFront();
+            Activate();
+        }
+
+        internal void ReturnForExcelImport()
+        {
+            ReturnFromMotherGroupConfirm();
+            cboMotherGroupSource.SelectedItem = RegularRankPeriodSourceEditor.ExcelSourceText;
+            lblRankStatus.Text = "已選擇 Excel 名單，請按「載入／更新母群及科目」選擇檔案。";
+        }
+
+        internal void AddHistoryStudent(RegularRankMotherGroupConfirmForm confirm, string number)
+        {
+            if (_rankContext == null || _rankContext.SourceKind != RegularRankSourceKind.History || _motherGroupLoadRunning)
+                return;
+            MotherGroupConfirmList copy = confirm.List.CopyWorking();
+            RegularRankConfirmRequest request = _rankContext.CreateRequest();
+            List<TagConfigRecord> tags = new List<TagConfigRecord>(_TagConfigRecord);
+            RegularRankLoadOutcome outcome = new RegularRankLoadOutcome();
+            confirm.SetAdding(true);
+            _motherGroupLoadRunning = true;
+            BackgroundWorker worker = new BackgroundWorker();
+            worker.DoWork += delegate
             {
                 try
                 {
-                    #region 依據條件篩選學生
-                    bkw.ReportProgress(1);
-                    foreach (string gradeYear in _CheckBoxList.Select(x => x.Text))
+                    QueryHelper query = new QueryHelper();
+                    List<TagDefinition> definitions = new List<TagDefinition>();
+                    foreach (TagConfigRecord tag in tags) definitions.Add(new TagDefinition { Id = tag.ID, Prefix = tag.Prefix, Name = tag.Name });
+                    List<StudentTagLink> links = new List<StudentTagLink>();
+                    foreach (StudentTagRecord tag in StudentTag.SelectAll()) links.Add(new StudentTagLink { StudentId = tag.RefStudentID, TagId = tag.RefTagID, Name = tag.Name });
+                    DataTable students = query.Select(HistoryStudentAdd.SelectSql(number));
+                    HistoryStudentAddResult added = HistoryStudentAdd.Read(number, students, copy,
+                        RegularRankCurrentStudentSource.NormalizeCategory(request.ExcludedCategory),
+                        RegularRankCurrentStudentSource.NormalizeCategory(request.RankTag1),
+                        RegularRankCurrentStudentSource.NormalizeCategory(request.RankTag2), definitions, links);
+                    if (added.Status != HistoryStudentAddStatus.Added) throw new InvalidOperationException(added.Message);
+                    copy.Add(new ConfirmStudentRow { Group = added.Student, ClassName = added.ClassName, SeatNo = added.SeatNo });
+                    List<string> ids = new List<string>();
+                    foreach (ConfirmStudentRow row in copy.Rows)
                     {
-                        _FilterStudentList.AddRange(_StudentRecord.Where(x => x.Class.GradeYear == Convert.ToInt32(gradeYear.Trim('年', '級'))).ToList());
+                        int grade;
+                        if (SemesterRankSql.TryParseGradeYear(row.Group.GetWorking(RankKinds.Year).GroupName, out grade) && request.GradeYears.Contains(grade))
+                            ids.Add(row.Group.StudentId);
                     }
-
-                    bkw.ReportProgress(50);
-                    if (!string.IsNullOrEmpty(studentFilter))
+                    string sql, error;
+                    if (!RegularRankSubjectCatalog.TryCreate(request.TargetSchoolYear, request.TargetSemester, request.TargetExamId, ids, out sql, out error))
+                        throw new InvalidOperationException(error);
+                    outcome.Subjects = new List<string>();
+                    foreach (DataRow row in query.Select(sql).Rows)
                     {
-                        List<string> studentFilterTagIDs = _TagConfigRecord.Where(x => x.Prefix == studentFilter).Select(x => x.ID).ToList();
-                        if (studentFilterTagIDs.Count == 0)
-                        {
-                            studentFilterTagIDs = _TagConfigRecord.Where(x => x.Name == studentFilter).Select(x => x.ID).ToList();
-                        }
-                        List<string> filterStudentID = K12.Data.StudentTag.SelectAll().Where(x => studentFilterTagIDs.Contains(x.RefTagID)).Select(x => x.RefStudentID).ToList();
-                        _FilterStudentList = _FilterStudentList.Where(x => !filterStudentID.Contains(x.ID)).ToList();
+                        string subject = Convert.ToString(row["subject"]).Trim();
+                        if (subject.Length > 0 && !outcome.Subjects.Contains(subject)) outcome.Subjects.Add(subject);
                     }
-
-                    bkw.ReportProgress(70);
-                    #region 取得篩選學生的科別
-                    string studentIDs = string.Join(",", _FilterStudentList.Select(x => x.ID).ToList());
-
-                    #region 取得科別的SQL
-                    string queryDeptSQL = @"
-SELECT
-	student.id AS student_id
-	, COALESCE(dept.name, '') AS deptname
-FROM
-	student
-	LEFT OUTER JOIN class
-		ON class.id = student.ref_class_id
-	LEFT OUTER JOIN dept
-		ON dept.id = COALESCE(student.ref_dept_id, class.ref_dept_id)
-WHERE
-	student.id IN
-	(
-		" + studentIDs + @"
-	)
-";
-                    #endregion
-
-                    QueryHelper queryHelper = new QueryHelper();
-                    deptDataTable = queryHelper.Select(queryDeptSQL);
-
-                    #endregion
-                    bkw.ReportProgress(100);
-                    #endregion
+                    if (outcome.Subjects.Count == 0) throw new InvalidOperationException("新增後沒有可用科目，保留原清單。");
+                    outcome.Rows = new List<ConfirmStudentRow>(copy.Rows);
+                    try { outcome.DatabaseEvidence = RegularRankPublicationService.VerifyTestDatabase(query); }
+                    catch (Exception ex) { outcome.ValidationError = RegularRankPublicationService.ValidationFailure(ex); }
                 }
-                catch (Exception ex)
-                {
-                    bkwException = ex;
-                }
+                catch (Exception ex) { outcome.Error = ex.Message; }
             };
-
-            bkw.RunWorkerCompleted += delegate
+            worker.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
             {
-                if (bkwException != null)
-                {
-                    throw new Exception("資料讀取失敗", bkwException);
-                }
-
-                if (_FilterStudentList.Count == 0)
-                {
-                    btnCacluate.Enabled = false;
-                    MessageBox.Show("沒有找到符合條件的學生");
-                    btnPrevious.Enabled = true;
-                    return;
-                }
-
-                #region 將學生清單顯示在dataGridView上
-                var studentView = (from s in _FilterStudentList
-                                   select new
-                                   {
-                                       studentId = s.ID,
-                                       ClassName = s.Class.Name,
-                                       s.SeatNo,
-                                       s.StudentNumber,
-                                       s.Name,
-                                       RankGradeYear = "" + s.Class.GradeYear + "年級",
-                                       RankClassName = s.Class.Name,
-                                   }).ToList();
-
-                #region 取得符合類別的學生
-                List<string> tag1IDs = new List<string>();
-                List<string> tag2IDs = new List<string>();
-                if (!string.IsNullOrEmpty(studentTag1))
-                {
-                    tag1IDs = _TagConfigRecord.Where(x => x.Prefix == studentTag1).Select(x => x.ID).ToList();
-                    if (tag1IDs.Count == 0)
-                    {
-                        tag1IDs = _TagConfigRecord.Where(x => x.Name == studentTag1).Select(x => x.ID).ToList();
-                    }
-                }
-                if (!string.IsNullOrEmpty(studentTag2))
-                {
-                    tag2IDs = _TagConfigRecord.Where(x => x.Prefix == studentTag2).Select(x => x.ID).ToList();
-                    if (tag2IDs.Count == 0)
-                    {
-                        tag2IDs = _TagConfigRecord.Where(x => x.Name == studentTag2).Select(x => x.ID).ToList();
-                    }
-                }
-                List<StudentTagRecord> studentTag1List = K12.Data.StudentTag.SelectAll().Where(x => tag1IDs.Contains(x.RefTagID)).ToList();
-                List<StudentTagRecord> studentTag2List = K12.Data.StudentTag.SelectAll().Where(x => tag2IDs.Contains(x.RefTagID)).ToList();
-                #endregion
-
-                List<DataGridViewRow> rowList = new List<DataGridViewRow>();
-                for (int rowIndex = 0; rowIndex < studentView.Count; rowIndex++)
-                {
-                    string tag1 = "", tag2 = "";
-                    DataGridViewRow row = new DataGridViewRow();
-                    row.CreateCells(dgvStudentList);
-                    row.Tag = studentView[rowIndex].studentId;
-                    row.Cells[0].Value = studentView[rowIndex].ClassName;
-                    row.Cells[1].Value = studentView[rowIndex].SeatNo;
-                    row.Cells[2].Value = studentView[rowIndex].StudentNumber;
-                    row.Cells[3].Value = studentView[rowIndex].Name;
-                    row.Cells[4].Value = studentView[rowIndex].RankGradeYear;
-                    DataRow[] dataRow = deptDataTable.Select("student_id = '" + studentView[rowIndex].studentId + "'");
-                    row.Cells[5].Value = dataRow.First()["deptname"];
-                    row.Cells[6].Value = studentView[rowIndex].RankClassName;
-                    if (studentTag1List.Select(x => x.RefStudentID).Contains(studentView[rowIndex].studentId))
-                    {
-                        tag1 = studentTag1List.First(x => x.RefStudentID == studentView[rowIndex].studentId).Name;
-                        row.Cells[7].Value = tag1;
-                    }
-                    if (studentTag2List.Select(x => x.RefStudentID).Contains(studentView[rowIndex].studentId))
-                    {
-                        tag2 = studentTag2List.First(x => x.RefStudentID == studentView[rowIndex].studentId).Name;
-                        row.Cells[8].Value = tag2;
-                    }
-
-                    rowList.Add(row);
-                }
-                dgvStudentList.Rows.AddRange(rowList.ToArray());
-                btnPrevious.Enabled = true;
-                #endregion
+                _motherGroupLoadRunning = false;
+                if (!confirm.IsDisposed) confirm.SetAdding(false);
+                if (IsDisposed) return;
+                if (e.Error != null || outcome.Error.Length > 0)
+                { MessageBox.Show(e.Error == null ? outcome.Error : e.Error.Message); return; }
+                _rankContext.MarkSubjectLoadFailed();
+                ApplyLoadOutcome(outcome);
+                ReturnFromMotherGroupConfirm();
+                if (btnNext.Enabled)
+                    lblRankStatus.Text = "已加入學生並更新目標科目，原學生參與設定保留。可按下一步。";
             };
-
-            bkw.RunWorkerAsync();
-            #endregion
+            worker.RunWorkerAsync();
         }
 
-        private void btnCacluate_Click(object sender, EventArgs e)
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            if (_motherGroupConfirmForm != null && _motherGroupConfirmForm.CalculationRunning)
+            {
+                e.Cancel = true;
+                return;
+            }
+            if (_motherGroupConfirmForm != null && !_motherGroupConfirmForm.IsDisposed)
+            {
+                _motherGroupConfirmForm.HideForHost();
+                _motherGroupConfirmForm.Close();
+            }
+            base.OnFormClosing(e);
+        }
 
-            // 學生依年級分批使用
+        internal bool TryCalculateFromConfirm(RegularRankMotherGroupConfirmForm confirm)
+        {
+            if (confirm == null || confirm.List == null || _rankContext == null) return false;
+            string error = _rankContext.CanCreateRequest();
+            if (error.Length > 0) { MessageBox.Show(error); return false; }
+            RegularRankConfirmRequest request = _rankContext.CreateRequest();
+            MotherGroupConfirmList copy = confirm.List.CopyWorking();
+            List<int> actual = RegularRankCandidateSql.ActualGrades(request, copy);
+            if (actual.Count == 0) { MessageBox.Show("沒有可計算的年級，不保存設定也不發布排名。"); return false; }
+            int unknownGrades = 0;
+            foreach (ConfirmStudentRow row in copy.Rows)
+            {
+                int grade;
+                if (!SemesterRankSql.TryParseGradeYear(row.Group.GetWorking(RankKinds.Year).GroupName, out grade)) unknownGrades++;
+            }
+            string prompt = "目標：" + request.TargetSchoolYear + "-" + request.TargetSemester + " " + request.TargetExamName + "（ID " + request.TargetExamId + "）\n"
+                + "來源：" + RegularRankPeriodSourceEditor.SourceText(request.SourceKind)
+                + (request.SourceKind == RegularRankSourceKind.History ? "｜批次 " + request.SourceBatchId + "｜" + request.SourceSchoolYear + "-" + request.SourceSemester + " " + request.SourceExamName : "")
+                + "\n實際計算及取代年級：" + string.Join("、", actual.Select(g => g.ToString()).ToArray())
+                + "\n完整名單：" + copy.Rows.Count + " 人；無法解析年級 " + unknownGrades + " 人保留快照，不進入排名。"
+                + "\n將取代相同目標期間、考試及上述年級的有效定期排名。"
+                + "\n三組科目等學校設定會先保存，排名失敗時不回滾該設定。寫入僅限 debug6，計算前會確認排名資料表結構。是否繼續？";
+            if (MessageBox.Show(confirm, prompt, "確認計算與發布", MessageBoxButtons.YesNo) != DialogResult.Yes) return false;
+            string configuration = SchoolConfigurationXml(request);
+            confirm.BeginCalculation();
+            BackgroundWorker worker = new BackgroundWorker();
+            DataTable result = null;
+            string operation = "";
+            worker.DoWork += delegate
+            {
+                RegularRankPublicationService.VerifyTestDatabase(new QueryHelper());
+                var config = K12.Data.School.Configuration["固定排名_定期評量排名計算"];
+                config["設定檔"] = configuration;
+                config.Save();
+                result = RegularRankPublicationService.PublishForVerification(request, copy, false, out operation);
+            };
+            worker.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
+            {
+                if (!confirm.IsDisposed) confirm.FinishCalculation();
+                if (IsDisposed) return;
+                if (e.Error != null)
+                {
+                    MessageBox.Show(confirm, "排名發布未完成。操作識別：" + operation + "\n" + e.Error.Message
+                        + "\n若訊息表示結果未確認，須先核對批次，不能直接重送。", "定期排名驗證");
+                    return;
+                }
+                MessageBox.Show(confirm, "計算完成。批次：" + result.Rows[0]["batch_id"] + "；矩陣：" + result.Rows[0]["matrix_count"]
+                    + "；明細：" + result.Rows[0]["detail_count"] + "\n操作識別：" + operation);
+            };
+            worker.RunWorkerAsync();
+            return true;
+        }
+
+        private string SchoolConfigurationXml(RegularRankConfirmRequest request)
+        {
+            XmlDocument document = new XmlDocument { XmlResolver = null };
+            document.LoadXml(RegularRankSnapshotDocument.BuildSettingXml(request));
+            string[] elements = { "不採計科目", "類別一不採計科目", "類別二不採計科目" };
+            RegularRankSubjectGroup[] groups = { _rankContext.GeneralSubjects, _rankContext.Tag1Subjects, _rankContext.Tag2Subjects };
+            for (int i = 0; i < groups.Length; i++) foreach (string name in groups[i].Available)
+                if (!groups[i].Checked.Contains(name))
+                {
+                    XmlElement subject = document.CreateElement(elements[i]);
+                    subject.InnerText = name;
+                    document.DocumentElement.AppendChild(subject);
+                }
+            return document.OuterXml;
+        }
+
+        private void LegacyCalculateFromConfirm(RegularRankMotherGroupConfirmForm confirm)
+        {
+            if (!RegularRankCalculationEntry.ExecutionAllowed)
+            {
+                MessageBox.Show(RegularRankCalculationEntry.BlockedMessage);
+                return;
+            }
+            if (confirm == null || confirm.List == null || confirm.List.Rows.Count == 0)
+            {
+                MessageBox.Show("沒有確認清單，不能計算。");
+                return;
+            }
+            if (_rankContext == null || _rankContext.CanCreateRequest().Length > 0)
+            {
+                MessageBox.Show(_rankContext == null ? "沒有計算條件。" : _rankContext.CanCreateRequest());
+                return;
+            }
+            RegularRankConfirmRequest request = _rankContext.CreateRequest();
+
+            // 學生依年級分批使用；資料來自確認頁完整清單，不是舊 plStudentView。
             Dictionary<string, List<string>> gradeStudentDict = new Dictionary<string, List<string>>();
             #region 依年級產生學生清單的SQL
-            foreach (DataGridViewRow row in dgvStudentList.Rows)
+            foreach (ConfirmStudentRow row in confirm.List.Rows)
             {
-                string gr = row.Cells[4].Value + "";
+                if (row == null || row.Group == null)
+                    continue;
+                string yearName = row.Group.GetWorking(RankKinds.Year).GroupName ?? "";
+                string gr = yearName;
                 #region 單筆學生資料的SQL
                 string studentSql = @"
 SELECT
-'" + ("" + row.Tag).Replace("'", "''") + @"'::BIGINT AS student_id
-, '" + ("" + row.Cells[3].Value).Replace("'", "''") + @"'::TEXT AS student_name
-, '" + ("" + row.Cells[4].Value).Trim('年', '級').Replace("'", "''") + @"'::INT AS rank_grade_year
-, '" + ("" + row.Cells[5].Value).Replace("'", "''") + @"'::TEXT AS rank_dept_name
-, '" + ("" + row.Cells[6].Value).Replace("'", "''") + @"'::TEXT AS rank_class_name
-, '" + ("" + row.Cells[7].Value).Replace("'", "''") + @"'::TEXT AS rank_tag1
-, '" + ("" + row.Cells[8].Value).Replace("'", "''") + @"'::TEXT AS rank_tag2
+'" + ("" + row.Group.StudentId).Replace("'", "''") + @"'::BIGINT AS student_id
+, '" + ("" + row.Group.StudentName).Replace("'", "''") + @"'::TEXT AS student_name
+, '" + yearName.Trim('年', '級').Replace("'", "''") + @"'::INT AS rank_grade_year
+, '" + ("" + row.Group.GetWorking(RankKinds.Department).GroupName).Replace("'", "''") + @"'::TEXT AS rank_dept_name
+, '" + ("" + row.Group.GetWorking(RankKinds.Class).GroupName).Replace("'", "''") + @"'::TEXT AS rank_class_name
+, '" + ("" + row.Group.GetWorking(RankKinds.Tag1).GroupName).Replace("'", "''") + @"'::TEXT AS rank_tag1
+, '" + ("" + row.Group.GetWorking(RankKinds.Tag2).GroupName).Replace("'", "''") + @"'::TEXT AS rank_tag2
 ";
                 #endregion
 
@@ -507,7 +1267,7 @@ SELECT
             {
                 XmlDocument document = new XmlDocument();
                 XmlElement configEle = document.CreateElement("Setting");
-                configEle.SetAttribute("考試名稱", lbExam.Text);
+                configEle.SetAttribute("考試名稱", request.TargetExamName);
                 configEle.SetAttribute("不排名學生類別", cboStudentFilter.Text);
                 configEle.SetAttribute("類別一", cboStudentTag1.Text);
                 configEle.SetAttribute("類別二", cboStudentTag2.Text);
@@ -575,36 +1335,14 @@ SELECT
             }
             #endregion
 
-            //List<string> studentSqlList = new List<string>();
-            //foreach (DataGridViewRow row in dgvStudentList.Rows)
-            //        {
-            //            //每一筆學生先組好先加進List裡
-            //            studentSqlList.Add(@"
-            //SELECT
-            //    '" + ("" + row.Tag).Replace("'", "''") + @"'::BIGINT AS student_id
-            //    ,'" + ("" + row.Cells[3].Value).Replace("'", "''") + @"'::TEXT AS student_name
-            //    ,'" + ("" + row.Cells[4].Value).Trim('年', '級').Replace("'", "''") + @"'::INT AS rank_grade_year
-            //    ,'" + ("" + row.Cells[5].Value).Replace("'", "''") + @"'::TEXT AS rank_dept_name
-            //    ,'" + ("" + row.Cells[6].Value).Replace("'", "''") + @"'::TEXT AS rank_class_name
-            //    ,'" + ("" + row.Cells[7].Value).Replace("'", "''") + @"'::TEXT AS rank_tag1
-            //    ,'" + ("" + row.Cells[8].Value).Replace("'", "''") + @"'::TEXT AS rank_tag2
-            //");
-            //        }
-
-            btnCacluate.Enabled = false;
-            btnPrevious.Enabled = false;
-            string schoolYear = lbSchoolYear.Text;
-            string semester = lbSemester.Text;
-            string examName = lbExam.Text;
-            string examId = _ExamList.First(x => x.Name == examName).ID;
+            string schoolYear = request.TargetSchoolYear;
+            string semester = request.TargetSemester;
+            string examName = request.TargetExamName;
+            string examId = request.TargetExamId;
             string tag1 = cboStudentTag1.Text.Trim('[', ']');
             string tag2 = cboStudentTag2.Text.Trim('[', ']');
             string studentFilter = cboStudentFilter.Text.Trim('[', ']');
-            List<int> gradeYearList = new List<int>();
-            foreach (CheckBox checkBox in _CheckBoxList)
-            {
-                gradeYearList.Add(Convert.ToInt32(checkBox.Text.Trim('年', '級')));
-            }
+            List<int> gradeYearList = new List<int>(request.GradeYears);
 
             List<string> selSubjetList = new List<string>();
             List<string> selSubjetTag1List = new List<string>();
@@ -645,7 +1383,6 @@ SELECT
             Exception bkwException = null;
             BackgroundWorker bkw = new BackgroundWorker();
             bkw.WorkerReportsProgress = true;
-            pbLoading.Visible = true;
 
             bkw.ProgressChanged += delegate (object s1, ProgressChangedEventArgs e1)
             {
@@ -877,7 +1614,7 @@ WITH row AS (
 			ON course.school_year = row.rank_school_year::int
 			AND course.semester = row.rank_semester::int
 			AND student_row.rank_grade_year = row.rank_grade_year::int
-			AND exam.exam_name= row.rank_exam_name
+			AND exam.id = row.ref_exam_id::INT
 	WHERE 
         sce_take.score IS NOT NULL
         AND sce_take.score <> -2
@@ -2594,16 +3331,14 @@ SELECT count(*) FROM score_list
             {
                 if (bkwException != null)
                 {
-                    btnCacluate.Enabled = true;
-                    btnPrevious.Enabled = true;
                     throw new Exception("計算排名失敗", bkwException);
                 }
                 MessageBox.Show("計算完成");
                 MotherForm.SetStatusBarMessage("排名計算完成");
-                pbLoading.Visible = false;
-                btnCacluate.Enabled = true;
-                btnPrevious.Enabled = true;
-                this.Close();
+                if (confirm != null && !confirm.IsDisposed)
+                    confirm.HideForHost();
+                Enabled = true;
+                Close();
             };
 
             bkw.RunWorkerAsync();
@@ -2624,6 +3359,7 @@ SELECT count(*) FROM score_list
             {
                 cboStudentTag1.SelectedIndex = 0;
             }
+            RegularPeriodSourceChanged(sender, e);
         }
 
         private void cboStudentTag2_SelectedIndexChanged(object sender, EventArgs e)
@@ -2632,6 +3368,7 @@ SELECT count(*) FROM score_list
             {
                 cboStudentTag2.SelectedIndex = 0;
             }
+            RegularPeriodSourceChanged(sender, e);
         }
 
         private void cboStudentFilter_SelectedIndexChanged(object sender, EventArgs e)
@@ -2640,41 +3377,8 @@ SELECT count(*) FROM score_list
             {
                 cboStudentFilter.SelectedIndex = 0;
             }
+            RegularPeriodSourceChanged(sender, e);
         }
 
-        private void btnImport_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnExport_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnPrevious_Click(object sender, EventArgs e)
-        {
-            #region 清除Panel裡的CheckBox
-            foreach (CheckBox checkBox in _CheckBoxList)
-            {
-                plStudentView.Controls.Remove(checkBox);
-            }
-            #endregion
-
-            btnCacluate.Enabled = true;
-            plSetting.Visible = true;
-            plStudentView.Visible = false;
-            _CheckBoxList = new List<CheckBox>();
-            if (dgvStudentList.Rows.Count > 0)
-            {
-                dgvStudentList.Rows.Clear();
-            }
-        }
-
-        private void CalculateRegularAssessmentRank_Resize(object sender, EventArgs e)
-        {
-            //調整Loading圖案的位置
-            pbLoading.Location = new Point(this.Width / 2 - 20, this.Height / 2 - 20);
-        }
     }
 }

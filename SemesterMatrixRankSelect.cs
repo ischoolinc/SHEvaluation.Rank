@@ -1,6 +1,7 @@
 ﻿using Aspose.Cells;
 using FISCA.Data;
 using FISCA.Presentation.Controls;
+using SHEvaluation.Rank.MotherGroup;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,6 +18,9 @@ namespace SHEvaluation.Rank
     public partial class SemesterMatrixRankSelect : BaseForm
     {
         bool _IsLoading = false;
+        private bool _localDetailForCheck;
+        private bool _suppressBatchEvent;
+        private Dictionary<string, DataTable> _localBatches;
         string _RankName = "";
         private string _RankMatrixID = "";
         private string _RefStudentID = "";
@@ -37,6 +41,9 @@ namespace SHEvaluation.Rank
                 string rankName)
         {
             InitializeComponent();
+            MotherGroupConfirmGrid.InstallBoundedAccessibility(dgvScoreRank);
+            MotherGroupConfirmGrid.InstallBoundedAccessibility(dgvMatrixInfo);
+            MotherGroupConfirmGrid.InstallBoundedAccessibility(dgvMatrixInfo2);
             _RankMatrixID = rankMatrixId;
             _RefStudentID = refStudentID;
             lbSchoolYear.Text = schoolYear;
@@ -50,6 +57,8 @@ namespace SHEvaluation.Rank
 
         private void SemesterMatrixRankSelect_Load(object sender, EventArgs e)
         {
+            if (_localDetailForCheck)
+                return;
             try
             {
                 QueryHelper queryHelper = new QueryHelper();
@@ -260,6 +269,15 @@ ORDER BY
 
         private void LoadRowData(object sender, EventArgs e)
         {
+            if (_localDetailForCheck)
+            {
+                if (_suppressBatchEvent || cboBatchId.SelectedIndex < 0)
+                    return;
+                DataTable local;
+                if (_localBatches != null && _localBatches.TryGetValue(cboBatchId.Text, out local))
+                    FillScoreRank(local);
+                return;
+            }
             if (_IsLoading)
             {
                 return;
@@ -366,40 +384,7 @@ ORDER BY
                 {
                     try
                     {
-                        #region 塞資料進dataGridView
-                        List<DataGridViewRow> gridViewRowList = new List<DataGridViewRow>();
-                        dgvScoreRank.Rows.Clear();
-                        dgvScoreRank.SuspendLayout();
-                        for (int row = 0; row < dt.Rows.Count; row++)
-                        {
-                            int tryParseInt;
-                            decimal tryParseDecimal;
-                            DataGridViewRow gridViewRow = new DataGridViewRow();
-                            gridViewRow.CreateCells(dgvScoreRank);
-                            gridViewRow.Cells[0].Value = "" + dt.Rows[row]["rank_matrix_id"];
-                            gridViewRow.Cells[1].Value = "" + dt.Rows[row]["score_type"];
-                            gridViewRow.Cells[2].Value = "" + dt.Rows[row]["score_category"];
-                            gridViewRow.Cells[3].Value = "" + dt.Rows[row]["item_name"];
-                            gridViewRow.Cells[4].Value = "" + dt.Rows[row]["rank_type"];
-                            gridViewRow.Cells[5].Value = "" + dt.Rows[row]["rank_name"];
-                            gridViewRow.Cells[6].Value = "" + dt.Rows[row]["class_name"];
-                            gridViewRow.Cells[7].Value = Int32.TryParse("" + dt.Rows[row]["seat_no"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[8].Value = "" + dt.Rows[row]["student_number"];
-                            gridViewRow.Cells[9].Value = "" + dt.Rows[row]["student_name"];
-                            gridViewRow.Cells[10].Value = "" + dt.Rows[row]["student_status"];
-                            gridViewRow.Cells[11].Value = Decimal.TryParse("" + dt.Rows[row]["score"], out tryParseDecimal) ? (decimal?)tryParseDecimal : null;
-                            gridViewRow.Cells[12].Value = Int32.TryParse("" + dt.Rows[row]["rank"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[13].Value = Int32.TryParse("" + dt.Rows[row]["pr"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[14].Value = Int32.TryParse("" + dt.Rows[row]["percentile"], out tryParseInt) ? (int?)tryParseInt : null;
-                            gridViewRow.Cells[15].Value = "" + dt.Rows[row]["school_year"];
-                            gridViewRow.Cells[16].Value = "" + dt.Rows[row]["semester"];
-                            gridViewRowList.Add(gridViewRow);
-                        }
-                        dgvScoreRank.Rows.AddRange(gridViewRowList.ToArray());
-                        dgvScoreRank.ResumeLayout();
-                        #endregion
-
-                        lbMemo.Text = "" + dt.Rows[0]["memo"];
+                        FillScoreRank(dt);
                     }
                     catch (Exception ex)
                     {
@@ -411,6 +396,42 @@ ORDER BY
             bkw.RunWorkerAsync();
 
             _IsLoading = false;
+        }
+
+        private void FillScoreRank(DataTable dt)
+        {
+            List<DataGridViewRow> gridViewRowList = new List<DataGridViewRow>();
+            dgvScoreRank.Rows.Clear();
+            dgvScoreRank.SuspendLayout();
+            for (int row = 0; row < dt.Rows.Count; row++)
+            {
+                int tryParseInt;
+                decimal tryParseDecimal;
+                DataGridViewRow gridViewRow = MotherGroupConfirmGrid.CreateBoundedRow(dgvScoreRank);
+                gridViewRow.CreateCells(dgvScoreRank);
+                gridViewRow.Cells[0].Value = "" + dt.Rows[row]["rank_matrix_id"];
+                gridViewRow.Cells[1].Value = "" + dt.Rows[row]["score_type"];
+                gridViewRow.Cells[2].Value = "" + dt.Rows[row]["score_category"];
+                gridViewRow.Cells[3].Value = "" + dt.Rows[row]["item_name"];
+                gridViewRow.Cells[4].Value = "" + dt.Rows[row]["rank_type"];
+                gridViewRow.Cells[5].Value = "" + dt.Rows[row]["rank_name"];
+                gridViewRow.Cells[6].Value = "" + dt.Rows[row]["class_name"];
+                gridViewRow.Cells[7].Value = Int32.TryParse("" + dt.Rows[row]["seat_no"], out tryParseInt) ? (int?)tryParseInt : null;
+                gridViewRow.Cells[8].Value = "" + dt.Rows[row]["student_number"];
+                gridViewRow.Cells[9].Value = "" + dt.Rows[row]["student_name"];
+                gridViewRow.Cells[10].Value = "" + dt.Rows[row]["student_status"];
+                gridViewRow.Cells[11].Value = Decimal.TryParse("" + dt.Rows[row]["score"], out tryParseDecimal) ? (decimal?)tryParseDecimal : null;
+                gridViewRow.Cells[12].Value = Int32.TryParse("" + dt.Rows[row]["rank"], out tryParseInt) ? (int?)tryParseInt : null;
+                gridViewRow.Cells[13].Value = Int32.TryParse("" + dt.Rows[row]["pr"], out tryParseInt) ? (int?)tryParseInt : null;
+                gridViewRow.Cells[14].Value = Int32.TryParse("" + dt.Rows[row]["percentile"], out tryParseInt) ? (int?)tryParseInt : null;
+                gridViewRow.Cells[15].Value = "" + dt.Rows[row]["school_year"];
+                gridViewRow.Cells[16].Value = "" + dt.Rows[row]["semester"];
+                gridViewRowList.Add(gridViewRow);
+            }
+            dgvScoreRank.Rows.AddRange(gridViewRowList.ToArray());
+            dgvScoreRank.ResumeLayout();
+            if (dt.Rows.Count > 0)
+                lbMemo.Text = "" + dt.Rows[0]["memo"];
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -485,6 +506,75 @@ ORDER BY
         {
             Manual manual = new Manual();
             manual.ShowDialog();
+        }
+
+        internal void UseLocalDetailForCheck()
+        {
+            _localDetailForCheck = true;
+            _localBatches = new Dictionary<string, DataTable>();
+        }
+
+        internal void AddLocalBatchForCheck(string key, DataTable detail)
+        {
+            _suppressBatchEvent = true;
+            _localBatches[key] = detail;
+            cboBatchId.Items.Add(key);
+            _suppressBatchEvent = false;
+        }
+
+        internal void SelectBatchForCheck(string key)
+        {
+            cboBatchId.SelectedItem = key;
+        }
+
+        internal DataGridView DetailGridForCheck()
+        {
+            return dgvScoreRank;
+        }
+
+        internal int DetailCountForCheck()
+        {
+            return dgvScoreRank.Rows.Count;
+        }
+
+        internal string DetailCellForCheck(int rowIndex, int columnIndex)
+        {
+            return "" + dgvScoreRank[columnIndex, rowIndex].Value;
+        }
+
+        internal void ScrollDetailForCheck(int rowIndex)
+        {
+            dgvScoreRank.FirstDisplayedScrollingRowIndex = rowIndex;
+        }
+
+        internal void ExportDetailForCheck(string path)
+        {
+            Workbook workbook = new Workbook();
+            Worksheet worksheet = workbook.Worksheets[0];
+            worksheet.Name = "排名母群資料";
+            int colIndex = 0;
+            foreach (DataGridViewColumn column in dgvScoreRank.Columns)
+            {
+                if (!column.Visible)
+                    continue;
+                worksheet.Cells[0, colIndex].PutValue(column.HeaderText);
+                colIndex++;
+            }
+            colIndex = 0;
+            foreach (DataGridViewColumn column in dgvScoreRank.Columns)
+            {
+                if (!column.Visible)
+                    continue;
+                for (int rowIndex = 0; rowIndex < dgvScoreRank.Rows.Count; rowIndex++)
+                    worksheet.Cells[rowIndex + 1, colIndex].PutValue("" + dgvScoreRank[column.Index, rowIndex].Value);
+                colIndex++;
+            }
+            workbook.Save(path);
+        }
+
+        internal void LeaveForCheck()
+        {
+            btnExit.PerformClick();
         }
     }
 }

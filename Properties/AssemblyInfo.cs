@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("SHEvaluation.Rank")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("定期評量完整功能實作版，主機整合待驗證；寫入僅限 debug6 且須通過執行當下傳輸檢查。")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("SHEvaluation.Rank")]
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.52")]
-[assembly: AssemblyFileVersion("1.0.0.52")]
+[assembly: AssemblyVersion("1.0.0.67")]
+[assembly: AssemblyFileVersion("1.0.0.67")]

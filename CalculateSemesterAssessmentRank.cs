@@ -1,4 +1,4 @@
-﻿using FISCA.Data;
+using FISCA.Data;
 using FISCA.Presentation;
 using FISCA.Presentation.Controls;
 using K12.Data;
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
 using System.Xml;
 using SHEvaluation.Rank.MotherGroup;
 
@@ -31,9 +32,29 @@ namespace SHEvaluation.Rank
         bool _confirmEventsReady;
         bool _bindingHistoryBatch;
         bool _historySourceEventsReady;
+        bool _applyingCalculationPeriod;
+        readonly EditableCalculationPeriodMemory _editableCalculation = new EditableCalculationPeriodMemory();
         bool _screenLoadQueued;
         bool _screenLoadSettled;
+        bool _screenLoadFailed;
         bool _nextStepRunning;
+        int _historyLoadGeneration;
+        volatile bool _settingsPageClosed;
+        bool _historyInputsLocked;
+        SemesterRankConfirmRequest _frozenHistoryRequest;
+        BackgroundWorker _historyLoadWorker;
+        static Func<DataTable> _historyBatchQuery;
+        static Action<string> _historyBatchFailureDialog;
+
+        internal static void SetHistoryBatchQuery(Func<DataTable> query)
+        {
+            _historyBatchQuery = query;
+        }
+
+        internal static void SetHistoryBatchFailureDialog(Action<string> dialog)
+        {
+            _historyBatchFailureDialog = dialog;
+        }
         bool _rankCalculationRunning;
         bool _capturingCalculationEdit;
         bool _calculationUiDisabled;
@@ -56,6 +77,8 @@ namespace SHEvaluation.Rank
         TextBox _txtAddStudentNumber;
         Button _btnAddHistoryStudent;
         const string ScreenLoadReadyText = "說明：班、科、年排名會自動計算。分項成績擇優項目請參考成績計算規則。";
+        const string NoHistoryBatchText = SemesterRankSourceChrome.NoSemesterBatchText;
+        const string HistoryBatchQueryFailureText = "歷史批次清單讀取失敗。";
         public CalculateSemesterAssessmentRank()
         {
             InitializeComponent();
@@ -67,6 +90,7 @@ namespace SHEvaluation.Rank
             plStudentView.Visible = false;
             btnNext.Enabled = false;
             labelX6.Text = "正在初始化畫面…";
+            ApplySourceVisibility();
         }
 
         protected override void OnShown(EventArgs e)
@@ -143,6 +167,7 @@ namespace SHEvaluation.Rank
                 CalculationPeriodBinder.Apply(_nudCalcSchoolYear, _cboCalcSemester, _cboMotherGroupSource, _nudHistorySchoolYear, _cboHistorySemester, _calculationPeriod);
                 EnsureHistorySourceEvents();
                 ApplyCalculationPeriodEditors();
+                ApplySourceVisibility();
             }
             catch (Exception ex)
             {
@@ -285,10 +310,26 @@ namespace SHEvaluation.Rank
 
         private void PublishConfirmRequest()
         {
+            PublishConfirmRequest(null);
+        }
+
+        private void PublishConfirmRequest(SemesterRankConfirmRequest request)
+        {
             if (plStudentView == null)
                 return;
-            plStudentView.Request = CreateConfirmRequest();
+            plStudentView.Request = request ?? CreateConfirmRequest();
             ShowConfirmForm();
+        }
+
+        private SemesterRankConfirmRequest FreezeConfirmRequest()
+        {
+            SemesterRankConfirmRequest request = CreateConfirmRequest();
+            request.Students = request.Students == null ? new List<StudentRecord>() : new List<StudentRecord>(request.Students);
+            request.Tags = request.Tags == null ? new List<TagConfigRecord>() : new List<TagConfigRecord>(request.Tags);
+            request.GradeYears = request.GradeYears == null ? new List<int>() : new List<int>(request.GradeYears);
+            request.GradeSelections = request.GradeSelections == null ? new List<string>() : new List<string>(request.GradeSelections);
+            request.RankTypes = request.RankTypes == null ? null : new List<string>(request.RankTypes);
+            return request;
         }
 
         private void ShowConfirmForm()
@@ -342,6 +383,8 @@ namespace SHEvaluation.Rank
                 _screenLoadErrorTip.SetToolTip(labelX6, "");
             if (enableNext && _screenLoadSettled)
                 btnNext.Enabled = true;
+            if (enableNext)
+                ApplyHistoryNextGate();
         }
 
         private void FinishScreenLoad()
@@ -354,8 +397,8 @@ namespace SHEvaluation.Rank
                 _screenLoadErrorTip.SetToolTip(labelX6, "");
             _nudCalcSchoolYear.Visible = true;
             _cboCalcSemester.Visible = true;
-            _cboHistorySemester.Visible = true;
             btnNext.Enabled = true;
+            ApplyHistoryNextGate();
         }
 
         private void FailScreenLoad(string stage, Exception ex)
@@ -363,6 +406,7 @@ namespace SHEvaluation.Rank
             if (_screenLoadSettled)
                 return;
             _screenLoadSettled = true;
+            _screenLoadFailed = true;
             _TagList = new List<TagConfigRecord>();
             _StudentList = new List<StudentRecord>();
             _GradeYearList = new List<int>();
@@ -378,7 +422,6 @@ namespace SHEvaluation.Rank
             listGradeYear.Items.Clear();
             _nudCalcSchoolYear.Visible = false;
             _cboCalcSemester.Visible = false;
-            _cboHistorySemester.Visible = false;
             btnNext.Enabled = false;
             string reason = ex == null || string.IsNullOrEmpty(ex.Message) ? "未知錯誤" : ex.Message;
             string message = "載入" + stage + "失敗：" + reason;
@@ -432,44 +475,255 @@ namespace SHEvaluation.Rank
             _historySourceEventsReady = true;
             _cboMotherGroupSource.SelectedIndexChanged += delegate
             {
+                if (_historyInputsLocked)
+                    return;
                 ApplyCalculationPeriodEditors();
+                ApplySourceVisibility();
                 if (!IsHistorySourceSelected())
                 {
+                    SetHistoryFiltersEnabled(false);
                     if (_cboHistoryBatch != null)
                     {
                         _bindingHistoryBatch = true;
                         _cboHistoryBatch.SelectedIndex = -1;
-                        _cboHistoryBatch.Enabled = false;
+                        _cboHistoryBatch.Items.Clear();
                         _bindingHistoryBatch = false;
                     }
                     if (_calculationPeriod != null)
                         _calculationPeriod.ClearHistoryBatch();
+                    ApplyHistoryNextGate();
                     return;
                 }
-                _cboHistoryBatch.Enabled = true;
+                SetHistoryFiltersEnabled(true);
                 try
                 {
-                    LoadHistoryBatches();
+                    LoadHistoryBatches(true);
                 }
                 catch (Exception ex)
                 {
                     ClearFailedHistorySelection();
-                    MessageBox.Show("歷史批次清單讀取失敗。\n" + ex.Message);
+                    ReportHistoryBatchQueryFailure(ex);
                 }
+            };
+            _nudHistorySchoolYear.ValueChanged += delegate { OnHistoryPeriodChanged(); };
+            _cboHistorySemester.SelectedIndexChanged += delegate { OnHistoryPeriodChanged(); };
+            _nudCalcSchoolYear.ValueChanged += delegate
+            {
+                if (_historyInputsLocked)
+                    return;
+                OnEditableCalculationChanged();
+            };
+            _cboCalcSemester.SelectedIndexChanged += delegate
+            {
+                if (_historyInputsLocked)
+                    return;
+                OnEditableCalculationChanged();
             };
             _cboHistoryBatch.SelectedIndexChanged += delegate
             {
-                if (_bindingHistoryBatch || _calculationPeriod == null || _cboHistoryBatch == null)
+                if (_historyInputsLocked || _bindingHistoryBatch || _calculationPeriod == null || _cboHistoryBatch == null)
                     return;
                 HistoryRankBatch selected = _cboHistoryBatch.SelectedItem as HistoryRankBatch;
                 if (selected == null)
                 {
-                    _calculationPeriod.ClearHistoryBatch();
+                    _calculationPeriod.ClearHistoryBatchSelection();
+                    ApplyHistoryNextGate();
                     return;
                 }
-                _calculationPeriod.RememberHistoryBatch(selected.Id, selected.SchoolYear, selected.Semester);
-                ShowHistoryPeriod(selected.SchoolYear, selected.Semester);
+                _calculationPeriod.SelectHistoryBatch(selected.Id);
+                if (labelX6 != null && IsHistoryMotherGroupLoadFailure(labelX6.Text))
+                    labelX6.Text = ScreenLoadReadyText;
+                ApplyHistoryNextGate();
             };
+        }
+
+        private string SelectedSourceName()
+        {
+            if (_cboMotherGroupSource == null || _cboMotherGroupSource.SelectedItem == null)
+                return CalculationPeriod.CurrentSourceName;
+            return _cboMotherGroupSource.SelectedItem.ToString();
+        }
+
+        private void ApplySourceVisibility()
+        {
+            string source = SelectedSourceName();
+            bool history = source == CalculationPeriod.HistorySourceName;
+            bool excel = source == CalculationPeriod.ExcelSourceName;
+            bool current = source == CalculationPeriod.CurrentSourceName;
+            SetControlVisible(history, _lblHistoryYearCaption, _nudHistorySchoolYear, _lblHistorySemesterCaption, _cboHistorySemester, _lblHistoryBatchCaption, _cboHistoryBatch);
+            SetControlVisible(excel, _btnDownloadExcelTemplate, _btnExcelFillGuide);
+            SetControlVisible(current, labelX4, cboStudentTag1, labelX5, cboStudentTag2);
+            if (_lblGradeYearHint != null)
+            {
+                if (history)
+                    _lblGradeYearHint.Text = SemesterRankSourceChrome.HistoryGradeHint;
+                else if (excel)
+                    _lblGradeYearHint.Text = SemesterRankSourceChrome.ExcelGradeHint;
+                else
+                    _lblGradeYearHint.Text = SemesterRankSourceChrome.CurrentGradeHint;
+            }
+            if (btnNext != null && !_nextStepRunning)
+                btnNext.Text = excel ? SemesterRankSourceChrome.ExcelNextText : SemesterRankSourceChrome.NextText;
+            LayoutConditionPage();
+            ApplyHistoryNextGate();
+        }
+
+        private static void SetControlVisible(bool visible, params Control[] controls)
+        {
+            if (controls == null)
+                return;
+            foreach (Control control in controls)
+            {
+                if (control != null)
+                    control.Visible = visible;
+            }
+        }
+
+        private void LayoutConditionPage()
+        {
+            if (gpRankPeople == null || btnNext == null)
+                return;
+            int top = _lblCalcPeriodHint != null ? _lblCalcPeriodHint.Bottom + 8 : gpRankPeople.Top;
+            if (_cboHistoryBatch != null && _cboHistoryBatch.Visible)
+                top = _cboHistoryBatch.Bottom + 8;
+            else if (_btnDownloadExcelTemplate != null && _btnDownloadExcelTemplate.Visible)
+                top = _btnDownloadExcelTemplate.Bottom + 8;
+            int height = btnNext.Top - 8 - top;
+            if (height < 160)
+                height = 160;
+            gpRankPeople.SetBounds(gpRankPeople.Left, top, gpRankPeople.Width, height);
+        }
+
+        private bool CanUpdateSourceGate()
+        {
+            return _screenLoadSettled && !_screenLoadFailed && !_nextStepRunning && btnNext != null;
+        }
+
+        private void ApplyHistoryNextGate()
+        {
+            if (!CanUpdateSourceGate())
+                return;
+            if (!IsHistorySourceSelected())
+            {
+                if (labelX6 != null && (labelX6.Text == NoHistoryBatchText || IsHistoryBatchQueryFailure(labelX6.Text)))
+                    labelX6.Text = ScreenLoadReadyText;
+                btnNext.Enabled = true;
+                return;
+            }
+            bool hasBatch = _cboHistoryBatch != null && _cboHistoryBatch.Items.Count > 0;
+            bool selected = _cboHistoryBatch != null && _cboHistoryBatch.SelectedItem is HistoryRankBatch;
+            btnNext.Enabled = hasBatch && selected;
+            if (labelX6 == null)
+                return;
+            if (!hasBatch)
+            {
+                if (!IsHistoryBatchQueryFailure(labelX6.Text))
+                    labelX6.Text = NoHistoryBatchText;
+            }
+            else if (labelX6.Text == NoHistoryBatchText || IsHistoryBatchQueryFailure(labelX6.Text))
+                labelX6.Text = ScreenLoadReadyText;
+        }
+
+        private void OnEditableCalculationChanged()
+        {
+            if (_applyingCalculationPeriod || SelectedSourceName() == CalculationPeriod.CurrentSourceName)
+                return;
+            RememberEditableCalculation();
+        }
+
+        private void RememberEditableCalculation()
+        {
+            if (_nudCalcSchoolYear == null)
+                return;
+            string semester = _cboCalcSemester == null || _cboCalcSemester.SelectedItem == null
+                ? "1"
+                : _cboCalcSemester.SelectedItem.ToString();
+            _editableCalculation.Remember(decimal.ToInt32(_nudCalcSchoolYear.Value).ToString(), semester);
+        }
+
+        private void ShowEditableCalculation()
+        {
+            if (!_editableCalculation.HasValue || _nudCalcSchoolYear == null)
+                return;
+            _applyingCalculationPeriod = true;
+            try
+            {
+                int yearNumber;
+                if (int.TryParse(_editableCalculation.SchoolYear, out yearNumber)
+                    && yearNumber >= _nudCalcSchoolYear.Minimum
+                    && yearNumber <= _nudCalcSchoolYear.Maximum)
+                    _nudCalcSchoolYear.Value = yearNumber;
+                if (_cboCalcSemester != null && _cboCalcSemester.Items.Contains(_editableCalculation.Semester))
+                    _cboCalcSemester.SelectedItem = _editableCalculation.Semester;
+                if (_calculationPeriod != null)
+                    _calculationPeriod.SetCalculationPeriod(_editableCalculation.SchoolYear, _editableCalculation.Semester);
+            }
+            finally
+            {
+                _applyingCalculationPeriod = false;
+            }
+        }
+
+        private void btnDownloadExcelTemplate_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.Title = "下載匯入範本";
+            dialog.Filter = "Excel (*.xlsx)|*.xlsx";
+            dialog.FileName = "學期排名母群匯入範本.xlsx";
+            dialog.OverwritePrompt = true;
+            if (dialog.ShowDialog() != DialogResult.OK)
+                return;
+            try
+            {
+                MotherGroupExcelExchange.SaveWorkbook(dialog.FileName, MotherGroupExcelExchange.CreateBlankTemplate());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("匯入範本儲存失敗。\n" + ex.Message);
+            }
+        }
+
+        private void btnExcelFillGuide_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show(MotherGroupExcelExchange.FillGuideText, "填寫說明");
+        }
+
+        private void SetHistoryFiltersEnabled(bool enabled)
+        {
+            if (_nudHistorySchoolYear != null)
+                _nudHistorySchoolYear.Enabled = enabled;
+            if (_cboHistorySemester != null)
+                _cboHistorySemester.Enabled = enabled;
+            if (_cboHistoryBatch != null)
+                _cboHistoryBatch.Enabled = enabled;
+        }
+
+        private void OnHistoryPeriodChanged()
+        {
+            if (_historyInputsLocked || _bindingHistoryBatch || !_historySourceEventsReady || !IsHistorySourceSelected())
+                return;
+            SyncHistoryPeriodFromControls();
+            if (_calculationPeriod != null)
+                _calculationPeriod.ClearHistoryBatchSelection();
+            try
+            {
+                LoadHistoryBatches(false);
+            }
+            catch (Exception ex)
+            {
+                ClearFailedHistorySelection();
+                ReportHistoryBatchQueryFailure(ex);
+            }
+        }
+
+        private void SyncHistoryPeriodFromControls()
+        {
+            if (_calculationPeriod == null || _nudHistorySchoolYear == null)
+                return;
+            string semester = _cboHistorySemester == null || _cboHistorySemester.SelectedItem == null
+                ? ""
+                : _cboHistorySemester.SelectedItem.ToString();
+            _calculationPeriod.SetHistoryPeriod(decimal.ToInt32(_nudHistorySchoolYear.Value).ToString(), semester);
         }
 
         private bool IsCurrentSourceSelected()
@@ -483,9 +737,19 @@ namespace SHEvaluation.Rank
         {
             if (_nudCalcSchoolYear == null || _cboCalcSemester == null)
                 return;
-            if (IsCurrentSourceSelected())
+            if (SelectedSourceName() == CalculationPeriod.CurrentSourceName)
             {
-                CalculationPeriodBinder.RestoreSystemPeriod(_nudCalcSchoolYear, _cboCalcSemester, _calculationPeriod, _DefaultSchoolYear, _DefaultSemester);
+                if (_nudCalcSchoolYear.Enabled)
+                    RememberEditableCalculation();
+                _applyingCalculationPeriod = true;
+                try
+                {
+                    CalculationPeriodBinder.RestoreSystemPeriod(_nudCalcSchoolYear, _cboCalcSemester, _calculationPeriod, _DefaultSchoolYear, _DefaultSemester);
+                }
+                finally
+                {
+                    _applyingCalculationPeriod = false;
+                }
                 _nudCalcSchoolYear.Enabled = false;
                 _cboCalcSemester.Enabled = false;
                 return;
@@ -494,6 +758,7 @@ namespace SHEvaluation.Rank
             {
                 _nudCalcSchoolYear.Enabled = true;
                 _cboCalcSemester.Enabled = true;
+                ShowEditableCalculation();
             }
         }
 
@@ -620,12 +885,17 @@ namespace SHEvaluation.Rank
                 && _cboMotherGroupSource.SelectedItem.ToString() == CalculationPeriod.HistorySourceName;
         }
 
-        private void LoadHistoryBatches()
+        private void LoadHistoryBatches(bool keepSelection)
         {
-            string previousId = _calculationPeriod == null ? "" : _calculationPeriod.HistoryBatchId;
-            QueryHelper queryHelper = new QueryHelper();
-            DataTable table = queryHelper.Select(SemesterHistoryBatchCatalog.SelectSql);
-            List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.Read(table);
+            SyncHistoryPeriodFromControls();
+            string previousId = keepSelection && _calculationPeriod != null ? _calculationPeriod.HistoryBatchId : "";
+            // 未設定時走資料庫。表單事件測試才代入批次表，避免連到學校資料庫。
+            DataTable table = _historyBatchQuery != null
+                ? _historyBatchQuery()
+                : new QueryHelper().Select(SemesterHistoryBatchCatalog.SelectSql);
+            string filterYear = _nudHistorySchoolYear == null ? "" : decimal.ToInt32(_nudHistorySchoolYear.Value).ToString();
+            string filterSemester = _cboHistorySemester == null || _cboHistorySemester.SelectedItem == null ? "" : _cboHistorySemester.SelectedItem.ToString();
+            List<HistoryRankBatch> batches = SemesterHistoryBatchCatalog.FilterPeriod(SemesterHistoryBatchCatalog.Read(table), filterYear, filterSemester);
             SemesterHistoryBatchCatalog.SortByIdDescending(batches);
             HistoryRankBatch reselect = null;
             _cboHistoryBatch.Sorted = false;
@@ -645,15 +915,16 @@ namespace SHEvaluation.Rank
                 _bindingHistoryBatch = false;
             }
             _cboHistoryBatch.SelectedItem = reselect;
-        }
-
-        private void ShowHistoryPeriod(string schoolYear, string semester)
-        {
-            int yearNumber;
-            if (_nudHistorySchoolYear != null && int.TryParse(schoolYear, out yearNumber) && yearNumber >= _nudHistorySchoolYear.Minimum && yearNumber <= _nudHistorySchoolYear.Maximum)
-                _nudHistorySchoolYear.Value = yearNumber;
-            if (_cboHistorySemester != null && (semester == "1" || semester == "2"))
-                _cboHistorySemester.SelectedItem = semester;
+            if (reselect == null && _calculationPeriod != null)
+                _calculationPeriod.ClearHistoryBatchSelection();
+            if (CanUpdateSourceGate() && labelX6 != null)
+            {
+                if (batches.Count == 0)
+                    labelX6.Text = NoHistoryBatchText;
+                else if (labelX6.Text == NoHistoryBatchText || IsHistoryBatchQueryFailure(labelX6.Text))
+                    labelX6.Text = ScreenLoadReadyText;
+            }
+            ApplyHistoryNextGate();
         }
 
         private void btnNext_Click(object sender, EventArgs e)
@@ -783,6 +1054,99 @@ namespace SHEvaluation.Rank
             #endregion
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            CancelHistorySnapshotLoad();
+            base.OnFormClosing(e);
+        }
+
+        private void CancelHistorySnapshotLoad()
+        {
+            _settingsPageClosed = true;
+            System.Threading.Interlocked.Increment(ref _historyLoadGeneration);
+            BackgroundWorker worker = _historyLoadWorker;
+            if (worker != null && worker.WorkerSupportsCancellation && worker.IsBusy)
+                worker.CancelAsync();
+        }
+
+        private int HistoryLoadGeneration()
+        {
+            return System.Threading.Interlocked.CompareExchange(ref _historyLoadGeneration, 0, 0);
+        }
+
+        private bool IsHistoryLoadCurrent(int generation)
+        {
+            if (generation != HistoryLoadGeneration())
+                return false;
+            if (_settingsPageClosed)
+                return false;
+            if (IsDisposed)
+                return false;
+            return true;
+        }
+
+        private void LockHistoryLoadInputs()
+        {
+            _historyInputsLocked = true;
+            if (_cboMotherGroupSource != null)
+                _cboMotherGroupSource.Enabled = false;
+            SetHistoryFiltersEnabled(false);
+            if (_nudCalcSchoolYear != null)
+                _nudCalcSchoolYear.Enabled = false;
+            if (_cboCalcSemester != null)
+                _cboCalcSemester.Enabled = false;
+            if (listGradeYear != null)
+                listGradeYear.Enabled = false;
+            if (cboStudentFilter != null)
+                cboStudentFilter.Enabled = false;
+            chbHandAdj.Enabled = false;
+            chbMakeUp.Enabled = false;
+            chbRetake.Enabled = false;
+            chbSYAdj.Enabled = false;
+        }
+
+        private void RestoreHistoryLoadInputs()
+        {
+            if (!_historyInputsLocked)
+                return;
+            _historyInputsLocked = false;
+            if (_cboMotherGroupSource != null)
+                _cboMotherGroupSource.Enabled = true;
+            SetHistoryFiltersEnabled(IsHistorySourceSelected());
+            ApplyCalculationPeriodEditors();
+            if (listGradeYear != null)
+                listGradeYear.Enabled = true;
+            if (cboStudentFilter != null)
+                cboStudentFilter.Enabled = true;
+            chbHandAdj.Enabled = true;
+            chbMakeUp.Enabled = true;
+            chbRetake.Enabled = true;
+            chbSYAdj.Enabled = true;
+        }
+
+        private void ShowHistoryLoadFailure(string failure)
+        {
+            if (_settingsPageClosed || IsDisposed)
+            {
+                _nextStepRunning = false;
+                return;
+            }
+            RestoreHistoryLoadInputs();
+            _frozenHistoryRequest = null;
+            ClearLoadedConfirmList();
+            btnPrevious.Enabled = true;
+            ReleaseNextStep(true);
+            if (labelX6 != null)
+                labelX6.Text = failure;
+            MessageBox.Show(failure);
+        }
+
+        private void RejectHistoryLoad(string batchId, string step, string reason)
+        {
+            ReleaseFailedHistoryPick();
+            ShowHistoryLoadFailure(HistoryRestoreLog.FailureMessage(batchId, step, reason));
+        }
+
         private void BeginHistorySnapshotRestore()
         {
             HistoryRankBatch selected = _cboHistoryBatch == null ? null : _cboHistoryBatch.SelectedItem as HistoryRankBatch;
@@ -792,9 +1156,25 @@ namespace SHEvaluation.Rank
                 MessageBox.Show("請選擇一筆歷史學期成績排名批次。");
                 return;
             }
+            string selectedType;
+            if (!SemesterHistoryBatchCatalog.TryClassifyExam(selected.ExamName, out selectedType))
+            {
+                ReleaseNextStep(true);
+                MessageBox.Show(HistorySnapshotRestore.UnrecognizedExamMessage);
+                return;
+            }
 
-            _calculationPeriod.RememberHistoryBatch(selected.Id, selected.SchoolYear, selected.Semester);
+            SyncHistoryPeriodFromControls();
+            if (selected.SchoolYear != _calculationPeriod.HistorySchoolYear || selected.Semester != _calculationPeriod.HistorySemester)
+            {
+                RejectHistoryLoad(selected.Id, HistoryRestoreLog.PeriodStep, SemesterHistoryPeriodGuard.MismatchMessage);
+                return;
+            }
+            _calculationPeriod.RememberHistoryBatch(selected.Id, _calculationPeriod.HistorySchoolYear, _calculationPeriod.HistorySemester);
             string batchId = selected.Id;
+            string failedStep = "";
+            string historyYear = _calculationPeriod.HistorySchoolYear;
+            string historySemester = _calculationPeriod.HistorySemester;
             // 年級與擇優採計已由下一步共用的 CaptureCalculationScope 依圖1重設。這裡不讀目前班級或年級。
             string calculationSchoolYear = _calculationPeriod.SchoolYear;
             string calculationSemester = _calculationPeriod.Semester;
@@ -809,6 +1189,7 @@ namespace SHEvaluation.Rank
 
             try
             {
+            _frozenHistoryRequest = FreezeConfirmRequest();
             ClearLoadedConfirmList();
             btnPrevious.Enabled = false;
             btnCacluate.Enabled = false;
@@ -821,16 +1202,34 @@ namespace SHEvaluation.Rank
                     studentsById.Add(student.ID, student);
             }
 
+            int generation = System.Threading.Interlocked.Increment(ref _historyLoadGeneration);
+            Func<bool> stillCurrent = delegate
+            {
+                return generation == HistoryLoadGeneration() && !_settingsPageClosed;
+            };
+            if (!IsHistoryLoadCurrent(generation))
+            {
+                _frozenHistoryRequest = null;
+                _nextStepRunning = false;
+                return;
+            }
+            LockHistoryLoadInputs();
+
             BackgroundWorker bkw = new BackgroundWorker();
+            _historyLoadWorker = bkw;
             bkw.WorkerReportsProgress = true;
+            bkw.WorkerSupportsCancellation = true;
             Exception bkwException = null;
             bool settingFound = false;
+            bool periodRejected = false;
             HistorySnapshotLoad load = null;
             HistoryRankLoad rankLoad = null;
+            HistoryRestoreLog trace = HistoryRestoreLog.Start(batchId);
+            Stopwatch stepWatch = new Stopwatch();
             bkw.ProgressChanged += delegate (object sender, ProgressChangedEventArgs args)
             {
                 string stage = args.UserState as string;
-                if (IsDisposed || string.IsNullOrEmpty(stage))
+                if (!IsHistoryLoadCurrent(generation) || string.IsNullOrEmpty(stage))
                     return;
                 labelX6.Text = stage;
             };
@@ -838,14 +1237,34 @@ namespace SHEvaluation.Rank
             {
                 try
                 {
+                    if (!stillCurrent())
+                        return;
                     bkw.ReportProgress(0, "正在讀取歷史批次及母群資料...");
                     QueryHelper queryHelper = new QueryHelper();
+                    failedStep = HistoryRestoreLog.PeriodStep;
+                    stepWatch.Restart();
+                    DataTable periodTable = queryHelper.Select(SemesterHistoryPeriodGuard.SelectSql(batchId));
+                    trace.Record(failedStep, stepWatch.ElapsedMilliseconds, periodTable == null ? 0 : periodTable.Rows.Count, "");
+                    if (!stillCurrent())
+                        return;
+                    if (!SemesterHistoryPeriodGuard.Matches(periodTable, batchId, historyYear, historySemester))
+                    {
+                        periodRejected = true;
+                        return;
+                    }
+                    failedStep = HistoryRestoreLog.SettingStep;
+                    stepWatch.Restart();
                     DataTable table = queryHelper.Select(HistorySnapshotRestore.SelectSettingSql(batchId));
                     string settingXml;
                     string extensionJson;
                     settingFound = HistorySnapshotRestore.TryReadBatch(table, batchId, out settingXml, out extensionJson);
+                    trace.Record(failedStep, stepWatch.ElapsedMilliseconds, table == null ? 0 : table.Rows.Count, "設定字元數=" + (settingXml == null ? 0 : settingXml.Length) + " 延伸字元數=" + (extensionJson == null ? 0 : extensionJson.Length));
+                    if (!stillCurrent())
+                        return;
                     if (!settingFound)
                         return;
+                    failedStep = HistoryRestoreLog.TagStep;
+                    stepWatch.Restart();
                     List<StudentTagLink> links = new List<StudentTagLink>();
                     foreach (StudentTagRecord tag in StudentTag.SelectAll())
                     {
@@ -858,46 +1277,98 @@ namespace SHEvaluation.Rank
                             Name = tag.Name
                         });
                     }
-                    load = HistorySnapshotRestore.LoadStored(batchId, extensionJson, settingXml, excludedCategory, tagDefinitions, links);
-                    if (load.Restored || load.Message != HistorySnapshotRestore.MissingSnapshotMessage)
+                    trace.Record(failedStep, stepWatch.ElapsedMilliseconds, links.Count, "");
+                    if (!stillCurrent())
                         return;
-                    bkw.ReportProgress(0, "正在讀取歷史批次及母群資料...");
-                    DataTable rankTable = queryHelper.Select(HistoryRankRestore.SelectBatchStudentSql(batchId));
+                    failedStep = HistoryRestoreLog.SettingStep;
+                    stepWatch.Restart();
+                    load = HistorySnapshotRestore.LoadSemester(batchId, extensionJson, settingXml, excludedCategory, tagDefinitions, links);
+                    if (load.Restored || load.Message != HistorySnapshotRestore.MissingSnapshotMessage)
+                    {
+                        trace.Record(HistoryRestoreLog.StudentStep, stepWatch.ElapsedMilliseconds, 0, load.Restored ? "未查排名學生" : "快照停止");
+                        return;
+                    }
+                    if (!stillCurrent())
+                        return;
+                    failedStep = HistoryRestoreLog.StudentStep;
+                    stepWatch.Restart();
+                    bkw.ReportProgress(0, "正在統計歷史排名學生...");
+                    int pageCount;
+                    bool discarded;
+                    DataTable rankTable = HistoryRankRestore.ReadBatchStudentTable(
+                        batchId,
+                        HistoryRankRestore.BatchStudentPageSize,
+                        delegate (string sql) { return queryHelper.Select(sql); },
+                        stillCurrent,
+                        delegate (int done, int total)
+                        {
+                            if (!stillCurrent())
+                                return;
+                            int percent = total <= 0 ? 0 : done * 100 / total;
+                            if (percent > 99)
+                                percent = 99;
+                            bkw.ReportProgress(percent, "正在讀取歷史排名學生（第 " + done.ToString() + " / " + total.ToString() + " 頁）");
+                        },
+                        out pageCount,
+                        out discarded);
+                    long queryMs = stepWatch.ElapsedMilliseconds;
+                    if (discarded || !stillCurrent())
+                    {
+                        rankTable = null;
+                        rankLoad = null;
+                        trace.Record(HistoryRestoreLog.StudentStep, queryMs, 0, "已停止後續分頁 頁數=" + pageCount.ToString());
+                        return;
+                    }
+                    stepWatch.Restart();
+                    bkw.ReportProgress(99, "正在合併歷史排名學生...");
                     rankLoad = HistoryRankRestore.ReadBatchStudents(batchId, rankTable, excludedCategory, tagDefinitions, links);
+                    long mergeMs = stepWatch.ElapsedMilliseconds;
+                    SemesterHistoryStudentParticipation.KeepYearDeptClassParticipating(rankLoad);
+                    trace.RecordStudentRead(queryMs, mergeMs, pageCount, rankTable == null ? 0 : rankTable.Rows.Count);
                 }
                 catch (Exception ex)
                 {
                     bkwException = ex;
+                    rankLoad = null;
+                    trace.Fail(failedStep, stepWatch.ElapsedMilliseconds, ex);
+                }
+                finally
+                {
+                    trace.Write();
                 }
             };
             bkw.RunWorkerCompleted += delegate
             {
-                if (IsDisposed)
+                if (!IsHistoryLoadCurrent(generation))
                 {
                     _nextStepRunning = false;
                     return;
                 }
+                if (periodRejected)
+                {
+                    ReleaseFailedHistoryPick();
+                    ShowHistoryLoadFailure(HistoryRestoreLog.FailureMessage(batchId, HistoryRestoreLog.PeriodStep, SemesterHistoryPeriodGuard.MismatchMessage));
+                    return;
+                }
                 if (bkwException != null || !settingFound)
                 {
-                    if (!settingFound)
-                        ClearFailedHistorySelection();
-                    ClearLoadedConfirmList();
-                    btnPrevious.Enabled = true;
-                    ReleaseNextStep(true);
-                    if (bkwException != null)
-                        MessageBox.Show("歷史批次設定讀取失敗。\n" + bkwException.Message);
-                    else
-                        MessageBox.Show("找不到所選的歷史批次，無法讀取設定。本次不會改用目前學生資料。");
+                    ReleaseFailedHistoryPick();
+                    string failure = bkwException == null
+                        ? HistoryRestoreLog.FailureMessage(batchId, HistoryRestoreLog.SettingStep, "找不到所選的歷史批次，無法讀取設定。本次不會改用目前學生資料。")
+                        : HistoryRestoreLog.FailureMessage(batchId, failedStep, bkwException);
+                    ShowHistoryLoadFailure(failure);
                     return;
                 }
                 if (load != null && load.Restored)
                 {
                     try
                     {
+                        RestoreHistoryLoadInputs();
                         plStudentView.Visible = true;
                         lbSchoolYear.Text = calculationSchoolYear;
                         lbSemester.Text = calculationSemester;
-                        PublishConfirmRequest();
+                        PublishConfirmRequest(_frozenHistoryRequest);
+                        _frozenHistoryRequest = null;
                         ShowConfirmList(load.Students, studentsById);
                     }
                     catch (Exception ex)
@@ -911,29 +1382,27 @@ namespace SHEvaluation.Rank
                 }
                 if (load == null || load.Message != HistorySnapshotRestore.MissingSnapshotMessage)
                 {
-                    ClearLoadedConfirmList();
-                    btnPrevious.Enabled = true;
-                    ReleaseNextStep(true);
-                    MessageBox.Show(load == null ? HistorySnapshotRestore.UnreadableSnapshotMessage : load.Message);
+                    ReleaseFailedHistoryPick();
+                    string restoreFailure = HistoryRestoreLog.FailureMessage(batchId, HistoryRestoreLog.SettingStep, load == null ? HistorySnapshotRestore.UnreadableSnapshotMessage : load.Message);
+                    ShowHistoryLoadFailure(restoreFailure);
                     return;
                 }
                 if (rankLoad == null || !rankLoad.Restored)
                 {
-                    ClearLoadedConfirmList();
-                    btnPrevious.Enabled = true;
-                    ReleaseNextStep(true);
-                    MessageBox.Show(rankLoad == null ? HistoryRankRestore.EmptyBatchMessage : rankLoad.Message);
+                    ReleaseFailedHistoryPick();
+                    string restoreFailure = HistoryRestoreLog.FailureMessage(batchId, HistoryRestoreLog.StudentStep, rankLoad == null ? HistoryRankRestore.EmptyBatchMessage : rankLoad.Message);
+                    ShowHistoryLoadFailure(restoreFailure);
                     return;
                 }
 
                 try
                 {
+                    RestoreHistoryLoadInputs();
                     plStudentView.Visible = true;
                     lbSchoolYear.Text = calculationSchoolYear;
                     lbSemester.Text = calculationSemester;
-                    PublishConfirmRequest();
-                    if (!string.IsNullOrEmpty(rankLoad.Notice))
-                        MessageBox.Show(rankLoad.Notice);
+                    PublishConfirmRequest(_frozenHistoryRequest);
+                    _frozenHistoryRequest = null;
                     ShowConfirmList(rankLoad.Students, studentsById);
                 }
                 catch (Exception ex)
@@ -944,12 +1413,22 @@ namespace SHEvaluation.Rank
                     MessageBox.Show("開啟母群確認畫面失敗。\n" + ex.Message);
                 }
             };
+            if (!IsHistoryLoadCurrent(generation))
+            {
+                _nextStepRunning = false;
+                return;
+            }
             bkw.RunWorkerAsync();
             }
             catch (Exception ex)
             {
-                ReleaseNextStep(true);
-                MessageBox.Show("歷史批次設定讀取失敗。\n" + ex.Message);
+                if (_settingsPageClosed || IsDisposed)
+                {
+                    _nextStepRunning = false;
+                    return;
+                }
+                ReleaseFailedHistoryPick();
+                ShowHistoryLoadFailure(HistoryRestoreLog.FailureMessage(batchId, failedStep.Length == 0 ? HistoryRestoreLog.PeriodStep : failedStep, ex));
             }
         }
 
@@ -1080,6 +1559,18 @@ namespace SHEvaluation.Rank
                 dgvStudentList.Rows.Clear();
         }
 
+        private void ReleaseFailedHistoryPick()
+        {
+            if (_cboHistoryBatch != null)
+            {
+                _bindingHistoryBatch = true;
+                _cboHistoryBatch.SelectedIndex = -1;
+                _bindingHistoryBatch = false;
+            }
+            if (_calculationPeriod != null)
+                _calculationPeriod.ClearHistoryBatchSelection();
+        }
+
         private void ClearFailedHistorySelection()
         {
             if (_cboHistoryBatch != null)
@@ -1090,7 +1581,33 @@ namespace SHEvaluation.Rank
                 _bindingHistoryBatch = false;
             }
             if (_calculationPeriod != null)
-                _calculationPeriod.ClearHistoryBatch();
+                _calculationPeriod.ClearHistoryBatchSelection();
+            ApplyHistoryNextGate();
+        }
+
+        private void ReportHistoryBatchQueryFailure(Exception ex)
+        {
+            string message = HistoryBatchQueryFailureText + "\n" + (ex == null ? "" : ex.Message);
+            if (CanUpdateSourceGate() && labelX6 != null)
+                labelX6.Text = message;
+            if (_historyBatchFailureDialog != null)
+                _historyBatchFailureDialog(message);
+            else
+                MessageBox.Show(message);
+        }
+
+        private static bool IsHistoryBatchQueryFailure(string text)
+        {
+            return text != null && text.StartsWith(HistoryBatchQueryFailureText);
+        }
+
+        private static bool IsHistoryMotherGroupLoadFailure(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return false;
+            return text.StartsWith("歷史批次 ")
+                && text.IndexOf("讀取失敗。") >= 0
+                && text.EndsWith("本次不會進入確認清單，也不會開始排名計算。");
         }
 
         internal void btnPrevious_Click(object sender, EventArgs e)
@@ -1354,6 +1871,7 @@ namespace SHEvaluation.Rank
         {
             _rankCalculationRunning = true;
             bool rankWorkerStarted = false;
+            SemesterRankCalculationTrace rankTrace = null;
             try
             {
             CommitPendingParticipationEdit();
@@ -1414,6 +1932,7 @@ namespace SHEvaluation.Rank
             // 學生依年級分批使用
             Dictionary<string, List<string>> gradeStudentDict = new Dictionary<string, List<string>>();
             SemesterRankStudentSqlResult rankStudents = null;
+            rankTrace = SemesterRankCalculationTrace.Start(schoolYear, semester, motherGroupSourceName, historyBatchId);
 
             try
             {
@@ -1432,6 +1951,7 @@ namespace SHEvaluation.Rank
             cd["設定檔"] = configEle.OuterXml;
             // 排名語句若在之後失敗，這份擇優設定已經寫入學校組態，不會隨排名語句回滾。本次不改寫入時機，也不寫快照。
             cd.Save();
+            rankTrace.Mark("擇優設定");
             #endregion
             //        #region 產生學生清單的SQL
             //        List<string> studentSqlList = new List<string>();
@@ -1456,6 +1976,8 @@ namespace SHEvaluation.Rank
             #region 依年級產生學生清單的SQL
             rankStudents = SemesterRankSql.Build(calculationList);
             rankStudents.Grades = RankCalculationConfirm.LimitToSelectedGrades(rankStudents.Grades, _GradeYearList);
+            rankTrace.ReadStudents(rankStudents);
+            rankTrace.Mark("學生清單");
             foreach (SemesterRankGradeStudents grade in rankStudents.Grades)
             {
                 string gr = grade.GradeYear + "年級";
@@ -1469,7 +1991,12 @@ namespace SHEvaluation.Rank
             {
                 RestoreCalculationEditors();
                 pbLoading.Visible = false;
-                MessageBox.Show("計算排名失敗。\n" + rankStartException.Message);
+                rankTrace.Mark("準備失敗");
+                SemesterRankPublishOutcome startOutcome = SemesterRankPublishOutcome.From(rankStartException, null, rankTrace);
+                string startMessage = startOutcome.DialogMessage ?? "";
+                if (startMessage.IndexOf("計算排名失敗") != 0)
+                    startMessage = "計算排名失敗。\n" + startMessage;
+                MessageBox.Show(startMessage);
                 return;
             }
 
@@ -1492,11 +2019,12 @@ namespace SHEvaluation.Rank
 
             bkw.DoWork += delegate
             {
+                QueryHelper queryHelper = null;
                 try
                 {
                     bkw.ReportProgress(1);
 
-                    QueryHelper queryHelper = new QueryHelper();
+                    queryHelper = SemesterRankPublishTransport.OpenWriter(rankTrace);
 
                     #region 產生要儲存到rank_batch的setting的Xml
                     XmlDocument xdoc = new XmlDocument();
@@ -1528,1724 +2056,15 @@ namespace SHEvaluation.Rank
 
                     // 批次與所有勾選年級由 SemesterRankPublishSql 組成同一句，不在這裡先取得批次識別。
 
-                    //2022-04 Cynthia 新增勾選「擇優採計成績」功能
-                        string schoolYearAdjScore = "";
-                        string handAdjScore = "";
-                        string makeUpScore = "";
-                        string RetakeScore = "";
-                        if (gradeSelectCopy.Contains("學年調整成績"))
-                            schoolYearAdjScore = ", NULLIF(array_to_string(xpath('/root/Subject/@學年調整成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
-                        if (gradeSelectCopy.Contains("手動調整成績"))
-                            handAdjScore = ", NULLIF(array_to_string(xpath('/root/Subject/@擇優採計成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
-                        if (gradeSelectCopy.Contains("補考成績"))
-                            makeUpScore = ", NULLIF(array_to_string(xpath('/root/Subject/@補考成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
-                        if (gradeSelectCopy.Contains("重修成績"))
-                            RetakeScore = ", NULLIF(array_to_string(xpath('/root/Subject/@重修成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL";
+                    //2022-04 Cynthia 新增勾選「擇優採計成績」功能；公式與診斷共用 SemesterRankFormulaSql。
                         #region 計算排名的SQL 新增新五標、標準差
-                    string insertRankSql = @"
-, subject_score AS
-(
-	SELECT
-		calc_condition.rank_school_year
-		, calc_condition.rank_semester
-		, student_list.student_id
-		, student_list.student_name
-		, student_list.rank_grade_year
-		, student_list.rank_dept_name
-		, student_list.rank_class_name
-		, student_list.rank_tag1
-		, student_list.rank_tag2
-		, calc_condition.ref_exam_id::BIGINT AS exam_id
-		, array_to_string(xpath('/root/Subject/@科目', xmlparse(content  concat('<root>', subj_score_ele , '</root>'))), '')::TEXT As subject
-		, NULLIF(array_to_string(xpath('/root/Subject/@原始成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''),'')::DECIMAL As subject_origin_score
-		, GREATEST
-		(
-			NULLIF(array_to_string(xpath('/root/Subject/@原始成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL"
-+ schoolYearAdjScore + handAdjScore + makeUpScore + RetakeScore
-                        //, NULLIF(array_to_string(xpath('/root/Subject/@學年調整成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-                        //, NULLIF(array_to_string(xpath('/root/Subject/@擇優採計成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-                        //, NULLIF(array_to_string(xpath('/root/Subject/@補考成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-                        //, NULLIF(array_to_string(xpath('/root/Subject/@重修成績', xmlparse(content concat('<root>', subj_score_ele , '</root>'))), ''), '')::DECIMAL
-                        + @"
-		) AS subject_greatest_score
-	FROM 
-	(
-		SELECT 
-			sems_subj_score.*
-			, unnest(xpath('/root/SemesterSubjectScoreInfo/Subject', xmlparse(content concat('<root>', score_info , '</root>') ))) AS subj_score_ele
-		FROM 
-			sems_subj_score
-	) AS sems_subj_score_ext
-	INNER JOIN student_list
-		ON sems_subj_score_ext.ref_student_id = student_list.student_id
-	INNER JOIN calc_condition
-		ON sems_subj_score_ext.school_year = calc_condition.rank_school_year::INT
-		AND sems_subj_score_ext.semester = calc_condition.rank_semester::INT
-		AND student_list.rank_grade_year = calc_condition.rank_grade_year::INT
-)
-, subj_origin_rank AS
-(
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, rank_dept_name
-		, rank_class_name
-		, exam_id
-		, subject::TEXT AS item_name
-		, student_id
-		, rank_tag1
-		, rank_tag2
-		, subject_origin_score AS origin_score
-		, RANK() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_origin_score DESC) AS grade_origin_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_origin_score DESC) AS dept_origin_rank
-		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_origin_score DESC) AS class_origin_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_origin_score DESC) AS tag1_origin_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_origin_score DESC) AS tag2_origin_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_origin_score ASC) AS grade_origin_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_origin_score ASC) AS dept_origin_rank_reverse
-		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_origin_score ASC) AS class_origin_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_origin_score ASC) AS tag1_origin_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_origin_score ASC) AS tag2_origin_rank_reverse
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, subject) AS grade_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, subject) AS dept_count
-		, COUNT(student_id) OVER(PARTITION BY rank_class_name, subject) AS class_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1, subject) AS tag1_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2, subject) AS tag2_count
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_origin_score ASC) AS grade_origin_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_origin_score ASC) AS dept_origin_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_origin_score ASC) AS class_origin_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_origin_score ASC) AS tag1_origin_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_origin_score ASC) AS tag2_origin_row_number
-	FROM
-		subject_score
-	WHERE
-		subject IS NOT NULL
-		AND subject_origin_score IS NOT NULL
-)
-, subj_greatest_rank AS
-(
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, rank_dept_name
-		, rank_class_name
-		, exam_id
-		, subject::TEXT AS item_name
-		, student_id
-		, rank_tag1
-		, rank_tag2
-		, subject_greatest_score AS greatest_score
-		, RANK() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_greatest_score DESC) AS grade_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_greatest_score DESC) AS dept_rank
-		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_greatest_score DESC) AS class_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_greatest_score DESC) AS tag1_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_greatest_score DESC) AS tag2_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_greatest_score ASC) AS grade_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_greatest_score ASC) AS dept_rank_reverse
-		, RANK() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_greatest_score ASC) AS class_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_greatest_score ASC) AS tag1_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_greatest_score ASC) AS tag2_rank_reverse
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, subject) AS grade_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, subject) AS dept_count
-		, COUNT(student_id) OVER(PARTITION BY rank_class_name, subject) AS class_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1, subject) AS tag1_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2, subject) AS tag2_count
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, subject ORDER BY subject_greatest_score ASC) AS grade_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_dept_name, subject ORDER BY subject_greatest_score ASC) AS dept_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_class_name, subject ORDER BY subject_greatest_score ASC) AS class_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag1, subject ORDER BY subject_greatest_score ASC) AS tag1_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag2, subject ORDER BY subject_greatest_score ASC) AS tag2_row_number
-	FROM
-		subject_score
-	WHERE
-		subject IS NOT NULL
-		AND subject_greatest_score IS NOT NULL
-)
-, subj_origin_rank_expand AS
-(
-	SELECT
-		subj_origin_rank.*
-		, FLOOR((grade_origin_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_origin_percentage
-		, FLOOR((dept_origin_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_origin_percentage
-		, FLOOR((class_origin_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_origin_percentage
-		, FLOOR((tag1_origin_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_origin_percentage
-		, FLOOR((tag2_origin_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_origin_percentage
-		, FLOOR((grade_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / grade_count)  AS graderank_origin_pr
-		, FLOOR((dept_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / dept_count)  AS deptrank_origin_pr
-		, FLOOR((class_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / class_count)  AS classrank_origin_pr
-		, FLOOR((tag1_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag1_count)  AS tag1rank_origin_pr
-		, FLOOR((tag2_origin_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag2_count)  AS tag2rank_origin_pr
-	FROM
-		subj_origin_rank
-)
-, subj_greatest_rank_expand AS
-(
-	SELECT
-		subj_greatest_rank.*
-		, FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
-		, FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
-		, FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
-		, FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
-		, FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
-		, FLOOR((grade_rank_reverse::DECIMAL - 1)*100::DECIMAL / grade_count) AS graderank_pr
-		, FLOOR((dept_rank_reverse::DECIMAL - 1)*100::DECIMAL / dept_count) AS deptrank_pr
-		, FLOOR((class_rank_reverse::DECIMAL - 1)*100::DECIMAL / class_count) AS classrank_pr
-		, FLOOR((tag1_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag1_count) AS tag1rank_pr
-		, FLOOR((tag2_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag2_count) AS tag2rank_pr
-	FROM
-		subj_greatest_rank
-)
-, entry_score_list AS
-(
-	SELECT
-		calc_condition.rank_school_year
-		, calc_condition.rank_semester
-		, student_list.student_id
-		, student_list.student_name
-		, student_list.rank_grade_year
-		, student_list.rank_dept_name
-		, student_list.rank_class_name
-		, student_list.rank_tag1
-		, student_list.rank_tag2
-		, calc_condition.ref_exam_id::BIGINT AS exam_id
-		, array_to_string(xpath('/root/Entry/@分項', xmlparse(content  concat('<root>', entry_score_ele , '</root>'))),'')::TEXT As entry
-		, NULLIF(array_to_string(xpath('/root/Entry/@成績', xmlparse(content   concat('<root>', entry_score_ele , '</root>'))), ''),'')::DECIMAL AS entry_score
-	FROM
-	(
-		SELECT
-			sems_entry_score.*
-			, unnest(xpath('/root/SemesterEntryScore/Entry', xmlparse(content  concat('<root>', sems_entry_score.score_info , '</root>') ))) As entry_score_ele
-		FROM
-		sems_entry_score
-	) AS sems_entry_score_ext
-	INNER JOIN student_list
-		ON sems_entry_score_ext.ref_student_id = student_list.student_id
-	INNER JOIN calc_condition
-		ON sems_entry_score_ext.school_year = calc_condition.rank_school_year::INT
-		AND sems_entry_score_ext.semester = calc_condition.rank_semester::INT
-		AND student_list.rank_grade_year = calc_condition.rank_grade_year::INT
-)
-, entry_rank_list AS
-(
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, rank_dept_name
-		, rank_class_name
-		, exam_id
-		, entry::TEXT AS item_name
-		, student_id
-		, rank_tag1
-		, rank_tag2
-		, entry_score
-		, RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score DESC) AS grade_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score DESC) AS dept_rank
-		, RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score DESC) AS class_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score DESC) AS tag1_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score DESC) AS tag2_rank
-		, RANK() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score ASC) AS grade_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score ASC) AS dept_rank_reverse
-		, RANK() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score ASC) AS class_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score ASC) AS tag1_rank_reverse
-		, RANK() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score ASC) AS tag2_rank_reverse
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, entry) AS grade_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_dept_name, entry) AS dept_count
-		, COUNT(student_id) OVER(PARTITION BY rank_class_name, entry) AS class_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag1, entry) AS tag1_count
-		, COUNT(student_id) OVER(PARTITION BY rank_grade_year, rank_tag2, entry) AS tag2_count
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, entry ORDER BY entry_score ASC) AS grade_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_dept_name, entry ORDER BY entry_score ASC) AS dept_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_class_name, entry ORDER BY entry_score ASC) AS class_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag1, entry ORDER BY entry_score ASC) AS tag1_row_number
-		, ROW_NUMBER() OVER(PARTITION BY rank_grade_year, rank_tag2, entry ORDER BY entry_score ASC) AS tag2_row_number
-	FROM
-		entry_score_list
-	WHERE
-		entry IS NOT NULL
-		AND entry_score IS NOT NULL
-)
-, entry_rank_expand AS
-(
-	SELECT
-		entry_rank_list.*
-		, FLOOR((grade_rank::DECIMAL - 1)*100::DECIMAL / grade_count) + 1 AS graderank_percentage
-		, FLOOR((dept_rank::DECIMAL - 1)*100::DECIMAL / dept_count) + 1 AS deptrank_percentage
-		, FLOOR((class_rank::DECIMAL - 1)*100::DECIMAL / class_count) + 1 AS classrank_percentage
-		, FLOOR((tag1_rank::DECIMAL - 1)*100::DECIMAL / tag1_count) + 1 AS tag1rank_percentage
-		, FLOOR((tag2_rank::DECIMAL - 1)*100::DECIMAL / tag2_count) + 1 AS tag2rank_percentage
-        , FLOOR((grade_rank_reverse::DECIMAL - 1)*100::DECIMAL / grade_count)  AS graderank_pr
-        , FLOOR((dept_rank_reverse::DECIMAL - 1)*100::DECIMAL / dept_count)  AS deptrank_pr
-        , FLOOR((class_rank_reverse::DECIMAL - 1)*100::DECIMAL / class_count)  AS classrank_pr
-        , FLOOR((tag1_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag1_count)  AS tag1rank_pr
-        , FLOOR((tag2_rank_reverse::DECIMAL - 1)*100::DECIMAL / tag2_count)  AS tag2rank_pr
-	FROM
-		entry_rank_list
-)
-, score_list AS
-(
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '年排名'::TEXT AS rank_type
-		, '' || rank_grade_year || '年級'::TEXT AS rank_name
-		, true AS is_alive
-		, grade_count AS matrix_count
-		, STDDEV_POP(origin_score) OVER(PARTITION BY rank_grade_year, item_name) AS std_dev_pop
-	    , CASE WHEN (grade_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*88/100+1=grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*88/100=grade_origin_row_number OR grade_count*88/100+1 = grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (grade_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*75/100+1=grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*75/100=grade_origin_row_number OR grade_count*75/100+1 = grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (grade_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*50/100+1=grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*50/100=grade_origin_row_number OR grade_count*50/100+1 = grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (grade_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*25/100+1=grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*25/100=grade_origin_row_number OR grade_count*25/100+1 = grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (grade_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*12/100+1=grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE grade_count*12/100=grade_origin_row_number OR grade_count*12/100+1 = grade_origin_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(origin_score::DECIMAL) FILTER(WHERE grade_origin_rank *4 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_25
-		, AVG(origin_score::DECIMAL) FILTER(WHERE grade_origin_rank *2 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_50
-		, AVG(origin_score::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS avg
-		, AVG(origin_score::DECIMAL) FILTER(WHERE (grade_count - grade_origin_rank + 1) *2 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_50
-		, AVG(origin_score::DECIMAL) FILTER(WHERE (grade_count - grade_origin_rank + 1) *4 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=origin_score) OVER(PARTITION BY rank_grade_year, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=origin_score AND origin_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=origin_score AND origin_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=origin_score AND origin_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=origin_score AND origin_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=origin_score AND origin_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=origin_score AND origin_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=origin_score AND origin_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=origin_score AND origin_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=origin_score AND origin_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE origin_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_lt10 
-		, student_id
-		, origin_score AS score
-		, grade_origin_rank AS rank
-        , graderank_origin_pr AS pr
-		, graderank_origin_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_origin_rank_expand
+                    string insertRankSql = SemesterRankFormulaSql.Build(gradeSelectCopy);
+                        #endregion
 
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '科排名'::TEXT AS rank_type
-		, rank_dept_name AS rank_name
-		, true AS is_alive
-		, dept_count AS matrix_count
-		, STDDEV_POP(origin_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS std_dev_pop
-	    , CASE WHEN (dept_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*88/100+1=dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*88/100=dept_origin_row_number OR dept_count*88/100+1 = dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (dept_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*75/100+1=dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*75/100=dept_origin_row_number OR dept_count*75/100+1 = dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (dept_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*50/100+1=dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*50/100=dept_origin_row_number OR dept_count*50/100+1 = dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (dept_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*25/100+1=dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*25/100=dept_origin_row_number OR dept_count*25/100+1 = dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (dept_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*12/100+1=dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE dept_count*12/100=dept_origin_row_number OR dept_count*12/100+1 = dept_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(origin_score::DECIMAL) FILTER(WHERE dept_origin_rank * 4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_25
-		, AVG(origin_score::DECIMAL) FILTER(WHERE dept_origin_rank * 2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_50
-		, AVG(origin_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg
-		, AVG(origin_score::DECIMAL) FILTER(WHERE ( dept_count - dept_origin_rank +1) * 2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_50
-		, AVG(origin_score::DECIMAL) FILTER(WHERE ( dept_count - dept_origin_rank +1) * 4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=origin_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=origin_score AND origin_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=origin_score AND origin_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=origin_score AND origin_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=origin_score AND origin_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=origin_score AND origin_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=origin_score AND origin_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=origin_score AND origin_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=origin_score AND origin_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=origin_score AND origin_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE origin_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_lt10 
-		, student_id
-		, origin_score AS score
-		, dept_origin_rank AS rank
-        , deptrank_origin_pr AS pr
-		, deptrank_origin_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_origin_rank_expand
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '班排名'::TEXT AS rank_type
-		, rank_class_name AS rank_name
-		, true AS is_alive
-		, class_count AS matrix_count
-		, STDDEV_POP(origin_score) OVER(PARTITION BY rank_class_name, item_name) AS std_dev_pop
-	    , CASE WHEN (class_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE class_count*88/100+1=class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE class_count*88/100=class_origin_row_number OR class_count*88/100+1 = class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (class_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE class_count*75/100+1=class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE class_count*75/100=class_origin_row_number OR class_count*75/100+1 = class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (class_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE class_count*50/100+1=class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE class_count*50/100=class_origin_row_number OR class_count*50/100+1 = class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (class_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE class_count*25/100+1=class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE class_count*25/100=class_origin_row_number OR class_count*25/100+1 = class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (class_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE class_count*12/100+1=class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE class_count*12/100=class_origin_row_number OR class_count*12/100+1 = class_origin_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(origin_score::DECIMAL) FILTER(WHERE class_origin_rank *4 <=  class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_25
-		, AVG(origin_score::DECIMAL) FILTER(WHERE class_origin_rank *2 <=  class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_50
-		, AVG(origin_score::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS avg
-		, AVG(origin_score::DECIMAL) FILTER(WHERE (class_count -class_origin_rank +1) *2 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_50
-		, AVG(origin_score::DECIMAL) FILTER(WHERE (class_count -class_origin_rank +1) *4 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=origin_score) OVER(PARTITION BY rank_class_name, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=origin_score AND origin_score <100::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=origin_score AND origin_score <90::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=origin_score AND origin_score <80::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=origin_score AND origin_score <70::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=origin_score AND origin_score <60::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=origin_score AND origin_score <50::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=origin_score AND origin_score <40::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=origin_score AND origin_score <30::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=origin_score AND origin_score <20::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE origin_score<10::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_lt10 
-		, student_id
-		, origin_score AS score
-		, class_origin_rank AS rank
-        , classrank_origin_pr AS pr
-		, classrank_origin_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_origin_rank_expand
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '類別1排名'::TEXT AS rank_type
-		, rank_tag1 AS rank_name
-		, true AS is_alive
-		, tag1_count AS matrix_count
-		, STDDEV_POP(origin_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS std_dev_pop
-	    , CASE WHEN (tag1_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*88/100+1=tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*88/100=tag1_origin_row_number OR tag1_count*88/100+1 = tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (tag1_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*75/100+1=tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*75/100=tag1_origin_row_number OR tag1_count*75/100+1 = tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (tag1_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*50/100+1=tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*50/100=tag1_origin_row_number OR tag1_count*50/100+1 = tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (tag1_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*25/100+1=tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*25/100=tag1_origin_row_number OR tag1_count*25/100+1 = tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (tag1_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*12/100+1=tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag1_count*12/100=tag1_origin_row_number OR tag1_count*12/100+1 = tag1_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(origin_score::DECIMAL) FILTER(WHERE tag1_origin_rank *4 <= tag1_count) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_25
-		, AVG(origin_score::DECIMAL) FILTER(WHERE tag1_origin_rank *2 <= tag1_count) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_50
-		, AVG(origin_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg
-		, AVG(origin_score::DECIMAL) FILTER(WHERE (tag1_count -tag1_origin_rank +1 ) *2 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_50
-		, AVG(origin_score::DECIMAL) FILTER(WHERE (tag1_count -tag1_origin_rank +1 ) *4 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=origin_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=origin_score AND origin_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=origin_score AND origin_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=origin_score AND origin_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=origin_score AND origin_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=origin_score AND origin_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=origin_score AND origin_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=origin_score AND origin_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=origin_score AND origin_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=origin_score AND origin_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE origin_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_lt10 
-		, student_id
-		, origin_score AS score
-		, tag1_origin_rank AS rank
-        , tag1rank_origin_pr AS pr
-		, tag1rank_origin_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_origin_rank_expand
-	WHERE
-		rank_tag1 IS NOT NULL
-		AND rank_tag1 <> ''
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '類別2排名'::TEXT AS rank_type
-		, rank_tag2 AS rank_name
-		, true AS is_alive
-		, tag2_count AS matrix_count
-		, STDDEV_POP(origin_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS std_dev_pop
-	    , CASE WHEN (tag2_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*88/100+1=tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*88/100=tag2_origin_row_number OR tag2_count*88/100+1 = tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (tag2_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*75/100+1=tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*75/100=tag2_origin_row_number OR tag2_count*75/100+1 = tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (tag2_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*50/100+1=tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*50/100=tag2_origin_row_number OR tag2_count*50/100+1 = tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (tag2_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*25/100+1=tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*25/100=tag2_origin_row_number OR tag2_count*25/100+1 = tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (tag2_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*12/100+1=tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(origin_score::DECIMAL)FILTER(WHERE tag2_count*12/100=tag2_origin_row_number OR tag2_count*12/100+1 = tag2_origin_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(origin_score::DECIMAL) FILTER(WHERE tag2_origin_rank *4 <= tag2_count) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_25
-		, AVG(origin_score::DECIMAL) FILTER(WHERE tag2_origin_rank *2 <= tag2_count) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_50
-		, AVG(origin_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg
-		, AVG(origin_score::DECIMAL) FILTER(WHERE ( tag2_count - tag2_origin_rank +1) *2 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_50
-		, AVG(origin_score::DECIMAL) FILTER(WHERE ( tag2_count - tag2_origin_rank +1) *4 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=origin_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=origin_score AND origin_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=origin_score AND origin_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=origin_score AND origin_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=origin_score AND origin_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=origin_score AND origin_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=origin_score AND origin_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=origin_score AND origin_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=origin_score AND origin_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=origin_score AND origin_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE origin_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_lt10 
-		, student_id
-		, origin_score AS score
-		, tag2_origin_rank AS rank
-        , tag2rank_origin_pr AS pr
-		, tag2rank_origin_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_origin_rank_expand
-	WHERE
-		rank_tag2 IS NOT NULL
-		AND rank_tag2 <> ''
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '年排名'::TEXT AS rank_type
-		, '' || rank_grade_year || '年級'::TEXT AS rank_name
-		, true AS is_alive
-		, grade_count AS matrix_count
-		, STDDEV_POP(greatest_score) OVER(PARTITION BY rank_grade_year, item_name) AS std_dev_pop
-	    , CASE WHEN (grade_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*88/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*88/100=grade_row_number OR grade_count*88/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (grade_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*75/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*75/100=grade_row_number OR grade_count*75/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (grade_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*50/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*50/100=grade_row_number OR grade_count*50/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (grade_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*25/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*25/100=grade_row_number OR grade_count*25/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (grade_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*12/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE grade_count*12/100=grade_row_number OR grade_count*12/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE grade_rank * 4 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_25
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE grade_rank * 2 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_50
-		, AVG(greatest_score::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS avg
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (grade_count - grade_rank +1) * 2 <= grade_count) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_50
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (grade_count - grade_rank +1) * 4 <= grade_count) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=greatest_score) OVER(PARTITION BY rank_grade_year, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=greatest_score AND greatest_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=greatest_score AND greatest_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=greatest_score AND greatest_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=greatest_score AND greatest_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=greatest_score AND greatest_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=greatest_score AND greatest_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=greatest_score AND greatest_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=greatest_score AND greatest_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=greatest_score AND greatest_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE greatest_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_lt10 
-		, student_id
-		, greatest_score AS score
-		, grade_rank AS rank
-        , graderank_pr AS pr
-		, graderank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_greatest_rank_expand
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '科排名'::TEXT AS rank_type
-		, rank_dept_name AS rank_name
-		, true AS is_alive
-		, dept_count AS matrix_count
-		, STDDEV_POP(greatest_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS std_dev_pop
-	    , CASE WHEN (dept_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*88/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*88/100=dept_row_number OR dept_count*88/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (dept_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*75/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*75/100=dept_row_number OR dept_count*75/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (dept_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*50/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*50/100=dept_row_number OR dept_count*50/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (dept_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*25/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*25/100=dept_row_number OR dept_count*25/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (dept_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*12/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE dept_count*12/100=dept_row_number OR dept_count*12/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE dept_rank * 4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_25
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE dept_rank * 2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_50
-		, AVG(greatest_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (dept_count - dept_rank + 1) * 2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_50
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (dept_count - dept_rank + 1) * 4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=greatest_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=greatest_score AND greatest_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=greatest_score AND greatest_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=greatest_score AND greatest_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=greatest_score AND greatest_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=greatest_score AND greatest_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=greatest_score AND greatest_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=greatest_score AND greatest_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=greatest_score AND greatest_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=greatest_score AND greatest_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE greatest_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_lt10 
-		, student_id
-		, greatest_score AS score
-		, dept_rank AS rank
-        , deptrank_pr AS pr
-		, deptrank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_greatest_rank_expand
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '班排名'::TEXT AS rank_type
-		, rank_class_name AS rank_name
-		, true AS is_alive
-		, class_count AS matrix_count
-		, STDDEV_POP(greatest_score) OVER(PARTITION BY rank_class_name, item_name) AS std_dev_pop
-	    , CASE WHEN (class_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*88/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*88/100=class_row_number OR class_count*88/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (class_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*75/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*75/100=class_row_number OR class_count*75/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (class_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*50/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*50/100=class_row_number OR class_count*50/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (class_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*25/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*25/100=class_row_number OR class_count*25/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (class_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*12/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE class_count*12/100=class_row_number OR class_count*12/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE class_rank *4 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_25
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE class_rank *2 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_50
-		, AVG(greatest_score::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS avg
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (class_count - class_rank +1) * 2  <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_50
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (class_count - class_rank +1) * 4  <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=greatest_score) OVER(PARTITION BY rank_class_name, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=greatest_score AND greatest_score <100::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=greatest_score AND greatest_score <90::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=greatest_score AND greatest_score <80::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=greatest_score AND greatest_score <70::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=greatest_score AND greatest_score <60::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=greatest_score AND greatest_score <50::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=greatest_score AND greatest_score <40::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=greatest_score AND greatest_score <30::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=greatest_score AND greatest_score <20::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE greatest_score<10::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_lt10 
-		, student_id
-		, greatest_score AS score
-		, class_rank AS rank
-        , classrank_pr AS pr
-		, classrank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_greatest_rank_expand
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '類別1排名'::TEXT AS rank_type
-		, rank_tag1 AS rank_name
-		, true AS is_alive
-		, tag1_count AS matrix_count
-		, STDDEV_POP(greatest_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS std_dev_pop
-	    , CASE WHEN (tag1_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*88/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*88/100=tag1_row_number OR tag1_count*88/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (tag1_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*75/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*75/100=tag1_row_number OR tag1_count*75/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (tag1_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*50/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*50/100=tag1_row_number OR tag1_count*50/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (tag1_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*25/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*25/100=tag1_row_number OR tag1_count*25/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (tag1_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*12/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag1_count*12/100=tag1_row_number OR tag1_count*12/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE tag1_rank * 4 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_25
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE tag1_rank * 2 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_50
-		, AVG(greatest_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE ( tag1_count - tag1_rank +1 ) *2 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_50
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE ( tag1_count - tag1_rank +1 ) *4 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=greatest_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=greatest_score AND greatest_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=greatest_score AND greatest_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=greatest_score AND greatest_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=greatest_score AND greatest_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=greatest_score AND greatest_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=greatest_score AND greatest_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=greatest_score AND greatest_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=greatest_score AND greatest_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=greatest_score AND greatest_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE greatest_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_lt10 
-		, student_id
-		, greatest_score AS score
-		, tag1_rank AS rank
-        , tag1rank_pr AS pr
-		, tag1rank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_greatest_rank_expand
-	WHERE
-		rank_tag1 IS NOT NULL
-		AND rank_tag1 <> ''
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/科目成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '類別2排名'::TEXT AS rank_type
-		, rank_tag2 AS rank_name
-		, true AS is_alive
-		, tag2_count AS matrix_count
-		, STDDEV_POP(greatest_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS std_dev_pop
-	    , CASE WHEN (tag2_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*88/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*88/100=tag2_row_number OR tag2_count*88/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (tag2_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*75/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*75/100=tag2_row_number OR tag2_count*75/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (tag2_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*50/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*50/100=tag2_row_number OR tag2_count*50/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (tag2_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*25/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*25/100=tag2_row_number OR tag2_count*25/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (tag2_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*12/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(greatest_score::DECIMAL)FILTER(WHERE tag2_count*12/100=tag2_row_number OR tag2_count*12/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE tag2_rank *4 <=  tag2_count) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_25
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE tag2_rank *2 <=  tag2_count) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_50
-		, AVG(greatest_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (tag2_count - tag2_rank+1 ) *2 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_50
-		, AVG(greatest_score::DECIMAL) FILTER(WHERE (tag2_count - tag2_rank+1 ) *4 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=greatest_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=greatest_score AND greatest_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=greatest_score AND greatest_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=greatest_score AND greatest_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=greatest_score AND greatest_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=greatest_score AND greatest_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=greatest_score AND greatest_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=greatest_score AND greatest_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=greatest_score AND greatest_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=greatest_score AND greatest_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE greatest_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_lt10 
-		, student_id
-		, greatest_score AS score
-		, tag2_rank AS rank
-        , tag2rank_pr AS pr
-		, tag2rank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		subj_greatest_rank_expand
-	WHERE
-		rank_tag2 IS NOT NULL
-		AND rank_tag2 <> ''
-
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, REPLACE(item_name, '(原始)', '') AS item_name
-		, '年排名'::TEXT AS rank_type
-		, '' || rank_grade_year || '年級'::TEXT AS rank_name
-		, true AS is_alive
-		, grade_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, item_name) AS std_dev_pop
-	    , CASE WHEN (grade_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*88/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*88/100=grade_row_number OR grade_count*88/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (grade_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*75/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*75/100=grade_row_number OR grade_count*75/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (grade_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*50/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*50/100=grade_row_number OR grade_count*50/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (grade_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*25/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*25/100=grade_row_number OR grade_count*25/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (grade_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*12/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*12/100=grade_row_number OR grade_count*12/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE grade_rank *4  <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE grade_rank *2  <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (grade_count -grade_rank +1 )*2 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (grade_count -grade_rank +1 )*4 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, grade_rank AS rank
-        , graderank_pr AS pr
-		, graderank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name LIKE '%(原始)%'
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, REPLACE(item_name, '(原始)', '') AS item_name
-		, '科排名'::TEXT AS rank_type
-		, rank_dept_name AS rank_name
-		, true AS is_alive
-		, dept_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS std_dev_pop
-	    , CASE WHEN (dept_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*88/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*88/100=dept_row_number OR dept_count*88/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (dept_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*75/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*75/100=dept_row_number OR dept_count*75/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (dept_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*50/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*50/100=dept_row_number OR dept_count*50/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (dept_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*25/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*25/100=dept_row_number OR dept_count*25/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (dept_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*12/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*12/100=dept_row_number OR dept_count*12/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE dept_rank * 4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE dept_rank  *2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (dept_count -dept_rank +1 )*2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (dept_count- dept_rank +1 )*4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, dept_rank AS rank
-        , deptrank_pr AS pr
-		, deptrank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name LIKE '%(原始)%'
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, REPLACE(item_name, '(原始)', '') AS item_name
-		, '班排名'::TEXT AS rank_type
-		, rank_class_name AS rank_name
-		, true AS is_alive
-		, class_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_class_name, item_name) AS std_dev_pop
-	    , CASE WHEN (class_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*88/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*88/100=class_row_number OR class_count*88/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (class_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*75/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*75/100=class_row_number OR class_count*75/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (class_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*50/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*50/100=class_row_number OR class_count*50/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (class_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*25/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*25/100=class_row_number OR class_count*25/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (class_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*12/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*12/100=class_row_number OR class_count*12/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE  class_rank *4 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE  class_rank *2 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (class_count -class_rank +1 ) *2 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (class_count -class_rank +1 ) *4 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_class_name, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, class_rank AS rank
-        , classrank_pr AS pr
-		, classrank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name LIKE '%(原始)%'
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, REPLACE(item_name, '(原始)', '') AS item_name
-		, '類別1排名'::TEXT AS rank_type
-		, rank_tag1 AS rank_name
-		, true AS is_alive
-		, tag1_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS std_dev_pop
-	    , CASE WHEN (tag1_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*88/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*88/100=tag1_row_number OR tag1_count*88/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (tag1_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*75/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*75/100=tag1_row_number OR tag1_count*75/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (tag1_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*50/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*50/100=tag1_row_number OR tag1_count*50/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (tag1_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*25/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*25/100=tag1_row_number OR tag1_count*25/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (tag1_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*12/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*12/100=tag1_row_number OR tag1_count*12/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag1_rank *4 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag1_rank *2 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (tag1_count - tag1_rank + 1 ) *2 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (tag1_count - tag1_rank + 1 ) *4 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, tag1_rank AS rank
-        , tag1rank_pr AS pr
-		, tag1rank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name LIKE '%(原始)%'
-		AND rank_tag1 IS NOT NULL
-		AND rank_tag1 <> ''
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績(原始)'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, REPLACE(item_name, '(原始)', '') AS item_name
-		, '類別2排名'::TEXT AS rank_type
-		, rank_tag2 AS rank_name
-		, true AS is_alive
-		, tag2_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS std_dev_pop
-	    , CASE WHEN (tag2_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*88/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*88/100=tag2_row_number OR tag2_count*88/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (tag2_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*75/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*75/100=tag2_row_number OR tag2_count*75/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (tag2_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*50/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*50/100=tag2_row_number OR tag2_count*50/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (tag2_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*25/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*25/100=tag2_row_number OR tag2_count*25/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (tag2_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*12/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*12/100=tag2_row_number OR tag2_count*12/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag2_rank  *4 <=  tag2_count) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag2_rank  *2 <=  tag2_count) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (tag2_count -tag2_rank +1 ) *2 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (tag2_count -tag2_rank +1 ) *4 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, tag2_rank AS rank
-        , tag2rank_pr AS pr
-		, tag2rank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name LIKE '%(原始)%'
-		AND rank_tag2 IS NOT NULL
-		AND rank_tag2 <> ''
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '年排名'::TEXT AS rank_type
-		, '' || rank_grade_year || '年級'::TEXT AS rank_name
-		, true AS is_alive
-		, grade_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, item_name) AS std_dev_pop
-	    , CASE WHEN (grade_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*88/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*88/100=grade_row_number OR grade_count*88/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (grade_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*75/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*75/100=grade_row_number OR grade_count*75/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (grade_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*50/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*50/100=grade_row_number OR grade_count*50/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (grade_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*25/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*25/100=grade_row_number OR grade_count*25/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (grade_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*12/100+1=grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE grade_count*12/100=grade_row_number OR grade_count*12/100+1 = grade_row_number) OVER(PARTITION BY rank_grade_year, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE grade_rank  *4 <=  grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE grade_rank  *2 <=  grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE ( grade_count -grade_rank +1 ) *2 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE ( grade_count -grade_rank +1 ) *4 <= grade_count ) OVER(PARTITION BY rank_grade_year, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, grade_rank AS rank
-        , graderank_pr AS pr
-		, graderank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name NOT LIKE '%(原始)%'
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '科排名'::TEXT AS rank_type
-		, rank_dept_name AS rank_name
-		, true AS is_alive
-		, dept_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS std_dev_pop
-	    , CASE WHEN (dept_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*88/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*88/100=dept_row_number OR dept_count*88/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (dept_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*75/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*75/100=dept_row_number OR dept_count*75/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (dept_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*50/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*50/100=dept_row_number OR dept_count*50/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (dept_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*25/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*25/100=dept_row_number OR dept_count*25/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (dept_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*12/100+1=dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE dept_count*12/100=dept_row_number OR dept_count*12/100+1 = dept_row_number) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE dept_rank *4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE dept_rank *2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (dept_count -dept_rank +1 ) *2 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (dept_count -dept_rank +1 ) *4 <= dept_count ) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_dept_name, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, dept_rank AS rank
-        , deptrank_pr AS pr
-		, deptrank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name NOT LIKE '%(原始)%'
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '班排名'::TEXT AS rank_type
-		, rank_class_name AS rank_name
-		, true AS is_alive
-		, class_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_class_name, item_name) AS std_dev_pop
-	    , CASE WHEN (class_count*88/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*88/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*88/100=class_row_number OR class_count*88/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_88
-	    , CASE WHEN (class_count*75/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*75/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*75/100=class_row_number OR class_count*75/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_75
-	    , CASE WHEN (class_count*50/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*50/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*50/100=class_row_number OR class_count*50/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_50
-	    , CASE WHEN (class_count*25/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*25/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*25/100=class_row_number OR class_count*25/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_25
-	    , CASE WHEN (class_count*12/100::DECIMAL % 1 <> 0) 
-	        THEN AVG(entry_score::DECIMAL)FILTER(WHERE class_count*12/100+1=class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	        ELSE AVG(entry_score::DECIMAL)FILTER(WHERE class_count*12/100=class_row_number OR class_count*12/100+1 = class_row_number) OVER(PARTITION BY rank_class_name, item_name)::DECIMAL 
-	      END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE class_rank  *4 <=  class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE class_rank  *2 <=  class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (class_count -class_rank +1 )*2 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (class_count -class_rank +1 )*4 <= class_count ) OVER(PARTITION BY rank_class_name, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_class_name, item_name)AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_class_name, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, class_rank AS rank
-        , classrank_pr AS pr
-		, classrank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name NOT LIKE '%(原始)%'
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '類別1排名'::TEXT AS rank_type
-		, rank_tag1 AS rank_name
-		, true AS is_alive
-		, tag1_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS std_dev_pop
-	    , CASE WHEN (tag1_count*88/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*88/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*88/100=tag1_row_number OR tag1_count*88/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	    END pr_88
-	    , CASE WHEN (tag1_count*75/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*75/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*75/100=tag1_row_number OR tag1_count*75/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	    END pr_75
-	    , CASE WHEN (tag1_count*50/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*50/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*50/100=tag1_row_number OR tag1_count*50/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	    END pr_50
-	    , CASE WHEN (tag1_count*25/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*25/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*25/100=tag1_row_number OR tag1_count*25/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	    END pr_25
-	    , CASE WHEN (tag1_count*12/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*12/100+1=tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag1_count*12/100=tag1_row_number OR tag1_count*12/100+1 = tag1_row_number) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name)::DECIMAL 
-	    END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag1_rank *4 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag1_rank *2 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE ( tag1_count - tag1_rank +1 ) * 2 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE  (tag1_count - tag1_rank +1 ) * 4 <= tag1_count ) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag1, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, tag1_rank AS rank
-        , tag1rank_pr AS pr
-		, tag1rank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name NOT LIKE '%(原始)%'
-		AND rank_tag1 IS NOT NULL
-		AND rank_tag1 <> ''
-	
-	UNION ALL
-	SELECT
-		rank_school_year
-		, rank_semester
-		, rank_grade_year
-		, '學期/分項成績'::TEXT AS item_type
-		, exam_id AS ref_exam_id
-		, item_name
-		, '類別2排名'::TEXT AS rank_type
-		, rank_tag2 AS rank_name
-		, true AS is_alive
-		, tag2_count AS matrix_count
-		, STDDEV_POP(entry_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS std_dev_pop
-	    , CASE WHEN (tag2_count*88/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*88/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*88/100=tag2_row_number OR tag2_count*88/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	    END pr_88
-	    , CASE WHEN (tag2_count*75/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*75/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*75/100=tag2_row_number OR tag2_count*75/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	    END pr_75
-	    , CASE WHEN (tag2_count*50/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*50/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*50/100=tag2_row_number OR tag2_count*50/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	    END pr_50
-	    , CASE WHEN (tag2_count*25/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*25/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*25/100=tag2_row_number OR tag2_count*25/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	    END pr_25
-	    , CASE WHEN (tag2_count*12/100::DECIMAL % 1 <> 0) 
-	      THEN AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*12/100+1=tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	      ELSE AVG(entry_score::DECIMAL)FILTER(WHERE tag2_count*12/100=tag2_row_number OR tag2_count*12/100+1 = tag2_row_number) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name)::DECIMAL 
-	    END pr_12
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag2_rank  *4 <=  tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_25
-		, AVG(entry_score::DECIMAL) FILTER(WHERE tag2_rank  *2 <=  tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_top_50
-		, AVG(entry_score::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (tag2_count -tag2_rank +1 ) *2 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_50
-		, AVG(entry_score::DECIMAL) FILTER(WHERE (tag2_count -tag2_rank +1 ) *4 <= tag2_count ) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS avg_bottom_25
-		, COUNT(*) FILTER(WHERE 100::DECIMAL<=entry_score) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_gte100 
-		, COUNT(*) FILTER(WHERE 90::DECIMAL<=entry_score AND entry_score <100::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_90
-		, COUNT(*) FILTER(WHERE 80::DECIMAL<=entry_score AND entry_score <90::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_80
-		, COUNT(*) FILTER(WHERE 70::DECIMAL<=entry_score AND entry_score <80::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_70
-		, COUNT(*) FILTER(WHERE 60::DECIMAL<=entry_score AND entry_score <70::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_60
-		, COUNT(*) FILTER(WHERE 50::DECIMAL<=entry_score AND entry_score <60::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_50
-		, COUNT(*) FILTER(WHERE 40::DECIMAL<=entry_score AND entry_score <50::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_40
-		, COUNT(*) FILTER(WHERE 30::DECIMAL<=entry_score AND entry_score <40::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_30
-		, COUNT(*) FILTER(WHERE 20::DECIMAL<=entry_score AND entry_score <30::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_20
-		, COUNT(*) FILTER(WHERE 10::DECIMAL<=entry_score AND entry_score <20::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_10
-		, COUNT(*) FILTER(WHERE entry_score<10::DECIMAL) OVER(PARTITION BY rank_grade_year, rank_tag2, item_name) AS level_lt10 
-		, student_id
-		, entry_score AS score
-		, tag2_rank AS rank
-        , tag2rank_pr AS pr
-		, tag2rank_percentage AS percentile
-		, rank_dept_name
-		, rank_class_name
-		, rank_tag1
-		, rank_tag2
-	FROM
-		entry_rank_expand
-	WHERE
-		item_name NOT LIKE '%(原始)%'
-		AND rank_tag2 IS NOT NULL
-		AND rank_tag2 <> ''
-		 
-)
-, update_data AS
-(
-	UPDATE
-		rank_matrix
-	SET
-		is_alive = NULL
-	FROM
-		calc_condition
-	WHERE
-		rank_matrix.is_alive = true
-		AND rank_matrix.school_year = calc_condition.rank_school_year::INT
-		AND rank_matrix.semester = calc_condition.rank_semester::INT
-		AND rank_matrix.grade_year = calc_condition.rank_grade_year::INT
-		AND rank_matrix.ref_exam_id = calc_condition.ref_exam_id::INT
-
-	RETURNING rank_matrix.*
-)
-, insert_matrix_data AS
-(
-	INSERT INTO
-		rank_matrix
-		(
-			ref_batch_id
-			, school_year
-			, semester
-			, grade_year
-			, item_type
-			, ref_exam_id
-			, item_name
-			, rank_type
-			, rank_name
-			, is_alive
-			, matrix_count
-			, avg_top_25
-			, avg_top_50
-			, avg
-			, avg_bottom_50
-			, avg_bottom_25
-			, level_gte100
-			, level_90
-			, level_80
-			, level_70
-			, level_60
-			, level_50
-			, level_40
-			, level_30
-			, level_20
-			, level_10
-			, level_lt10
-			, pr_88
-			, pr_75
-			, pr_50
-			, pr_25
-			, pr_12
-			, std_dev_pop
-		)
-		SELECT
-			calc_condition.batch_id AS ref_batch_id
-			, score_list.rank_school_year::INT
-			, score_list.rank_semester::INT
-			, score_list.rank_grade_year::INT
-			, score_list.item_type
-			, score_list.ref_exam_id
-			, score_list.item_name
-			, score_list.rank_type
-			, score_list.rank_name
-			, score_list.is_alive
-			, score_list.matrix_count
-			, score_list.avg_top_25
-			, score_list.avg_top_50
-			, score_list.avg
-			, score_list.avg_bottom_50
-			, score_list.avg_bottom_25
-			, score_list.level_gte100
-			, score_list.level_90
-			, score_list.level_80
-			, score_list.level_70
-			, score_list.level_60
-			, score_list.level_50
-			, score_list.level_40
-			, score_list.level_30
-			, score_list.level_20
-			, score_list.level_10
-			, score_list.level_lt10
-			, score_list.pr_88
-			, score_list.pr_75
-			, score_list.pr_50
-			, score_list.pr_25
-			, score_list.pr_12
-			, score_list.std_dev_pop
-		FROM
-			score_list
-			LEFT OUTER JOIN update_data
-				ON update_data.id  < 0 --永遠為false，只是為了讓insert等待update執行完
-			CROSS JOIN calc_condition
-		GROUP BY
-			calc_condition.batch_id
-			, score_list.rank_school_year
-			, score_list.rank_semester
-			, score_list.rank_grade_year
-			, score_list.item_type
-			, score_list.ref_exam_id
-			, score_list.item_name
-			, score_list.rank_type
-			, score_list.rank_name
-			, score_list.is_alive
-			, score_list.matrix_count
-			, score_list.avg_top_25
-			, score_list.avg_top_50
-			, score_list.avg
-			, score_list.avg_bottom_50
-			, score_list.avg_bottom_25
-			, score_list.level_gte100
-			, score_list.level_90
-			, score_list.level_80
-			, score_list.level_70
-			, score_list.level_60
-			, score_list.level_50
-			, score_list.level_40
-			, score_list.level_30
-			, score_list.level_20
-			, score_list.level_10
-			, score_list.level_lt10
-			, score_list.pr_88
-			, score_list.pr_75
-			, score_list.pr_50
-			, score_list.pr_25
-			, score_list.pr_12
-			, score_list.std_dev_pop
-
-	RETURNING *
-)
-, insert_batch_student_data AS
-(
-	INSERT INTO
-		rank_batch_student
-		(
-			ref_batch_id
-			, ref_student_id
-			, grade_year
-			, matrix_grade
-			, matrix_class
-			, matrix_tag1
-			, matrix_tag2
-		)
-		SELECT
-			calc_condition.batch_id AS ref_batch_id
-			, score_list.student_id
-			, score_list.rank_grade_year::INT
-			, score_list.rank_grade_year||'年級' AS matrix_grade
-			, score_list.rank_class_name
-			, score_list.rank_tag1
-			, score_list.rank_tag2
-		FROM
-			score_list
-			CROSS JOIN calc_condition
-)
-, insert_detail_data AS
-(
-	INSERT INTO
-		rank_detail
-		(
-			ref_matrix_id
-			, ref_student_id
-			, score
-			, rank
-            , pr
-			, percentile
-		)
-		SELECT
-			insert_matrix_data.id AS ref_matrix_id
-			, score_list.student_id AS ref_student_id
-			, score_list.score AS score
-			, score_list.rank AS rank
-            , score_list.pr AS pr
-			, score_list.percentile AS percentile
-		FROM
-			score_list
-			LEFT OUTER JOIN
-				insert_matrix_data
-					ON insert_matrix_data.school_year = score_list.rank_school_year::INT
-					AND insert_matrix_data.semester = score_list.rank_semester::INT
-					AND insert_matrix_data.grade_year = score_list.rank_grade_year::INT
-					AND insert_matrix_data.item_type = score_list.item_type
-					AND insert_matrix_data.ref_exam_id = score_list.ref_exam_id
-					AND insert_matrix_data.item_name = score_list.item_name
-					AND insert_matrix_data.rank_type = score_list.rank_type
-					AND insert_matrix_data.rank_name = score_list.rank_name
-)
-SELECT count(*) FROM score_list
-
-
-";
-
-
-					#endregion
 
 
 					//DataTable dt1 = queryHelper.Select(insertRankSql_Old);
-					SemesterRankPublishStatement publish = SemesterRankPublishSql.Build(rankStudents.Grades, schoolYear, semester, calculationSetting, extensionJson, insertRankSql, false);
+					SemesterRankPublishStatement publish = SemesterRankPublishSql.Build(rankStudents.Grades, schoolYear, semester, calculationSetting, extensionJson, insertRankSql, false, false, rankTrace.Id);
                         insertRankSql = SemesterRankSql.ApplyParticipation(publish.Sql);
                     //// debug 
                     //string fiPath = Application.StartupPath + @"\sems_sql1.sql";
@@ -3254,7 +2073,12 @@ SELECT count(*) FROM score_list
                     //    fi.WriteLine(insertRankSql);
                     //}
 
+                    rankTrace.SqlBytes = Encoding.UTF8.GetByteCount(insertRankSql);
+                    rankTrace.Mark("排名語句");
                     publishResult = queryHelper.Select(insertRankSql);
+                    rankTrace.Mark("資料庫查詢");
+                    if (rankTrace.LargeWriteTrips != 1)
+                        throw new InvalidOperationException("結果未確認。公布寫入行程不是一次。");
                         if (SemesterRankPublishSql.HasPublishedDetails(publishResult))
                             bkw.ReportProgress(100);
                         else
@@ -3262,7 +2086,47 @@ SELECT count(*) FROM score_list
                 }
                 catch (Exception ex)
                 {
-                    bkwException = ex;
+                    rankTrace.Mark("資料庫查詢失敗");
+                    bool transport = SemesterRankPublishTransport.IsUnconfirmed(ex);
+                    bool repeatedWrite = rankTrace.LargeWriteTrips > 1;
+                    bool writeCountRejected = (ex.Message ?? "").IndexOf("公布寫入行程不是一次") >= 0;
+                    DataTable reconciled = null;
+                    if ((transport || repeatedWrite || writeCountRejected) && queryHelper != null)
+                    {
+                        rankTrace.Mark("結果未確認");
+                        try
+                        {
+                            reconciled = SemesterRankPublishTransport.Reconcile(queryHelper, rankTrace);
+                        }
+                        catch (Exception)
+                        {
+                            reconciled = null;
+                            rankTrace.Mark("核對失敗");
+                        }
+                    }
+                    if (SemesterRankPublishSql.HasPublishedDetails(reconciled))
+                    {
+                        publishResult = reconciled;
+                        bkwException = null;
+                        bkw.ReportProgress(100);
+                    }
+                    else if (transport || writeCountRejected)
+                        bkwException = new InvalidOperationException(SemesterRankPublishTransport.UnconfirmedMessage(rankTrace), ex);
+                    else
+                        bkwException = ex;
+                }
+                finally
+                {
+                    if (rankTrace != null)
+                    {
+                        if (bkwException == null && SemesterRankPublishSql.HasPublishedDetails(publishResult))
+                            rankTrace.TransportResult = "成功";
+                        else if (bkwException != null && (bkwException.Message ?? "").IndexOf("結果未確認") >= 0)
+                            rankTrace.TransportResult = "未確認";
+                        else
+                            rankTrace.TransportResult = "明確失敗";
+                        SemesterRankPublishTransport.WriteLog(rankTrace);
+                    }
                 }
             };
 
@@ -3270,6 +2134,7 @@ SELECT count(*) FROM score_list
             {
                 try
                 {
+                    SemesterRankPublishOutcome.PendingTrace = rankTrace;
                     SemesterRankPublishOutcome outcome = SemesterRankPublishOutcome.From(bkwException, publishResult);
                     _rankCalculationRunning = false;
                     RestoreCalculationEditors();
@@ -3292,7 +2157,14 @@ SELECT count(*) FROM score_list
             {
                 RestoreCalculationEditors();
                 pbLoading.Visible = false;
-                MessageBox.Show("計算排名失敗。\n" + rankFlowException.Message);
+                if (rankTrace == null)
+                    rankTrace = SemesterRankCalculationTrace.Start("", "", "", "");
+                rankTrace.Mark("流程失敗");
+                SemesterRankPublishOutcome flowOutcome = SemesterRankPublishOutcome.From(rankFlowException, null, rankTrace);
+                string flowMessage = flowOutcome.DialogMessage ?? "";
+                if (flowMessage.IndexOf("計算排名失敗") != 0)
+                    flowMessage = "計算排名失敗。\n" + flowMessage;
+                MessageBox.Show(flowMessage);
             }
             finally
             {
@@ -3303,6 +2175,7 @@ SELECT count(*) FROM score_list
 
         private void CalculateSemesterAssessmentRank_Resize(object sender, EventArgs e)
         {
+            LayoutConditionPage();
             if (pbLoading == null || pbLoading.Parent == null)
                 return;
             pbLoading.Location = new Point(pbLoading.Parent.ClientSize.Width / 2 - 16, pbLoading.Parent.ClientSize.Height / 2 - 16);

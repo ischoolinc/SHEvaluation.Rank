@@ -1,0 +1,20 @@
+{
+  "name": "NULL 差異",
+  "expect": {
+    "passed": false,
+    "baselineCount": 1,
+    "candidateCount": 1,
+    "equalPairs": 0,
+    "missing": 0,
+    "extra": 0,
+    "valueDifferences": 0,
+    "nullDifferences": 1,
+    "nullField": "avg"
+  },
+  "baseline": [
+    { "student_id": 101 }
+  ],
+  "candidate": [
+    { "student_id": 101, "avg": null }
+  ]
+}

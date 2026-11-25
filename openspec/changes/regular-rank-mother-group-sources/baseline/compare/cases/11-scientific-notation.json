@@ -1,0 +1,31 @@
+{
+  "name": "科學記號",
+  "expect": {
+    "passed": true,
+    "baselineCount": 7,
+    "candidateCount": 7,
+    "equalPairs": 7,
+    "missing": 0,
+    "extra": 0,
+    "valueDifferences": 0,
+    "nullDifferences": 0
+  },
+  "baseline": [
+    { "student_id": 101, "score": 90 },
+    { "student_id": 102, "score": 90.00 },
+    { "student_id": 103, "score": 90 },
+    { "student_id": 104, "score": 123 },
+    { "student_id": 105, "score": 0.15 },
+    { "student_id": 106, "score": -12.5 },
+    { "student_id": 107, "score": 90.12345678901234567890123456781 }
+  ],
+  "candidate": [
+    { "student_id": 101, "score": 9.0e1 },
+    { "student_id": 102, "score": 9E+1 },
+    { "student_id": 103, "score": 900e-1 },
+    { "student_id": 104, "score": 1.2300e2 },
+    { "student_id": 105, "score": 1.5e-1 },
+    { "student_id": 106, "score": -1.25e1 },
+    { "student_id": 107, "score": 9.012345678901234567890123456781e1 }
+  ]
+}

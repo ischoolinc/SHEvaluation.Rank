@@ -1,0 +1,20 @@
+{
+  "name": "數值不同",
+  "expect": {
+    "passed": false,
+    "baselineCount": 1,
+    "candidateCount": 1,
+    "equalPairs": 0,
+    "missing": 0,
+    "extra": 0,
+    "valueDifferences": 1,
+    "nullDifferences": 0,
+    "valueField": "pr_88"
+  },
+  "baseline": [
+    { "student_id": 101 }
+  ],
+  "candidate": [
+    { "student_id": 101, "pr_88": 51 }
+  ]
+}

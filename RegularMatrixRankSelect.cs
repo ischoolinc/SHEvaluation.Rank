@@ -55,6 +55,7 @@ namespace SHEvaluation.Rank
                 QueryHelper queryHelper = new QueryHelper();
 
                 #region 要顯示的資料的sql字串
+                // Keep full statistics columns; join key / exam / batch policy comes from the regular adapter.
                 string queryTable = @"
 SELECT 
 	rank_matrix.id AS rank_matrix_id
@@ -92,6 +93,7 @@ SELECT
     , rank_matrix.pr_50
     , rank_matrix.pr_25
     , rank_matrix.pr_12
+    , rank_matrix.ref_exam_id
 FROM 
 	rank_matrix AS source
     INNER JOIN rank_matrix
@@ -107,6 +109,7 @@ FROM
         ON exam.id=rank_matrix.ref_exam_id
 WHERE
 	source.id = " + _RankMatrixID + @"::BIGINT
+    AND source.item_type LIKE '定期評量/%'
     AND rank_matrix.id IN (
         SELECT ref_matrix_id FROM rank_detail WHERE ref_student_id = " + _RefStudentID + @"::BIGINT
     )
@@ -116,6 +119,11 @@ ORDER BY
 
                 DataTable dataTable = new DataTable();
                 dataTable = queryHelper.Select(queryTable);
+                if (dataTable.Rows.Count == 0)
+                {
+                    MessageBox.Show("找不到對應的定期評量矩陣資料。");
+                    return;
+                }
 
                 #region 填入編號的ComboBox
                 foreach (DataRow row in dataTable.Rows)

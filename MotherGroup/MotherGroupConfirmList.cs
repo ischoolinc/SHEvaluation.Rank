@@ -130,7 +130,7 @@ namespace SHEvaluation.Rank.MotherGroup
                 if (!selected.ContainsKey(row.Group.StudentId))
                     continue;
                 RankSlot slot = row.Group.GetWorking(rankType);
-                if (slot.HasConflict)
+                if (slot.HasConflict && !slot.AllowParticipationDespiteConflict)
                     slot.Participate = false;
                 else
                     slot.Participate = participate;
@@ -147,7 +147,7 @@ namespace SHEvaluation.Rank.MotherGroup
                 foreach (string rankType in RankKinds.All)
                 {
                     RankSlot slot = row.Group.GetWorking(rankType);
-                    if (slot.HasConflict)
+                    if (slot.HasConflict && !slot.AllowParticipationDespiteConflict)
                     {
                         slot.Participate = false;
                         continue;
